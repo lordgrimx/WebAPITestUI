@@ -1,10 +1,12 @@
 'use client'
 import React from 'react'
 import { ThemeProvider as NextThemesProvider } from "next-themes"
+import { ConvexProvider } from "convex/react"
+import { convex } from "@/convex/client"
 
 function Provider({ children }) {
     return (
-        <div>
+        <ConvexProvider client={convex}>
             <NextThemesProvider
                 attribute="class"
                 defaultTheme="system"
@@ -13,7 +15,7 @@ function Provider({ children }) {
             >
                 {children}
             </NextThemesProvider>
-        </div>
+        </ConvexProvider>
     )
 }
 
