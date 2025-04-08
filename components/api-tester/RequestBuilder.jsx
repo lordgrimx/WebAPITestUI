@@ -12,9 +12,27 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, SendHorizontal } from "lucide-react";
+import { 
+  Plus, 
+  Trash2, 
+  SendHorizontal, 
+  Code,
+  Key,
+  Lock,
+  Globe,
+  User
+} from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogClose
+} from "@/components/ui/dialog";
 
 // HTTP Methods
 const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"];
@@ -147,6 +165,284 @@ function HeadersTab({ headers, setHeaders }) {
   );
 }
 
+// Auth Tab Content
+function AuthTab({ auth, setAuth }) {
+  const authTypes = [
+    { value: "none", label: "No Auth" },
+    { value: "basic", label: "Basic Auth" },
+    { value: "bearer", label: "Bearer Token" },
+    { value: "apiKey", label: "API Key" },
+    { value: "oauth2", label: "OAuth 2.0" }
+  ];
+
+  const handleAuthTypeChange = (type) => {
+    setAuth({
+      ...auth,
+      type
+    });
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+          Auth Type
+        </label>
+        <Select value={auth.type} onValueChange={handleAuthTypeChange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Select auth type" />
+          </SelectTrigger>
+          <SelectContent>
+            {authTypes.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {auth.type === "basic" && (
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Username
+            </label>
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="Username"
+                value={auth.username || ""}
+                onChange={(e) => setAuth({ ...auth, username: e.target.value })}
+                className="pl-8"
+              />
+              <User className="h-4 w-4 absolute left-2 top-2 text-gray-400" />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Password
+            </label>
+            <div className="relative">
+              <Input
+                type="password"
+                placeholder="Password"
+                value={auth.password || ""}
+                onChange={(e) => setAuth({ ...auth, password: e.target.value })}
+                className="pl-8"
+              />
+              <Lock className="h-4 w-4 absolute left-2 top-2 text-gray-400" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {auth.type === "bearer" && (
+        <div>
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+            Token
+          </label>
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Bearer token"
+              value={auth.token || ""}
+              onChange={(e) => setAuth({ ...auth, token: e.target.value })}
+              className="pl-8"
+            />
+            <Key className="h-4 w-4 absolute left-2 top-2 text-gray-400" />
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            The token will be prefixed with 'Bearer' in the Authorization header
+          </p>
+        </div>
+      )}
+
+      {auth.type === "apiKey" && (
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Key Name
+            </label>
+            <Input
+              type="text"
+              placeholder="API Key Name"
+              value={auth.apiKeyName || ""}
+              onChange={(e) => setAuth({ ...auth, apiKeyName: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Key Value
+            </label>
+            <Input
+              type="text"
+              placeholder="API Key Value"
+              value={auth.apiKeyValue || ""}
+              onChange={(e) => setAuth({ ...auth, apiKeyValue: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Add to
+            </label>
+            <Select 
+              value={auth.apiKeyLocation || "header"} 
+              onValueChange={(value) => setAuth({ ...auth, apiKeyLocation: value })}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select location" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="header">Header</SelectItem>
+                <SelectItem value="query">Query Parameter</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {auth.type === "oauth2" && (
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Access Token URL
+            </label>
+            <div className="relative">
+              <Input
+                type="url"
+                placeholder="https://example.com/oauth/token"
+                value={auth.accessTokenUrl || ""}
+                onChange={(e) => setAuth({ ...auth, accessTokenUrl: e.target.value })}
+                className="pl-8"
+              />
+              <Globe className="h-4 w-4 absolute left-2 top-2 text-gray-400" />
+            </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Client ID
+            </label>
+            <Input
+              type="text"
+              placeholder="Client ID"
+              value={auth.clientId || ""}
+              onChange={(e) => setAuth({ ...auth, clientId: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Client Secret
+            </label>
+            <Input
+              type="password"
+              placeholder="Client Secret"
+              value={auth.clientSecret || ""}
+              onChange={(e) => setAuth({ ...auth, clientSecret: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              Scope
+            </label>
+            <Input
+              type="text"
+              placeholder="read:user write:user"
+              value={auth.scope || ""}
+              onChange={(e) => setAuth({ ...auth, scope: e.target.value })}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Separate scopes with spaces
+            </p>
+          </div>
+          <Button variant="outline" size="sm" className="mt-2">
+            Request Token
+          </Button>
+        </div>
+      )}
+      
+      {auth.type === "none" && (
+        <div className="text-gray-500 text-sm">
+          No authentication will be applied to the request.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Tests Tab Content
+function TestsTab({ tests, setTests }) {
+  return (
+    <div className="p-4 space-y-4">
+      <div>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+          Test Script <span className="text-xs text-gray-500">(JavaScript)</span>
+        </label>
+        <div className="border rounded overflow-hidden">
+          <div className="bg-gray-50 dark:bg-gray-800 p-2 border-b flex justify-between items-center">
+            <div className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center">
+              <Code className="h-4 w-4 mr-1" />
+              Tests
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" className="text-xs h-7">
+                Examples
+              </Button>
+              <Button variant="ghost" size="sm" className="text-xs h-7">
+                Documentation
+              </Button>
+            </div>
+          </div>
+          <textarea
+            value={tests.script || ""}
+            onChange={(e) => setTests({ ...tests, script: e.target.value })}
+            className="w-full h-64 p-3 font-mono text-sm focus:outline-none"
+            placeholder={`// Example test script
+pm.test("Status code is 200", function() {
+  pm.expect(pm.response.code).to.equal(200);
+});
+
+pm.test("Response contains user data", function() {
+  const responseJson = pm.response.json();
+  pm.expect(responseJson).to.have.property("id");
+  pm.expect(responseJson).to.have.property("name");
+});`}
+          />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          Test Results
+        </h3>
+        {tests.results && tests.results.length > 0 ? (
+          <div className="space-y-2">
+            {tests.results.map((result, index) => (
+              <div 
+                key={index}
+                className={`p-2 border rounded flex items-center ${
+                  result.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                }`}
+              >
+                <div className={`h-4 w-4 rounded-full mr-2 ${
+                  result.passed ? 'bg-green-500' : 'bg-red-500'
+                }`} />
+                <span className={result.passed ? 'text-green-700' : 'text-red-700'}>
+                  {result.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-gray-500 text-sm border rounded p-3 bg-gray-50 dark:bg-gray-800">
+            Tests will run when you send a request
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("https://api.example.com/v1/users");
@@ -159,7 +455,14 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
     { id: 2, key: "", value: "", enabled: false },
   ]);
   const [body, setBody] = useState("");
+  const [auth, setAuth] = useState({ type: "none" });
+  const [tests, setTests] = useState({ script: "", results: [] });
   const [error, setError] = useState(null);
+  
+  // Dialog states
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [parallelRequestCount, setParallelRequestCount] = useState(1);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   
   // Fix for "Cannot convert undefined or null to object" error
   const requestData = useQuery(
@@ -197,10 +500,15 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
       }
       
       setBody(requestData.body || "");
+      setAuth(requestData.auth || { type: "none" });
+      setTests(requestData.tests || { script: "", results: [] });
     }
   }, [requestData]);
-
   const handleSendRequest = () => {
+    setDialogOpen(true);
+  };
+  
+  const executeRequest = () => {
     // Get enabled params
     const enabledParams = params
       .filter(p => p.enabled && p.key.trim())
@@ -216,6 +524,20 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
         obj[header.key] = header.value;
         return obj;
       }, {});
+      
+    // Apply auth headers if necessary
+    if (auth.type === "basic") {
+      const basicAuthValue = `Basic ${btoa(`${auth.username || ""}:${auth.password || ""}`)}`;
+      enabledHeaders["Authorization"] = basicAuthValue;
+    } else if (auth.type === "bearer" && auth.token) {
+      enabledHeaders["Authorization"] = `Bearer ${auth.token}`;
+    } else if (auth.type === "apiKey" && auth.apiKeyName && auth.apiKeyValue) {
+      if (auth.apiKeyLocation === "header") {
+        enabledHeaders[auth.apiKeyName] = auth.apiKeyValue;
+      } else if (auth.apiKeyLocation === "query") {
+        enabledParams[auth.apiKeyName] = auth.apiKeyValue;
+      }
+    }
     
     // Create request object
     const requestObject = {
@@ -223,12 +545,24 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
       url,
       params: enabledParams,
       headers: enabledHeaders,
-      body: method !== "GET" && body ? body : undefined
+      body: method !== "GET" && body ? body : undefined,
+      auth,
+      tests,
+      parallelCount: parallelRequestCount
     };
     
     if (onSendRequest) {
-      onSendRequest(requestObject);
+      // Send multiple requests if parallelRequestCount > 1
+      for (let i = 0; i < parallelRequestCount; i++) {
+        onSendRequest({
+          ...requestObject,
+          requestNumber: i + 1,
+          totalRequests: parallelRequestCount
+        });
+      }
     }
+    
+    setDialogOpen(false);
   };
 
   return (
@@ -298,13 +632,54 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
             )}
           </div>
         </TabsContent>
-        <TabsContent value="auth" className="p-4 text-sm text-gray-500">
-          <p>Authentication options will be implemented soon.</p>
+        <TabsContent value="auth" className="flex-1 overflow-auto">
+          <AuthTab auth={auth} setAuth={setAuth} />
         </TabsContent>
-        <TabsContent value="tests" className="p-4 text-sm text-gray-500">
-          <p>Test scripts will be implemented soon.</p>
+        <TabsContent value="tests" className="flex-1 overflow-auto">
+          <TestsTab tests={tests} setTests={setTests} />
         </TabsContent>
       </Tabs>
+
+      {/* Dialog for advanced options */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Advanced Options</DialogTitle>
+            <DialogDescription>
+              Configure advanced settings for your request.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                Parallel Request Count
+              </label>
+              <Input
+                type="number"
+                min="1"
+                max="10"
+                value={parallelRequestCount}
+                onChange={(e) => setParallelRequestCount(Number(e.target.value))}
+              />
+            </div>
+            <div>
+              <Checkbox
+                checked={showAdvancedOptions}
+                onCheckedChange={setShowAdvancedOptions}
+                aria-label="Show advanced options"
+              />
+              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                Show advanced options
+              </span>
+            </div>
+          </div>          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={executeRequest}>Send Request{parallelRequestCount > 1 ? `s (${parallelRequestCount})` : ''}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
