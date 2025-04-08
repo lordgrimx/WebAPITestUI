@@ -21,15 +21,13 @@ export const getCollection = query({
 // Add a new collection
 export const addCollection = mutation({
     args: {
-        name: v.string(),
-        description: v.optional(v.string())
+        name: v.string()
     },
     handler: async (ctx, args) => {
         const now = Date.now();
 
         const collectionId = await ctx.db.insert("collections", {
             name: args.name,
-            description: args.description || "",
             createdAt: now,
             updatedAt: now,
         });

@@ -39,6 +39,49 @@ const methodStyles = {
 
 const getMethodStyle = (method) => methodStyles[method.toUpperCase()] || methodStyles.DEFAULT;
 
+// Helper to format timestamps
+const formatTimeAgo = (timestamp) => {
+  if (!timestamp) return '';
+  
+  const now = Date.now();
+  const diff = now - timestamp;
+  
+  // Less than a minute
+  if (diff < 60000) {
+    return 'just now';
+  }
+  
+  // Less than an hour
+  if (diff < 3600000) {
+    const minutes = Math.floor(diff / 60000);
+    return `${minutes}m ago`;
+  }
+  
+  // Less than a day
+  if (diff < 86400000) {
+    const hours = Math.floor(diff / 3600000);
+    return `${hours}h ago`;
+  }
+  
+  // Default to time display
+  return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+// Helper to get path part from URL
+const getPathFromUrl = (urlString) => {
+  try {
+    const url = new URL(urlString);
+    return url.pathname;
+  } catch (e) {
+    // If URL parsing fails, return the original string or a reasonable part of it
+    const slashIndex = urlString.indexOf('/', 8); // Skip 'http://' or 'https://'
+    if (slashIndex > -1) {
+      return urlString.substring(slashIndex);
+    }
+    return urlString;
+  }
+};
+
 export default function CollectionsSidebar({ setSelectedRequestId, hasError }) {
   // Use try-catch with useQuery to handle potential errors
   let collections = [];
@@ -50,11 +93,23 @@ export default function CollectionsSidebar({ setSelectedRequestId, hasError }) {
     console.error("Failed to fetch collections:", err);
     collections = [];
   }
+  
+  // Fetch history data from Convex
+  let historyItems = [];
+  let historyError = null;
+  try {
+    historyItems = useQuery(api?.history?.getRecentHistory, { limit: 10 }) || [];
+  } catch (err) {
+    historyError = err;
+    console.error("Failed to fetch history:", err);
+    historyItems = [];
+  }
 
   // Define these with null checks to handle potential undefined API
   const addCollection = useMutation(api?.collections?.addCollection);
   const deleteCollection = useMutation(api?.collections?.deleteCollection);
   const deleteRequest = useMutation(api?.requests?.deleteRequest);
+  const deleteHistoryEntry = useMutation(api?.history?.deleteHistoryEntry);
 
   const [newCollectionName, setNewCollectionName] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -105,17 +160,24 @@ export default function CollectionsSidebar({ setSelectedRequestId, hasError }) {
       }
     }
   };
+  
+  const handleDeleteHistoryEntry = (e, historyId) => {
+    e.stopPropagation();
+    try {
+      if (deleteHistoryEntry) {
+        deleteHistoryEntry({ id: historyId });
+      } else {
+        console.warn("deleteHistoryEntry function is not available");
+      }
+    } catch (err) {
+      console.error("Failed to delete history entry:", err);
+    }
+  };
 
   // Arama filtrelemesi
   const filteredCollections = (collections || []).filter(collection =>
     collection.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Mock history data for now
-  const historyItems = [
-    { _id: "h1", method: "GET", name: "/users", _creationTime: Date.now() - 1000 * 60 * 5 }, // 5 dk önce
-    { _id: "h2", method: "POST", name: "/products", _creationTime: Date.now() - 1000 * 60 * 15 }, // 15 dk önce
-  ];
 
   if (hasError || error) {
     return (
@@ -205,25 +267,44 @@ export default function CollectionsSidebar({ setSelectedRequestId, hasError }) {
 
         {/* Geçmiş Bölümü */}
         <h3 className="mt-4 px-2 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">History</h3>
-        {historyItems.length === 0 && (
+        {historyError && (
+          <p className="px-2 py-2 text-sm text-red-500">Error loading history.</p>
+        )}
+        {!historyError && historyItems.length === 0 && (
           <p className="px-2 py-2 text-sm text-gray-500">No recent requests.</p>
         )}
         <div className="space-y-1 px-2">
-          {historyItems.map((item) => {
+          {!historyError && historyItems.map((item) => {
             const style = getMethodStyle(item.method);
-            const timeAgo = new Date(item._creationTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // Basit zaman gösterimi
+            const timeAgo = formatTimeAgo(item.timestamp);
+            const displayPath = getPathFromUrl(item.url);
+            
             return (
               <div
                 key={item._id}
                 className="flex items-center justify-between group hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1.5 rounded cursor-pointer text-sm"
+                onClick={() => item.requestId && setSelectedRequestId(item.requestId)}
               >
                 <div className="flex items-center truncate flex-1 mr-2">
                   <Badge variant={style.variant} className={`mr-2 w-14 justify-center flex-shrink-0 ${style.className}`}>
                     {item.method.toUpperCase()}
                   </Badge>
-                  <span className="truncate">{item.name}</span>
+                  <span className="truncate">{displayPath}</span>
                 </div>
-                <span className="text-xs text-gray-400 flex-shrink-0">{timeAgo}</span>
+                <div className="flex items-center">
+                  <span className="text-xs text-gray-400 flex-shrink-0 mr-2">{timeAgo}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:text-red-500"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteHistoryEntry(e, item._id);
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             );
           })}

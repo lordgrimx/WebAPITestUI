@@ -6,6 +6,8 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
@@ -15,6 +17,9 @@ export default function ApiTester() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [responseData, setResponseData] = useState(null);
   const [error, setError] = useState(null);
+  
+  // Add the recordHistory mutation
+  const recordHistory = useMutation(api.history.recordHistory);
 
   // Use useCallback to prevent function recreation on each render
   const handleSendRequest = useCallback(async (requestData) => {
@@ -24,8 +29,13 @@ export default function ApiTester() {
       // For now, we'll simulate a response
       console.log("Sending request:", requestData);
       
+      const startTime = Date.now();
+      
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const endTime = Date.now();
+      const duration = endTime - startTime;
       
       // Create a mock response based on the request
       const mockResponse = {
@@ -41,10 +51,21 @@ export default function ApiTester() {
           "x-response-time": `${Math.floor(Math.random() * 200)}ms`
         },
         size: "1.2 KB",
-        timeTaken: `${Math.floor(Math.random() * 200)} ms`
+        timeTaken: `${duration} ms`
       };
       
       setResponseData(mockResponse);
+      
+      // Record this request in history
+      await recordHistory({
+        requestId: selectedRequestId || undefined,
+        method: requestData.method,
+        url: requestData.url,
+        status: mockResponse.status,
+        duration: duration,
+        responseSize: 1200, // 1.2 KB in bytes
+      });
+      
     } catch (error) {
       console.error("Error sending request:", error);
       setError(error.message || "An error occurred while sending the request");
@@ -55,8 +76,22 @@ export default function ApiTester() {
         size: "0.2 KB",
         timeTaken: "0 ms"
       });
+      
+      // Still record the failed request in history
+      try {
+        await recordHistory({
+          requestId: selectedRequestId || undefined,
+          method: requestData.method,
+          url: requestData.url,
+          status: 500,
+          duration: 0,
+          responseSize: 200, // 0.2 KB in bytes
+        });
+      } catch (historyError) {
+        console.error("Failed to record request history:", historyError);
+      }
     }
-  }, []);
+  }, [selectedRequestId, recordHistory]);
 
   // Use useCallback for setSelectedRequestId to prevent re-renders
   const handleRequestSelect = useCallback((id) => {

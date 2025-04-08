@@ -12,7 +12,6 @@ export default defineSchema({
     // API Test Aracı için Koleksiyonlar
     collections: defineTable({
         name: v.string(),
-        description: v.optional(v.string()),
         createdAt: v.number(),
         updatedAt: v.number(),
     }).index("by_name", ["name"]), // İsimle arama için index
