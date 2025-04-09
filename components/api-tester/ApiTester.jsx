@@ -15,7 +15,7 @@ import ResponseDisplay from "./ResponseDisplay";
 
 export default function ApiTester() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
-  const [responseData, setResponseData] = useState(null);
+  const [responseData, setResponseData] = useState([]); // Array olarak değiştirdik
   const [error, setError] = useState(null);
   
   // Add the recordHistory mutation
@@ -24,15 +24,15 @@ export default function ApiTester() {
   // Use useCallback to prevent function recreation on each render
   const handleSendRequest = useCallback(async (requestData) => {
     try {
+      if (requestData.requestNumber === 1) {
+        setResponseData([]); // İlk istek geldiğinde array'i temizle
+      }
+
       setError(null);
-      // In a real implementation, this would make an actual API request
-      // For now, we'll simulate a response
-      console.log("Sending request:", requestData);
-      
       const startTime = Date.now();
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Simulate API call delay with random timing for each request
+      await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
       
       const endTime = Date.now();
       const duration = endTime - startTime;
@@ -40,21 +40,26 @@ export default function ApiTester() {
       // Create a mock response based on the request
       const mockResponse = {
         status: 200,
-        data: {
-          id: 1,
-          name: "John Doe",
-          email: "john@example.com",
-          created_at: new Date().toISOString()
+        statusText: "OK",
+        data: requestData.data || {
+          token: "mock-token",
+          user: {
+            id: "mock-id",
+            email: "mock@example.com",
+            fullName: "Mock User"
+          }
         },
         headers: {
           "content-type": "application/json",
-          "x-response-time": `${Math.floor(Math.random() * 200)}ms`
+          "x-response-time": `${duration}ms`,
+          "x-request-number": `${requestData.requestNumber}/${requestData.totalRequests}`
         },
-        size: "1.2 KB",
-        timeTaken: `${duration} ms`
+        timeTaken: `${duration} ms`,
+        requestNumber: requestData.requestNumber,
+        totalRequests: requestData.totalRequests
       };
       
-      setResponseData(mockResponse);
+      setResponseData(prev => [...prev, mockResponse]); // Array'e yeni yanıtı ekle
       
       // Record this request in history
       await recordHistory({
@@ -63,19 +68,19 @@ export default function ApiTester() {
         url: requestData.url,
         status: mockResponse.status,
         duration: duration,
-        responseSize: 1200, // 1.2 KB in bytes
+        responseSize: 1200,
       });
       
     } catch (error) {
       console.error("Error sending request:", error);
       setError(error.message || "An error occurred while sending the request");
-      setResponseData({
+      setResponseData(prev => [...prev, {
         status: 500,
         data: { error: "Failed to send request" },
         headers: { "content-type": "application/json" },
         size: "0.2 KB",
         timeTaken: "0 ms"
-      });
+      }]);
       
       // Still record the failed request in history
       try {

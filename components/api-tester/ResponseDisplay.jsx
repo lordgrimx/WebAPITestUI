@@ -5,8 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
 export default function ResponseDisplay({ responseData }) {
-  // If no response data yet, show placeholder
-  if (!responseData) {
+  if (!responseData || responseData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
         <div className="text-gray-400 mb-4">
@@ -35,69 +34,96 @@ export default function ResponseDisplay({ responseData }) {
     );
   }
 
-  const isSuccessStatus = responseData.status >= 200 && responseData.status < 300;
-
   return (
-    <div className="flex flex-col h-full p-4">
-      {/* Status Bar */}
-      <div className="flex items-center justify-between mb-2">
+    <div className="h-full flex flex-col">
+      {/* Status Bar - Show total requests status */}
+      <div className="flex-none p-4 pb-0">
         <div className="flex items-center space-x-2">
-          <Badge variant="default"
-            className={`${isSuccessStatus 
-              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
-              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"}`}
-          >
-            Response {responseData.status}
+          <Badge variant="default" className="bg-blue-100 text-blue-800">
+            {responseData.length} Responses
           </Badge>
-          <span className="text-xs text-gray-500">{responseData.timeTaken}, {responseData.size}</span>
         </div>
       </div>
 
-      {/* Tabs: Pretty, Raw, Preview, Headers */}
-      <Tabs defaultValue="pretty" className="flex-1 flex flex-col">
-        <TabsList className="border-b rounded-none justify-start px-0 pt-0 bg-transparent">
+      <Tabs defaultValue="pretty" className="flex-1 flex flex-col overflow-hidden p-4 pt-2">
+        <TabsList className="flex-none border-b rounded-none justify-start px-0 bg-transparent">
           <TabsTrigger value="pretty">Pretty</TabsTrigger>
           <TabsTrigger value="raw">Raw</TabsTrigger>
           <TabsTrigger value="preview">Preview</TabsTrigger>
           <TabsTrigger value="headers">Headers</TabsTrigger>
         </TabsList>
-        <TabsContent value="pretty" className="flex-1 overflow-auto p-0">
-          <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded border text-sm overflow-auto h-full">
-            {JSON.stringify(responseData.data, null, 2)}
-          </pre>
-        </TabsContent>
-        <TabsContent value="raw" className="flex-1 overflow-auto p-4">
-          <pre className="font-mono text-sm">
-            {JSON.stringify(responseData.data)}
-          </pre>
-        </TabsContent>
-        <TabsContent value="preview" className="flex-1 overflow-auto p-4 text-sm text-gray-500">
-          {/* Preview content - could be formatted HTML/XML view or other visualization */}
-          <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded border h-full">
-            {typeof responseData.data === 'object' ? (
-              <div className="divide-y">
-                {Object.entries(responseData.data).map(([key, value]) => (
-                  <div key={key} className="py-2">
-                    <div className="font-semibold">{key}</div>
-                    <div className="text-gray-700 dark:text-gray-300">
-                      {typeof value === 'object'
-                        ? JSON.stringify(value)
-                        : String(value)}
-                    </div>
-                  </div>
-                ))}
+
+        <TabsContent value="pretty" className="flex-1 overflow-auto mt-2">
+          <div className="space-y-4">
+            {responseData.map((response, index) => (
+              <div key={index} className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 flex justify-between items-center border-b">
+                  <Badge variant="default"
+                    className={`${response.status >= 200 && response.status < 300 
+                      ? "bg-green-100 text-green-800" 
+                      : "bg-red-100 text-red-800"}`}
+                  >
+                    Status {response.status} - Request {response.requestNumber}/{response.totalRequests}
+                  </Badge>
+                  <span className="text-xs text-gray-500">{response.timeTaken}</span>
+                </div>
+                <pre className="bg-white dark:bg-gray-900 p-4 text-sm overflow-auto">
+                  {JSON.stringify(response.data, null, 2)}
+                </pre>
               </div>
-            ) : (
-              <p>Preview not available for this content type.</p>
-            )}
+            ))}
           </div>
         </TabsContent>
-        <TabsContent value="headers" className="flex-1 overflow-auto p-4 text-sm">
-          <div className="space-y-2">
-            {Object.entries(responseData.headers || {}).map(([key, value]) => (
-              <div key={key} className="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-gray-500">{key}</span>
-                <span>{value}</span>
+
+        <TabsContent value="raw" className="flex-1 overflow-auto mt-2">
+          <pre className="font-mono text-sm">
+            {JSON.stringify(responseData, null, 2)}
+          </pre>
+        </TabsContent>
+
+        <TabsContent value="preview" className="flex-1 overflow-auto mt-2">
+          <div className="space-y-4">
+            {responseData.map((response, index) => (
+              <div key={index} className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 border-b">
+                  <h3 className="font-medium">Request {response.data.requestNumber}</h3>
+                </div>
+                <div className="p-4">
+                  <div className="divide-y">
+                    {Object.entries(response.data).map(([key, value]) => (
+                      <div key={key} className="py-2">
+                        <div className="font-semibold">{key}</div>
+                        <div className="text-gray-700 dark:text-gray-300">
+                          {typeof value === 'object'
+                            ? JSON.stringify(value, null, 2)
+                            : String(value)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="headers" className="flex-1 overflow-auto mt-2">
+          <div className="space-y-4">
+            {responseData.map((response, index) => (
+              <div key={index} className="border rounded-lg overflow-hidden">
+                <div className="bg-gray-50 dark:bg-gray-800 p-2 border-b">
+                  <h3 className="font-medium">Request {response.data.requestNumber} Headers</h3>
+                </div>
+                <div className="p-4">
+                  <div className="space-y-2">
+                    {Object.entries(response.headers || {}).map(([key, value]) => (
+                      <div key={key} className="flex justify-between py-1 border-b">
+                        <span className="text-gray-500">{key}</span>
+                        <span>{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             ))}
           </div>

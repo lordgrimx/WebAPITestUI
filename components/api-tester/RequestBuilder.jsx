@@ -248,7 +248,7 @@ function AuthTab({ auth, setAuth }) {
               placeholder="Bearer token"
               value={auth.token || ""}
               onChange={(e) => setAuth({ ...auth, token: e.target.value })}
-              className="pl-8"
+                className="pl-8"
             />
             <Key className="h-4 w-4 absolute left-2 top-2 text-gray-400" />
           </div>
@@ -443,6 +443,82 @@ pm.test("Response contains user data", function() {
   );
 }
 
+// Fetch API kullanarak gerçek HTTP isteği yapacak fonksiyon
+const makeHttpRequest = async (requestConfig) => {
+  const {
+    method,
+    url,
+    params,
+    headers,
+    body,
+    auth,
+    requestNumber,
+    totalRequests
+  } = requestConfig;
+
+  try {
+    const urlObj = new URL(url);
+    Object.entries(params).forEach(([key, value]) => {
+      urlObj.searchParams.append(key, value);
+    });
+
+    const startTime = Date.now();
+
+    const requestHeaders = {
+      ...headers,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    const response = await fetch(urlObj.toString(), {
+      method: method,
+      headers: requestHeaders,
+      body: method !== 'GET' ? body : undefined,
+      mode: 'cors',
+      credentials: 'same-origin',
+    });
+
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+
+    let responseData;
+    const contentType = response.headers.get('content-type');
+    
+    try {
+      // Her zaman önce JSON olarak parse etmeyi dene
+      responseData = await response.json();
+    } catch (e) {
+      // JSON parse başarısız olursa text olarak al
+      responseData = await response.text();
+    }
+
+    const responseHeaders = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+
+    console.log("MakeHttp :",responseData);
+    
+
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+      data: responseData, // Direkt responseData'yı kullan
+      size: typeof responseData === 'string' ? responseData.length : JSON.stringify(responseData).length,
+      timeTaken: `${duration} ms`,
+      requestNumber,
+      totalRequests
+    };
+
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('CORS')) {
+      throw new Error(`CORS Error: The server must allow requests from ${window.location.origin}`);
+    }
+    throw new Error(`Request failed: ${error.message}`);
+  }
+};
+
 export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("https://api.example.com/v1/users");
@@ -504,11 +580,12 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
       setTests(requestData.tests || { script: "", results: [] });
     }
   }, [requestData]);
+
   const handleSendRequest = () => {
     setDialogOpen(true);
   };
   
-  const executeRequest = () => {
+  const executeRequest = async () => {
     // Get enabled params
     const enabledParams = params
       .filter(p => p.enabled && p.key.trim())
@@ -539,26 +616,46 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
       }
     }
     
-    // Create request object
-    const requestObject = {
-      method,
-      url,
-      params: enabledParams,
-      headers: enabledHeaders,
-      body: method !== "GET" && body ? body : undefined,
-      auth,
-      tests,
-      parallelCount: parallelRequestCount
-    };
-    
+    // Send multiple requests if parallelRequestCount > 1
     if (onSendRequest) {
-      // Send multiple requests if parallelRequestCount > 1
-      for (let i = 0; i < parallelRequestCount; i++) {
-        onSendRequest({
-          ...requestObject,
+      const requests = Array.from({ length: parallelRequestCount }, (_, i) => {
+        const requestObject = {
+          method,
+          url,
+          params: enabledParams,
+          headers: enabledHeaders,
+          body: method !== "GET" ? body : undefined,
+          auth,
+          tests,
           requestNumber: i + 1,
           totalRequests: parallelRequestCount
-        });
+        };
+        
+        return makeHttpRequest(requestObject)
+          .then(response => {
+            onSendRequest(response);
+            return response;
+          })
+          .catch(error => {
+            console.error(`Request ${i + 1} failed:`, error);
+            onSendRequest({
+              status: 0,
+              statusText: error.message,
+              headers: {},
+              data: { error: error.message },
+              size: 0,
+              timeTaken: '0 ms',
+              requestNumber: i + 1,
+              totalRequests: parallelRequestCount
+            });
+          });
+      });
+
+      // Paralel istekleri yönet
+      try {
+        await Promise.all(requests);
+      } catch (error) {
+        console.error('Error executing requests:', error);
       }
     }
     
