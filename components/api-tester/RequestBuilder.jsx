@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,6 +33,7 @@ import {
   DialogTitle,
   DialogClose
 } from "@/components/ui/dialog";
+import { useDebounce } from "@/hooks/useDebounce"; // Add this import
 
 // HTTP Methods
 const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"];
@@ -548,6 +549,7 @@ const makeHttpRequest = async (requestConfig) => {
 export default function RequestBuilder({ selectedRequestId, onSendRequest, onRequestDataChange }) {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("https://api.example.com/v1/users");
+  const [debouncedUrl, setDebouncedUrl] = useState(url);
   const [params, setParams] = useState([
     { id: 1, key: "limit", value: "10", enabled: true },
     { id: 2, key: "", value: "", enabled: false },
@@ -560,134 +562,213 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest, onReq
   const [auth, setAuth] = useState({ type: "none" });
   const [tests, setTests] = useState({ script: "", results: [] });
   const [error, setError] = useState(null);
+  const [isValidatingUrl, setIsValidatingUrl] = useState(false);
+  const [urlError, setUrlError] = useState(null);
   
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [parallelRequestCount, setParallelRequestCount] = useState(1);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   
-  // Fix for "Cannot convert undefined or null to object" error
+  // Memoize request data query
   const requestData = useQuery(
     api?.requests?.getRequestById, 
     selectedRequestId ? { id: selectedRequestId } : "skip"
   );
-  
+
+  // URL validation
+  const validateUrl = useCallback(async (url) => {
+    if (!url) return;
+    
+    setIsValidatingUrl(true);
+    setUrlError(null);
+    
+    try {
+      const urlObj = new URL(url);
+      // Optional: Add more validation logic here
+    } catch (error) {
+      setUrlError('Invalid URL format');
+    } finally {
+      setIsValidatingUrl(false);
+    }
+  }, []);
+
+  // Debounce URL updates
+  const debouncedSetUrl = useCallback((value) => {
+    requestAnimationFrame(() => {
+      setUrl(value);
+    });
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      validateUrl(url);
+      setDebouncedUrl(url);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [url, validateUrl]);
+
+  // Memoize enabled params and headers for executeRequest
+  const enabledParams = useMemo(() => 
+    params
+      .filter(p => p.enabled && p.key.trim())
+      .reduce((obj, param) => {
+        obj[param.key] = param.value;
+        return obj;
+      }, {}),
+    [params]
+  );
+
+  const enabledHeaders = useMemo(() => 
+    headers
+      .filter(h => h.enabled && h.key.trim())
+      .reduce((obj, header) => {
+        obj[header.key] = header.value;
+        return obj;
+      }, {}),
+    [headers]
+  );
+
+  // Memoize the current request data
+  const currentData = useMemo(() => ({
+    method,
+    url: debouncedUrl, // Use debounced URL here
+    headers: headers.filter(h => h.enabled && h.key).length > 0 
+      ? JSON.stringify(headers.filter(h => h.enabled && h.key))
+      : undefined,
+    params: params.filter(p => p.enabled && p.key).length > 0
+      ? JSON.stringify(params.filter(p => p.enabled && p.key))
+      : undefined,
+    body: method !== "GET" ? body : undefined
+  }), [method, debouncedUrl, headers, params, body]); // Use debounced URL in dependencies
+
+  // Add this new useEffect for cleaning up state when selectedRequestId changes
+  useEffect(() => {
+    if (!selectedRequestId) {
+      // Reset state when no request is selected
+      setMethod("GET");
+      setUrl("");
+      setParams([
+        { id: 1, key: "", value: "", enabled: false }
+      ]);
+      setHeaders([
+        { id: 1, key: "", value: "", enabled: false }
+      ]);
+      setBody("");
+      setAuth({ type: "none" });
+      setTests({ script: "", results: [] });
+    }
+  }, [selectedRequestId]);
+
+  // Update executeRequest to always use the current state values
+  const executeRequest = useCallback(async () => {
+    if (!onSendRequest) return;
+
+    // Validate URL before sending request
+    try {
+      new URL(url); // This will throw if URL is invalid
+    } catch (error) {
+      setError('Invalid URL. Please enter a valid URL including http:// or https://');
+      setDialogOpen(false);
+      return;
+    }
+
+    const requests = Array.from({ length: parallelRequestCount }, (_, i) => {
+      const requestObject = {
+        method,
+        url, // Use current url state instead of debouncedUrl
+        params: enabledParams,
+        headers: enabledHeaders,
+        body: method !== "GET" ? body : undefined,
+        auth,
+        tests,
+        requestNumber: i + 1,
+        totalRequests: parallelRequestCount
+      };
+      
+      return makeHttpRequest(requestObject)
+        .then(response => {
+          // Clear any previous errors
+          setError(null);
+          onSendRequest(response);
+          return response;
+        })
+        .catch(error => {
+          setError(error.message);
+          console.error(`Request ${i + 1} failed:`, error);
+          onSendRequest({
+            status: 0,
+            statusText: error.message,
+            headers: {},
+            data: { error: error.message },
+            size: 0,
+            timeTaken: '0 ms',
+            requestNumber: i + 1,
+            totalRequests: parallelRequestCount
+          });
+        });
+    });
+
+    try {
+      await Promise.all(requests);
+    } catch (error) {
+      console.error('Error executing requests:', error);
+      setError(error.message);
+    }
+    
+    setDialogOpen(false);
+  }, [method, url, enabledParams, enabledHeaders, body, auth, tests, parallelRequestCount, onSendRequest]);
+
   // Update form when selectedRequestId changes and data is loaded
   useEffect(() => {
     if (requestData) {
+      // Set method and URL first to ensure they're available
       setMethod(requestData.method || "GET");
       setUrl(requestData.url || "");
+      setDebouncedUrl(requestData.url || ""); // Also update debounced URL
       
-      // Initialize params, headers, body if they exist in the loaded request
       if (requestData.params) {
         try {
           const parsedParams = JSON.parse(requestData.params);
-          if (Array.isArray(parsedParams)) {
-            setParams(parsedParams);
-          }
+          setParams(Array.isArray(parsedParams) ? parsedParams : [
+            { id: 1, key: "", value: "", enabled: false }
+          ]);
         } catch (e) {
           console.error("Error parsing params:", e);
+          setParams([{ id: 1, key: "", value: "", enabled: false }]);
         }
       }
       
       if (requestData.headers) {
         try {
           const parsedHeaders = JSON.parse(requestData.headers);
-          if (Array.isArray(parsedHeaders)) {
-            setHeaders(parsedHeaders);
-          }
+          setHeaders(Array.isArray(parsedHeaders) ? parsedHeaders : [
+            { id: 1, key: "", value: "", enabled: false }
+          ]);
         } catch (e) {
           console.error("Error parsing headers:", e);
+          setHeaders([{ id: 1, key: "", value: "", enabled: false }]);
         }
       }
       
       setBody(requestData.body || "");
       setAuth(requestData.auth || { type: "none" });
       setTests(requestData.tests || { script: "", results: [] });
+      setError(null); // Clear any previous errors
     }
   }, [requestData]);
 
-  const handleSendRequest = () => {
+  // Update parent component with current request data
+  useEffect(() => {
+    if (onRequestDataChange) {
+      onRequestDataChange(currentData);
+    }
+  }, [currentData, onRequestDataChange]);
+
+  const handleSendRequest = useCallback(() => {
     setDialogOpen(true);
-  };
+  }, []);
   
-  const executeRequest = async () => {
-    // Get enabled params
-    const enabledParams = params
-      .filter(p => p.enabled && p.key.trim())
-      .reduce((obj, param) => {
-        obj[param.key] = param.value;
-        return obj;
-      }, {});
-    
-    // Get enabled headers
-    const enabledHeaders = headers
-      .filter(h => h.enabled && h.key.trim())
-      .reduce((obj, header) => {
-        obj[header.key] = header.value;
-        return obj;
-      }, {});
-      
-    // Apply auth headers if necessary
-    if (auth.type === "basic") {
-      const basicAuthValue = `Basic ${btoa(`${auth.username || ""}:${auth.password || ""}`)}`;
-      enabledHeaders["Authorization"] = basicAuthValue;
-    } else if (auth.type === "bearer" && auth.token) {
-      enabledHeaders["Authorization"] = `Bearer ${auth.token}`;
-    } else if (auth.type === "apiKey" && auth.apiKeyName && auth.apiKeyValue) {
-      if (auth.apiKeyLocation === "header") {
-        enabledHeaders[auth.apiKeyName] = auth.apiKeyValue;
-      } else if (auth.apiKeyLocation === "query") {
-        enabledParams[auth.apiKeyName] = auth.apiKeyValue;
-      }
-    }
-    
-    // Send multiple requests if parallelRequestCount > 1
-    if (onSendRequest) {
-      const requests = Array.from({ length: parallelRequestCount }, (_, i) => {
-        const requestObject = {
-          method,
-          url,
-          params: enabledParams,
-          headers: enabledHeaders,
-          body: method !== "GET" ? body : undefined,
-          auth,
-          tests,
-          requestNumber: i + 1,
-          totalRequests: parallelRequestCount
-        };
-        
-        return makeHttpRequest(requestObject)
-          .then(response => {
-            onSendRequest(response);
-            return response;
-          })
-          .catch(error => {
-            console.error(`Request ${i + 1} failed:`, error);
-            onSendRequest({
-              status: 0,
-              statusText: error.message,
-              headers: {},
-              data: { error: error.message },
-              size: 0,
-              timeTaken: '0 ms',
-              requestNumber: i + 1,
-              totalRequests: parallelRequestCount
-            });
-          });
-      });
-
-      // Paralel istekleri yönet
-      try {
-        await Promise.all(requests);
-      } catch (error) {
-        console.error('Error executing requests:', error);
-      }
-    }
-    
-    setDialogOpen(false);
-  };
-
   return (
     <div className="flex flex-col h-full">
       {/* Display error if any */}
@@ -711,13 +792,25 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest, onReq
             ))}
           </SelectContent>
         </Select>
-        <Input
-          type="url"
-          placeholder="https://api.example.com/v1/users"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          className="flex-grow"
-        />
+        <div className="flex-grow relative">
+          <Input
+            type="url"
+            placeholder="https://api.example.com/v1/users"
+            value={url}
+            onChange={(e) => debouncedSetUrl(e.target.value)}
+            className={`w-full ${urlError ? 'border-red-500' : ''}`}
+          />
+          {isValidatingUrl && (
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+            </div>
+          )}
+          {urlError && (
+            <div className="absolute -bottom-5 left-0 text-xs text-red-500">
+              {urlError}
+            </div>
+          )}
+        </div>
         <Button 
           onClick={handleSendRequest} 
           className="bg-blue-600 hover:bg-blue-700 text-white flex items-center"
@@ -765,10 +858,10 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest, onReq
 
       {/* Dialog for advanced options */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby="request-dialog-description">
           <DialogHeader>
             <DialogTitle>Advanced Options</DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="request-dialog-description">
               Configure advanced settings for your request.
             </DialogDescription>
           </DialogHeader>
@@ -783,19 +876,22 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest, onReq
                 max="10"
                 value={parallelRequestCount}
                 onChange={(e) => setParallelRequestCount(Number(e.target.value))}
+                aria-label="Number of parallel requests"
               />
             </div>
             <div>
               <Checkbox
                 checked={showAdvancedOptions}
                 onCheckedChange={setShowAdvancedOptions}
+                id="show-advanced"
                 aria-label="Show advanced options"
               />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+              <label htmlFor="show-advanced" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                 Show advanced options
-              </span>
+              </label>
             </div>
-          </div>          <DialogFooter>
+          </div>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>

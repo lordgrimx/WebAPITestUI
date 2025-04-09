@@ -31,7 +31,7 @@ export default function SaveRequestModal({
   darkMode, 
   onSaveRequest, 
   selectedCollection,
-  initialData  // Add this prop to receive method, url, etc.
+  initialData 
 }) {
   const [requestName, setRequestName] = useState("");
   const [description, setDescription] = useState("");
@@ -42,7 +42,6 @@ export default function SaveRequestModal({
 
   const createRequest = useMutation(api.requests.createRequest);
 
-  // Fetch collections from Convex
   const collections = useQuery(api.collections.getCollections) || [];
   
   const handleCollectionChange = (value) => {
@@ -56,34 +55,29 @@ export default function SaveRequestModal({
   
   const handleSaveRequest = async () => {
     try {
-      // Create the request object with required fields
       const requestData = {
         collectionId: showNewCollectionInput ? newCollectionName : selectedCollectionState,
         name: requestName,
-        description: description || undefined, // Only include if it has a value
+        description: description || undefined,
         method: initialData?.method || 'GET',
         url: initialData?.url || '',
-        headers: initialData?.headers ? JSON.stringify(initialData.headers) : undefined,
-        params: initialData?.params ? JSON.stringify(initialData.params) : undefined,
-        body: initialData?.body,
-        isFavorite: addToFavorites || undefined, // Only include if true
+        headers: initialData?.headers || undefined,
+        params: initialData?.params || undefined,
+        body: initialData?.body || undefined,
+        isFavorite: addToFavorites || undefined,
       };
       
-      // Save to Convex
-      await createRequest(requestData);
+      console.log("Saving request data:", requestData);
       
-      // Call the save function passed from parent
-      if (onSaveRequest) {
-        onSaveRequest(requestData);
-      }
+      const result = await createRequest(requestData);
       
-      // Close the modal
       setOpen(false);
-      
-      // Reset form after saving
       resetForm();
+      
+      return result;
     } catch (error) {
       console.error("Failed to save request:", error);
+      throw error;
     }
   };
   

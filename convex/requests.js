@@ -37,6 +37,7 @@ export const createRequest = mutation({
     },
     handler: async (ctx, args) => {
         const now = Date.now();
+        console.log("Creating request with args:", args);
 
         // Ensure collection exists
         const collection = await ctx.db.get(args.collectionId);
@@ -98,15 +99,14 @@ export const recordHistory = mutation({
         status: v.optional(v.number()),
         duration: v.optional(v.number()),
         responseSize: v.optional(v.number()),
+        headers: v.optional(v.string()),
+        params: v.optional(v.string()),
+        body: v.optional(v.string()),
+        name: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const historyId = await ctx.db.insert("history", {
-            requestId: args.requestId,
-            method: args.method,
-            url: args.url,
-            status: args.status,
-            duration: args.duration,
-            responseSize: args.responseSize,
+            ...args,
             timestamp: Date.now(),
         });
 

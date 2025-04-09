@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/resizable";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
@@ -16,7 +15,6 @@ import Header from "../Header";
 
 export default function ApiTester() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
-  const [selectedCollectionId, setSelectedCollectionId] = useState(null);
   const [responseData, setResponseData] = useState([]);
   const [error, setError] = useState(null);
   const [sidebarError, setSidebarError] = useState(null);
@@ -25,6 +23,14 @@ export default function ApiTester() {
 
   const recordHistory = useMutation(api.history.recordHistory);
 
+  // Memoize the request data handler
+  const handleRequestDataChange = useCallback((data) => {
+    requestAnimationFrame(() => {
+      setCurrentRequestData(data);
+    });
+  }, []);
+
+  // Memoize the response handler
   const handleSendRequest = useCallback(async (response) => {
     try {
       if (response.requestNumber === 1) {
@@ -33,8 +39,11 @@ export default function ApiTester() {
 
       setError(null);
 
+      // Use functional update to prevent race conditions
       setResponseData((prev) => [...prev, response]);
-      setCurrentRequestData(response);
+      requestAnimationFrame(() => {
+        setCurrentRequestData(response);
+      });
 
       await recordHistory({
         requestId: selectedRequestId || undefined,
@@ -75,9 +84,12 @@ export default function ApiTester() {
     }
   }, [selectedRequestId, recordHistory]);
 
+  // Memoize the request selection handler
   const handleRequestSelect = useCallback((requestId) => {
-    setSelectedRequestId(requestId);
-    setResponseData([]);
+    requestAnimationFrame(() => {
+      setSelectedRequestId(requestId);
+      setResponseData([]);
+    });
   }, []);
 
   return (
@@ -102,7 +114,7 @@ export default function ApiTester() {
             <RequestBuilder
               selectedRequestId={selectedRequestId}
               onSendRequest={handleSendRequest}
-              onRequestDataChange={(data) => setCurrentRequestData(data)}
+              onRequestDataChange={handleRequestDataChange}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />

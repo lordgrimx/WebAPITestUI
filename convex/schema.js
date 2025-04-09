@@ -20,14 +20,14 @@ export default defineSchema({
     // API Test Aracı için İstekler
     requests: defineTable({
         name: v.string(),
-        description: v.optional(v.string()), // Add description field
-        collectionId: v.id("collections"), // Bir koleksiyona ait olabilir
-        method: v.string(), // GET, POST, PUT, DELETE, etc.
+        description: v.optional(v.string()),
+        collectionId: v.id("collections"),
+        method: v.string(),
         url: v.string(),
-        headers: v.optional(v.string()), // JSON stringified headers
-        params: v.optional(v.string()), // JSON stringified query parameters
-        body: v.optional(v.string()), // Request body
-        isFavorite: v.optional(v.boolean()), // Add isFavorite field
+        headers: v.optional(v.string()),
+        params: v.optional(v.string()),
+        body: v.optional(v.string()),
+        isFavorite: v.optional(v.boolean()),
         createdAt: v.number(),
         updatedAt: v.number(),
     })
@@ -43,6 +43,11 @@ export default defineSchema({
         duration: v.optional(v.number()),
         responseSize: v.optional(v.number()),
         timestamp: v.number(),
+        // Add new fields to match request data
+        headers: v.optional(v.string()),
+        params: v.optional(v.string()),
+        body: v.optional(v.string()),
+        name: v.optional(v.string()),
     })
         .index("by_timestamp", ["timestamp"])
 
