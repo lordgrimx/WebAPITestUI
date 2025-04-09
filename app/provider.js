@@ -3,6 +3,8 @@ import React from 'react'
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import { ConvexProvider } from "convex/react"
 import { convex } from "@/convex/client"
+import { AuthProvider } from "@/lib/auth-context"
+import LoadingWrapper from "@/components/LoadingWrapper"
 
 function Provider({ children }) {
     return (
@@ -13,7 +15,11 @@ function Provider({ children }) {
                 enableSystem
                 disableTransitionOnChange
             >
-                {children}
+                <AuthProvider>
+                    <LoadingWrapper>
+                        {children}
+                    </LoadingWrapper>
+                </AuthProvider>
             </NextThemesProvider>
         </ConvexProvider>
     )

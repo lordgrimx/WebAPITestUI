@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/resizable";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import axios from "axios"; // axios kütüphanesini import ediyorum
+import { toast } from "sonner"; // sonner'dan toast fonksiyonunu import et
 
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
@@ -17,79 +19,203 @@ export default function ApiTester() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [responseData, setResponseData] = useState(null);
   const [error, setError] = useState(null);
+  // const { toast } = useToast(); // Eski useToast kaldırıldı
   
   // Add the recordHistory mutation
   const recordHistory = useMutation(api.history.recordHistory);
-
   // Use useCallback to prevent function recreation on each render
   const handleSendRequest = useCallback(async (requestData) => {
     try {
       setError(null);
-      // In a real implementation, this would make an actual API request
-      // For now, we'll simulate a response
       console.log("Sending request:", requestData);
       
       const startTime = Date.now();
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Extract request data
+      const { method, url, headers: requestHeaders, body: requestBody, params } = requestData;
       
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-      
-      // Create a mock response based on the request
-      const mockResponse = {
-        status: 200,
-        data: {
-          id: 1,
-          name: "John Doe",
-          email: "john@example.com",
-          created_at: new Date().toISOString()
-        },
-        headers: {
-          "content-type": "application/json",
-          "x-response-time": `${Math.floor(Math.random() * 200)}ms`
-        },
-        size: "1.2 KB",
-        timeTaken: `${duration} ms`
+      // Prepare axios config
+      const axiosConfig = {
+        method: method,
+        url: url,
+        headers: requestHeaders || {},
+        params: params || {}
       };
       
-      setResponseData(mockResponse);
+      // Add request body for non-GET requests
+      if (method !== 'GET' && method !== 'HEAD' && requestBody) {
+        try {
+          // Try to parse as JSON first
+          const parsedBody = JSON.parse(requestBody);
+          axiosConfig.data = parsedBody;
+        } catch (e) {
+          // If not valid JSON, send as plain text
+          axiosConfig.data = requestBody;
+        }
+      }      
       
-      // Record this request in history
-      await recordHistory({
-        requestId: selectedRequestId || undefined,
-        method: requestData.method,
-        url: requestData.url,
-        status: mockResponse.status,
-        duration: duration,
-        responseSize: 1200, // 1.2 KB in bytes
-      });
+      // Make the actual API request
+      const axiosResponse = await axios(axiosConfig);
       
-    } catch (error) {
-      console.error("Error sending request:", error);
-      setError(error.message || "An error occurred while sending the request");
-      setResponseData({
-        status: 500,
-        data: { error: "Failed to send request" },
-        headers: { "content-type": "application/json" },
-        size: "0.2 KB",
-        timeTaken: "0 ms"
-      });
+      // Handle successful response
+      console.log("Response received:", axiosResponse);
       
-      // Still record the failed request in history
-      try {
+      const endTime = Date.now();
+      const duration = endTime - startTime;      // Calculate response size - convert to string and measure
+      const responseText = JSON.stringify(axiosResponse.data);
+      const responseSize = new Blob([responseText]).size;
+      
+      const MAX_RESPONSE_SIZE = 304857;
+      let truncatedData = axiosResponse.data;
+      let truncatedResponseText = responseText;
+      let isTruncated = false;
+        if (responseSize > MAX_RESPONSE_SIZE) {
+        // Mark as truncated but keep the full structure for display
+        isTruncated = true;
+        
+        // Keep the original data structure but indicate truncation in a safer way
+        // We'll preserve the JSON structure by creating a safe truncated version
+        try {
+          // For arrays, truncate to fewer items
+          if (Array.isArray(axiosResponse.data)) {
+            const originalLength = axiosResponse.data.length;
+            const maxItems = Math.max(20, Math.floor(MAX_RESPONSE_SIZE / 5000)); // Estimate based on size
+            truncatedData = axiosResponse.data.slice(0, maxItems);
+            if (originalLength > maxItems) {
+              truncatedData.push({
+                _truncated: `[${originalLength - maxItems} more items truncated due to size limit]`
+              });
+            }
+          } 
+          // For objects, keep a subset of keys
+          else if (typeof axiosResponse.data === 'object' && axiosResponse.data !== null) {
+            truncatedData = {};
+            const keys = Object.keys(axiosResponse.data);
+            const maxKeys = Math.max(50, Math.floor(MAX_RESPONSE_SIZE / 2000)); // Estimate based on size
+            
+            keys.slice(0, maxKeys).forEach(key => {
+              truncatedData[key] = axiosResponse.data[key];
+            });
+            
+            if (keys.length > maxKeys) {
+              truncatedData._truncated = `[${keys.length - maxKeys} more fields truncated due to size limit]`;
+            }
+          } 
+          // For strings or other types, truncate directly
+          else {
+            truncatedData = axiosResponse.data.toString().substring(0, MAX_RESPONSE_SIZE) + 
+              "... [Response truncated due to size limit]";
+          }
+        } catch (e) {
+          // If anything fails, fallback to simple truncation
+          truncatedData = { 
+            truncated: true, 
+            message: "The response was truncated due to size limits (1MB)",
+            error: e.message,
+            preview: truncatedResponseText.substring(0, 1000) + "..."
+          };
+        }
+        
+        // Show a toast notification about truncation
+        toast.warning("Large Response", {
+          description: `Response size (${(responseSize / 1024 / 1024).toFixed(2)} MB) exceeds the 1MB limit and has been truncated.`,
+        });
+      }
+      
+      // Format for display
+      const formattedResponse = {
+        status: axiosResponse.status,
+        data: truncatedData,
+        headers: axiosResponse.headers,
+        size: `${(responseSize / 1024).toFixed(2)} KB`,
+        timeTaken: `${duration} ms`,
+        isTruncated: isTruncated,
+        originalSize: responseSize
+      };
+      
+      setResponseData(formattedResponse);      
+      // Record this request in history - ONLY for successful requests
+      if (axiosResponse.status >= 200 && axiosResponse.status < 300) {
         await recordHistory({
           requestId: selectedRequestId || undefined,
           method: requestData.method,
           url: requestData.url,
-          status: 500,
-          duration: 0,
-          responseSize: 200, // 0.2 KB in bytes
+          status: axiosResponse.status,
+          duration: duration,
+          responseSize: responseSize,
+          responseData: isTruncated ? truncatedResponseText : responseText,
+          responseHeaders: JSON.stringify(axiosResponse.headers),
+          isTruncated: isTruncated
         });
-      } catch (historyError) {
-        console.error("Failed to record request history:", historyError);
+        toast.success("Request Sent", {
+          description: isTruncated 
+            ? "The request was successful but the response was truncated due to size limits (1MB)." 
+            : "The request was sent successfully and recorded in history.",
+        });
       }
+    } catch (error) {
+      console.error("Error sending request:", error);
+      
+      // Check if this is a network error (like invalid URL, no internet, etc.)
+      let errorResponse;
+      let status;
+      let errorData;
+      let errorHeaders;
+      
+      if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || !error.response) {
+        const errorMessage = `Network error: ${error.message}`;
+        
+        // Sonner toast bildirimi göster
+        toast.error("Ağ Hatası", {
+          description: "İstek sunucuya ulaşamadı. URL'yi veya internet bağlantınızı kontrol edin.",
+        });
+
+        status = 0; // Ağ hatasını belirtmek için 0 kullan
+        errorData = { 
+          error: errorMessage, 
+          details: "The request could not reach the server. Check the URL and your internet connection." 
+        };
+        errorHeaders = { "content-type": "application/json" };
+        
+        errorResponse = {
+          status: status,
+          data: errorData,
+          headers: errorHeaders,
+          size: "0.2 KB",
+          timeTaken: "0 ms",
+          isNetworkError: true
+        };
+        
+        // For network errors, set the error state
+        setError(errorMessage);
+      } else {
+        // Handle HTTP errors (400, 500, etc.) - Do NOT set the error state for these
+        status = error.response?.status || 500;
+        const errorMessage = error.message || "An error occurred while sending the request";
+        errorData = error.response?.data || { error: errorMessage };
+        errorHeaders = error.response?.headers || { "content-type": "application/json" };
+        
+        // For HTTP errors, do NOT set the error state
+        // setError(errorMessage); - Remove this line
+        
+        errorResponse = {
+          status: status,
+          data: errorData,
+          headers: errorHeaders,
+          size: "0.2 KB",
+          timeTaken: "0 ms"
+        };
+        
+        // Display an appropriate toast message for HTTP errors
+        toast.error(`HTTP Error ${status}`, {
+          description: errorMessage,
+        });
+      }
+      
+      setResponseData(errorResponse);
+      
+      // Do NOT record failed requests in history per requirements
+      // Removed the recordHistory call for failed requests
     }
   }, [selectedRequestId, recordHistory]);
 

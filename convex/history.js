@@ -10,6 +10,9 @@ export const recordHistory = mutation({
         status: v.optional(v.number()),
         duration: v.optional(v.number()),
         responseSize: v.optional(v.number()),
+        responseData: v.optional(v.string()),
+        responseHeaders: v.optional(v.string()),
+        isTruncated: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
         const historyId = await ctx.db.insert("history", {
@@ -18,7 +21,10 @@ export const recordHistory = mutation({
             url: args.url,
             status: args.status,
             duration: args.duration,
+            isTruncated: args.isTruncated,
             responseSize: args.responseSize,
+            responseData: args.responseData,
+            responseHeaders: args.responseHeaders,
             timestamp: Date.now(),
         });
 

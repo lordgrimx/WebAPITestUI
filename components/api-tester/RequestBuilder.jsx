@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,17 @@ import {
 
 // HTTP Methods
 const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"];
+
+// Method color mapping
+const methodColors = {
+  GET: "bg-blue-600 hover:bg-blue-700",
+  POST: "bg-green-600 hover:bg-green-700",
+  PUT: "bg-yellow-600 hover:bg-yellow-700",
+  DELETE: "bg-red-600 hover:bg-red-700",
+  PATCH: "bg-purple-600 hover:bg-purple-700",
+  OPTIONS: "bg-gray-600 hover:bg-gray-700",
+  HEAD: "bg-pink-600 hover:bg-pink-700"
+};
 
 // Params Tab Content
 function ParamsTab({ params, setParams }) {
@@ -597,7 +609,7 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
         />
         <Button 
           onClick={handleSendRequest} 
-          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center"
+          className={`${methodColors[method]} text-white flex items-center`}
         >
           <SendHorizontal className="h-4 w-4 mr-1" /> Send
         </Button>
