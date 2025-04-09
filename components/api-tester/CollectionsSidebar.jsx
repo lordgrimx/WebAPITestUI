@@ -118,16 +118,20 @@ export default function CollectionsSidebar({ setSelectedRequestId, hasError }) {
   const handleAddCollection = async () => {
     if (newCollectionName.trim()) {
       try {
-        if (addCollection) {
-          await addCollection({ name: newCollectionName.trim() });
-        } else {
-          console.warn("addCollection function is not available");
-        }
+        console.log("Trying to add collection:", newCollectionName);
+        const result = await addCollection({
+          name: newCollectionName.trim(),
+          description: ""
+        });
+        console.log("Collection added successfully:", result);
         setNewCollectionName("");
         setIsAddDialogOpen(false);
       } catch (err) {
         console.error("Failed to add collection:", err);
+        alert("Failed to add collection: " + (err.message || "Unknown error"));
       }
+    } else {
+      alert("Please enter a collection name");
     }
   };
 

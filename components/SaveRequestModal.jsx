@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   Dialog,
   DialogContent,
@@ -23,48 +25,72 @@ import {
 } from "@/components/ui/select";
 import { X } from "lucide-react";
 
-export default function SaveRequestModal({ open, setOpen, darkMode, onSaveRequest }) {
+export default function SaveRequestModal({ 
+  open, 
+  setOpen, 
+  darkMode, 
+  onSaveRequest, 
+  selectedCollection,
+  initialData  // Add this prop to receive method, url, etc.
+}) {
   const [requestName, setRequestName] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedCollection, setSelectedCollection] = useState("");
   const [newCollectionName, setNewCollectionName] = useState("");
   const [showNewCollectionInput, setShowNewCollectionInput] = useState(false);
   const [addToFavorites, setAddToFavorites] = useState(false);
+  const [selectedCollectionState, setSelectedCollectionState] = useState(selectedCollection || "");
+
+  const createRequest = useMutation(api.requests.createRequest);
+
+  // Fetch collections from Convex
+  const collections = useQuery(api.collections.getCollections) || [];
   
   const handleCollectionChange = (value) => {
     if (value === "new") {
       setShowNewCollectionInput(true);
     } else {
       setShowNewCollectionInput(false);
-      setSelectedCollection(value);
+      setSelectedCollectionState(value);
     }
   };
   
-  const handleSaveRequest = () => {
-    // Create the request object
-    const requestData = {
-      name: requestName,
-      description,
-      collection: showNewCollectionInput ? newCollectionName : selectedCollection,
-      isFavorite: addToFavorites
-    };
-    
-    // Call the save function passed from parent
-    if (onSaveRequest) {
-      onSaveRequest(requestData);
+  const handleSaveRequest = async () => {
+    try {
+      // Create the request object with required fields
+      const requestData = {
+        collectionId: showNewCollectionInput ? newCollectionName : selectedCollectionState,
+        name: requestName,
+        description: description || undefined, // Only include if it has a value
+        method: initialData?.method || 'GET',
+        url: initialData?.url || '',
+        headers: initialData?.headers ? JSON.stringify(initialData.headers) : undefined,
+        params: initialData?.params ? JSON.stringify(initialData.params) : undefined,
+        body: initialData?.body,
+        isFavorite: addToFavorites || undefined, // Only include if true
+      };
+      
+      // Save to Convex
+      await createRequest(requestData);
+      
+      // Call the save function passed from parent
+      if (onSaveRequest) {
+        onSaveRequest(requestData);
+      }
+      
+      // Close the modal
+      setOpen(false);
+      
+      // Reset form after saving
+      resetForm();
+    } catch (error) {
+      console.error("Failed to save request:", error);
     }
-    
-    // Close the modal
-    setOpen(false);
-    
-    // Reset form after saving
-    resetForm();
   };
   
   const resetForm = () => {
     setRequestName("");
     setDescription("");
-    setSelectedCollection("");
+    setSelectedCollectionState("");
     setNewCollectionName("");
     setShowNewCollectionInput(false);
     setAddToFavorites(false);
@@ -131,7 +157,7 @@ export default function SaveRequestModal({ open, setOpen, darkMode, onSaveReques
                 Collection
               </Label>
               <Select
-                value={selectedCollection}
+                value={selectedCollectionState}
                 onValueChange={handleCollectionChange}
               >
                 <SelectTrigger 
@@ -141,8 +167,11 @@ export default function SaveRequestModal({ open, setOpen, darkMode, onSaveReques
                   <SelectValue placeholder="Select a collection" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user-api">User API</SelectItem>
-                  <SelectItem value="product-api">Product API</SelectItem>
+                  {collections.map((collection) => (
+                    <SelectItem key={collection._id} value={collection._id}>
+                      {collection.name}
+                    </SelectItem>
+                  ))}
                   <SelectItem value="new">+ Create new collection</SelectItem>
                 </SelectContent>
               </Select>

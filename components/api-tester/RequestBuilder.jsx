@@ -40,19 +40,32 @@ const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"]
 // Params Tab Content
 function ParamsTab({ params, setParams }) {
   const handleParamChange = (id, field, value) => {
-    setParams(params.map(p => p.id === id ? { ...p, [field]: value } : p));
+    const updatedParams = params.map(p => 
+      p.id === id ? { ...p, [field]: value } : p
+    );
+    setParams(updatedParams);
   };
 
   const handleCheckboxChange = (id, checked) => {
-     setParams(params.map(p => p.id === id ? { ...p, enabled: checked } : p));
+    const updatedParams = params.map(p => 
+      p.id === id ? { ...p, enabled: checked } : p
+    );
+    setParams(updatedParams);
   };
 
   const addParamRow = () => {
-    setParams([...params, { id: Date.now(), key: "", value: "", enabled: false }]);
+    const newParam = {
+      id: Date.now(),
+      key: "",
+      value: "",
+      enabled: true
+    };
+    setParams(prevParams => [...prevParams, newParam]);
   };
 
   const removeParamRow = (id) => {
-    setParams(params.filter(p => p.id !== id));
+    const updatedParams = params.filter(p => p.id !== id);
+    setParams(updatedParams);
   };
 
   return (
@@ -104,19 +117,32 @@ function ParamsTab({ params, setParams }) {
 // Headers Tab Content
 function HeadersTab({ headers, setHeaders }) {
   const handleHeaderChange = (id, field, value) => {
-    setHeaders(headers.map(h => h.id === id ? { ...h, [field]: value } : h));
+    const updatedHeaders = headers.map(h => 
+      h.id === id ? { ...h, [field]: value } : h
+    );
+    setHeaders(updatedHeaders);
   };
 
   const handleCheckboxChange = (id, checked) => {
-     setHeaders(headers.map(h => h.id === id ? { ...h, enabled: checked } : h));
+    const updatedHeaders = headers.map(h => 
+      h.id === id ? { ...h, enabled: checked } : h
+    );
+    setHeaders(updatedHeaders);
   };
 
   const addHeaderRow = () => {
-    setHeaders([...headers, { id: Date.now(), key: "", value: "", enabled: false }]);
+    const newHeader = {
+      id: Date.now(),
+      key: "",
+      value: "",
+      enabled: true
+    };
+    setHeaders(prevHeaders => [...prevHeaders, newHeader]);
   };
 
   const removeHeaderRow = (id) => {
-    setHeaders(headers.filter(h => h.id !== id));
+    const updatedHeaders = headers.filter(h => h.id !== id);
+    setHeaders(updatedHeaders);
   };
 
   return (
@@ -519,7 +545,7 @@ const makeHttpRequest = async (requestConfig) => {
   }
 };
 
-export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
+export default function RequestBuilder({ selectedRequestId, onSendRequest, onRequestDataChange }) {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("https://api.example.com/v1/users");
   const [params, setParams] = useState([

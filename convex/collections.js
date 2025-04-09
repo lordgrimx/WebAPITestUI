@@ -21,18 +21,32 @@ export const getCollection = query({
 // Add a new collection
 export const addCollection = mutation({
     args: {
-        name: v.string()
+        name: v.string(),
+        description: v.optional(v.string())
     },
     handler: async (ctx, args) => {
+        console.log("Server: Received request to add collection:", args);
+
+        if (!args.name.trim()) {
+            console.error("Server: Collection name is empty");
+            throw new Error("Collection name cannot be empty");
+        }
+
         const now = Date.now();
-
-        const collectionId = await ctx.db.insert("collections", {
-            name: args.name,
-            createdAt: now,
-            updatedAt: now,
-        });
-
-        return collectionId;
+        try {
+            console.log("Server: Inserting new collection into database");
+            const collectionId = await ctx.db.insert("collections", {
+                name: args.name,
+                description: args.description || "",
+                createdAt: now,
+                updatedAt: now,
+            });
+            console.log("Server: Collection created with ID:", collectionId);
+            return collectionId;
+        } catch (error) {
+            console.error("Server: Database error while creating collection:", error);
+            throw new Error(`Failed to create collection: ${error.message}`);
+        }
     },
 });
 

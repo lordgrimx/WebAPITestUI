@@ -12,85 +12,62 @@ import { api } from "@/convex/_generated/api";
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
+import Header from "../Header";
 
 export default function ApiTester() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
-  const [responseData, setResponseData] = useState([]); // Array olarak değiştirdik
+  const [selectedCollectionId, setSelectedCollectionId] = useState(null);
+  const [responseData, setResponseData] = useState([]);
   const [error, setError] = useState(null);
-  
-  // Add the recordHistory mutation
+  const [sidebarError, setSidebarError] = useState(null);
+  const [currentRequestData, setCurrentRequestData] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+
   const recordHistory = useMutation(api.history.recordHistory);
 
-  // Use useCallback to prevent function recreation on each render
-  const handleSendRequest = useCallback(async (requestData) => {
+  const handleSendRequest = useCallback(async (response) => {
     try {
-      if (requestData.requestNumber === 1) {
-        setResponseData([]); // İlk istek geldiğinde array'i temizle
+      if (response.requestNumber === 1) {
+        setResponseData([]);
       }
 
       setError(null);
-      const startTime = Date.now();
-      
-      // Simulate API call delay with random timing for each request
-      await new Promise(resolve => setTimeout(resolve, 200 + Math.random() * 300));
-      
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-      
-      // Create a mock response based on the request
-      const mockResponse = {
-        status: 200,
-        statusText: "OK",
-        data: requestData.data || {
-          token: "mock-token",
-          user: {
-            id: "mock-id",
-            email: "mock@example.com",
-            fullName: "Mock User"
-          }
-        },
-        headers: {
-          "content-type": "application/json",
-          "x-response-time": `${duration}ms`,
-          "x-request-number": `${requestData.requestNumber}/${requestData.totalRequests}`
-        },
-        timeTaken: `${duration} ms`,
-        requestNumber: requestData.requestNumber,
-        totalRequests: requestData.totalRequests
-      };
-      
-      setResponseData(prev => [...prev, mockResponse]); // Array'e yeni yanıtı ekle
-      
-      // Record this request in history
+
+      setResponseData((prev) => [...prev, response]);
+      setCurrentRequestData(response);
+
       await recordHistory({
         requestId: selectedRequestId || undefined,
-        method: requestData.method,
-        url: requestData.url,
-        status: mockResponse.status,
-        duration: duration,
+        method: response.method || "GET",
+        url: response.url || "",
+        status: response.status,
+        duration: parseInt(response.timeTaken),
         responseSize: 1200,
       });
-      
     } catch (error) {
-      console.error("Error sending request:", error);
-      setError(error.message || "An error occurred while sending the request");
-      setResponseData(prev => [...prev, {
-        status: 500,
-        data: { error: "Failed to send request" },
-        headers: { "content-type": "application/json" },
-        size: "0.2 KB",
-        timeTaken: "0 ms"
-      }]);
-      
-      // Still record the failed request in history
+      console.error("Error handling request:", error);
+      setError(error.message || "An error occurred while handling the request");
+      setResponseData((prev) => [
+        ...prev,
+        {
+          status: 500,
+          data: { error: "Failed to handle request" },
+          headers: { "content-type": "application/json" },
+          size: "0.2 KB",
+          timeTaken: "0 ms",
+          method: response.method || "GET",
+          url: response.url || "",
+        },
+      ]);
+
       try {
         await recordHistory({
           requestId: selectedRequestId || undefined,
-          method: requestData.method,
-          url: requestData.url,
+          method: response.method || "GET",
+          url: response.url || "",
           status: 500,
           duration: 0,
-          responseSize: 200, // 0.2 KB in bytes
+          responseSize: 200,
         });
       } catch (historyError) {
         console.error("Failed to record request history:", historyError);
@@ -98,40 +75,43 @@ export default function ApiTester() {
     }
   }, [selectedRequestId, recordHistory]);
 
-  // Use useCallback for setSelectedRequestId to prevent re-renders
-  const handleRequestSelect = useCallback((id) => {
-    setSelectedRequestId(id);
+  const handleRequestSelect = useCallback((requestId) => {
+    setSelectedRequestId(requestId);
+    setResponseData([]);
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-gray-950">
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="flex-1"
-      >
-        {/* Left Panel: Collections and History */}
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-          <CollectionsSidebar 
-            setSelectedRequestId={handleRequestSelect} 
-            hasError={!!error}
-          />
-        </ResizablePanel>
-        <ResizableHandle withHandle />
+    <>
+      <Header
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        currentRequestData={currentRequestData}
+      />
+      <div className="h-screen flex flex-col bg-white dark:bg-gray-950">
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+            <CollectionsSidebar
+              setSelectedRequestId={handleRequestSelect}
+              hasError={!!sidebarError}
+              onError={setSidebarError}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
 
-        {/* Middle Panel: Request Builder */}
-        <ResizablePanel defaultSize={40} minSize={30}>
-          <RequestBuilder 
-            selectedRequestId={selectedRequestId} 
-            onSendRequest={handleSendRequest} 
-          />
-        </ResizablePanel>
-        <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={40} minSize={30}>
+            <RequestBuilder
+              selectedRequestId={selectedRequestId}
+              onSendRequest={handleSendRequest}
+              onRequestDataChange={(data) => setCurrentRequestData(data)}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
 
-        {/* Right Panel: Response */}
-        <ResizablePanel defaultSize={40} minSize={25}>
-          <ResponseDisplay responseData={responseData} />
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    </div>
+          <ResizablePanel defaultSize={40} minSize={25}>
+            <ResponseDisplay responseData={responseData} />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </div>
+    </>
   );
 }

@@ -28,15 +28,27 @@ import GenerateCodeModal from "@/components/GenerateCodeModal";
 import SaveRequestModal from "@/components/SaveRequestModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
 
-export default function Header({ darkMode, setDarkMode }) {
+export default function Header({ darkMode, setDarkMode, currentRequestData }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
   
-  const handleSaveRequest = (requestData) => {
-    console.log('Saving request:', requestData);
-    // Here you would implement the actual saving logic
-    // For example, calling an API endpoint or updating state
+  const handleSaveRequest = async (requestData) => {
+    try {
+      const fullRequestData = {
+        ...requestData,
+        method: currentRequestData?.method || 'GET',
+        url: currentRequestData?.url || '',
+        headers: currentRequestData?.headers ? JSON.stringify(currentRequestData.headers) : undefined,
+        params: currentRequestData?.params ? JSON.stringify(currentRequestData.params) : undefined,
+        body: currentRequestData?.body,
+      };
+
+      // Call the API to save the request
+      console.log('Saving request:', fullRequestData);
+    } catch (error) {
+      console.error('Failed to save request:', error);
+    }
   };
 
   return (
@@ -57,6 +69,7 @@ export default function Header({ darkMode, setDarkMode }) {
         setOpen={setShowSaveRequest}
         darkMode={darkMode}
         onSaveRequest={handleSaveRequest}
+        initialData={currentRequestData}
       />
       <header
         className={`${
