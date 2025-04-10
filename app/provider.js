@@ -7,6 +7,11 @@ import { AuthProvider } from "@/lib/auth-context"
 import LoadingWrapper from "@/components/LoadingWrapper"
 
 function Provider({ children }) {
+    // Get the URL for Auth0 redirects - using the current URL in the browser
+    const redirectUri = typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_AUTH0_REDIRECT_URI || 'http://localhost:3000';
+
     return (
         <ConvexAuthProvider client={convex}>
             <AuthProvider>
