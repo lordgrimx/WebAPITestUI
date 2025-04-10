@@ -12,6 +12,7 @@ import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
+import MonitorsPanel from "./MonitorsPanel";
 
 export default function ApiTester() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
@@ -20,8 +21,19 @@ export default function ApiTester() {
   const [sidebarError, setSidebarError] = useState(null);
   const [currentRequestData, setCurrentRequestData] = useState(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [authToken, setAuthToken] = useState(localStorage.getItem('authToken') || '');
 
   const recordHistory = useMutation(api.history.recordHistory);
+
+  // Add token persistence
+  const updateAuthToken = useCallback((token) => {
+    setAuthToken(token);
+    if (token) {
+      localStorage.setItem('authToken', token);
+    } else {
+      localStorage.removeItem('authToken');
+    }
+  }, []);
 
   // Memoize the request data handler
   const handleRequestDataChange = useCallback((data) => {
@@ -115,6 +127,8 @@ export default function ApiTester() {
               selectedRequestId={selectedRequestId}
               onSendRequest={handleSendRequest}
               onRequestDataChange={handleRequestDataChange}
+              authToken={authToken}
+              onUpdateAuthToken={updateAuthToken}
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -123,6 +137,9 @@ export default function ApiTester() {
             <ResponseDisplay responseData={responseData} />
           </ResizablePanel>
         </ResizablePanelGroup>
+        <div className="h-64 border-t">
+          <MonitorsPanel />
+        </div>
       </div>
     </>
   );

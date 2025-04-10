@@ -193,7 +193,7 @@ function HeadersTab({ headers, setHeaders }) {
 }
 
 // Auth Tab Content
-function AuthTab({ auth, setAuth }) {
+function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken }) {
   const authTypes = [
     { value: "none", label: "No Auth" },
     { value: "basic", label: "Basic Auth" },
@@ -202,11 +202,19 @@ function AuthTab({ auth, setAuth }) {
     { value: "oauth2", label: "OAuth 2.0" }
   ];
 
+  const [tokenInput, setTokenInput] = useState(authToken || '');
+
   const handleAuthTypeChange = (type) => {
     setAuth({
       ...auth,
       type
     });
+  };
+
+  const handleTokenChange = (token) => {
+    setTokenInput(token);
+    onUpdateAuthToken?.(token);
+    setAuth({ ...auth, token });
   };
 
   return (
@@ -267,20 +275,20 @@ function AuthTab({ auth, setAuth }) {
       {auth.type === "bearer" && (
         <div>
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-            Token
+            Bearer Token
           </label>
           <div className="relative">
             <Input
               type="text"
-              placeholder="Bearer token"
-              value={auth.token || ""}
-              onChange={(e) => setAuth({ ...auth, token: e.target.value })}
-                className="pl-8"
+              placeholder="Enter your bearer token"
+              value={tokenInput}
+              onChange={(e) => handleTokenChange(e.target.value)}
+              className="pl-8"
             />
             <Key className="h-4 w-4 absolute left-2 top-2 text-gray-400" />
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            The token will be prefixed with 'Bearer' in the Authorization header
+            Token will be included in Authorization header
           </p>
         </div>
       )}
@@ -471,7 +479,7 @@ pm.test("Response contains user data", function() {
 }
 
 // Fetch API kullanarak gerçek HTTP isteği yapacak fonksiyon
-const makeHttpRequest = async (requestConfig) => {
+const makeHttpRequest = async (requestConfig, authToken) => {
   const {
     method,
     url,
@@ -496,6 +504,11 @@ const makeHttpRequest = async (requestConfig) => {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
     };
+
+    // Add bearer token if available
+    if (authToken) {
+      requestHeaders['Authorization'] = `Bearer ${authToken}`;
+    }
 
     const response = await fetch(urlObj.toString(), {
       method: method,
@@ -546,7 +559,13 @@ const makeHttpRequest = async (requestConfig) => {
   }
 };
 
-export default function RequestBuilder({ selectedRequestId, onSendRequest, onRequestDataChange }) {
+export default function RequestBuilder({ 
+  selectedRequestId, 
+  onSendRequest, 
+  onRequestDataChange, 
+  authToken, 
+  onUpdateAuthToken 
+}) {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("https://api.example.com/v1/users");
   const [debouncedUrl, setDebouncedUrl] = useState(url);
@@ -686,7 +705,7 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest, onReq
         totalRequests: parallelRequestCount
       };
       
-      return makeHttpRequest(requestObject)
+      return makeHttpRequest(requestObject, authToken)
         .then(response => {
           // Clear any previous errors
           setError(null);
@@ -717,7 +736,7 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest, onReq
     }
     
     setDialogOpen(false);
-  }, [method, url, enabledParams, enabledHeaders, body, auth, tests, parallelRequestCount, onSendRequest]);
+  }, [method, url, enabledParams, enabledHeaders, body, auth, tests, parallelRequestCount, onSendRequest, authToken]);
 
   // Update form when selectedRequestId changes and data is loaded
   useEffect(() => {
@@ -849,7 +868,7 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest, onReq
           </div>
         </TabsContent>
         <TabsContent value="auth" className="flex-1 overflow-auto">
-          <AuthTab auth={auth} setAuth={setAuth} />
+          <AuthTab auth={auth} setAuth={setAuth} authToken={authToken} onUpdateAuthToken={onUpdateAuthToken} />
         </TabsContent>
         <TabsContent value="tests" className="flex-1 overflow-auto">
           <TestsTab tests={tests} setTests={setTests} />
