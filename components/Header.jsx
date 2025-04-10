@@ -29,7 +29,8 @@ import SaveRequestModal from "@/components/SaveRequestModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import { useAuth } from "@/lib/auth-context";
 
-export default function Header({ darkMode, setDarkMode, currentRequestData,openSignupModal, openLoginModal }) {
+// Accept currentRequestData prop from ApiTester
+export default function Header({ darkMode, setDarkMode, currentRequestData, openSignupModal, openLoginModal }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
@@ -160,6 +161,24 @@ export default function Header({ darkMode, setDarkMode, currentRequestData,openS
         open={showGenerateCode}
         setOpen={setShowGenerateCode}
         darkMode={darkMode}
+        // Pass data from currentRequestData to the modal
+        selectedMethod={currentRequestData?.method || "GET"}
+        url={currentRequestData?.url || ""}
+        // Attempt to parse params if they exist and are a string, otherwise pass empty array
+        parameterRows={
+          currentRequestData?.params && typeof currentRequestData.params === 'string'
+            ? (() => {
+                try {
+                  const parsed = JSON.parse(currentRequestData.params);
+                  // Ensure it's an array before passing
+                  return Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                  console.error("Error parsing params for GenerateCodeModal:", e);
+                  return []; // Return empty array on parsing error
+                }
+              })()
+            : [] // Default to empty array if params don't exist or aren't a string
+        }
       />
       <SaveRequestModal
         open={showSaveRequest}
