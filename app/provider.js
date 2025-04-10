@@ -1,27 +1,27 @@
 'use client'
 import React from 'react'
 import { ThemeProvider as NextThemesProvider } from "next-themes"
-import { ConvexProvider } from "convex/react"
 import { convex } from "@/convex/client"
+import { ConvexAuthProvider } from "@convex-dev/auth/react"
 import { AuthProvider } from "@/lib/auth-context"
 import LoadingWrapper from "@/components/LoadingWrapper"
 
 function Provider({ children }) {
     return (
-        <ConvexProvider client={convex}>
-            <NextThemesProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-                disableTransitionOnChange
-            >
-                <AuthProvider>
+        <ConvexAuthProvider client={convex}>
+            <AuthProvider>
+                <NextThemesProvider
+                    attribute="class"
+                    defaultTheme="system"
+                    enableSystem
+                    disableTransitionOnChange
+                >
                     <LoadingWrapper>
                         {children}
                     </LoadingWrapper>
-                </AuthProvider>
-            </NextThemesProvider>
-        </ConvexProvider>
+                </NextThemesProvider>
+            </AuthProvider>
+        </ConvexAuthProvider>
     )
 }
 

@@ -1,17 +1,23 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { authTables } from "@convex-dev/auth/server";
 
 export default defineSchema({
+    // Include Convex Auth tables
+    ...authTables,
+
     // Users table for authentication and user data
     users: defineTable({
         name: v.string(),
         email: v.string(),
-        passwordHash: v.string(),
+        tokenIdentifier: v.string(), // For Convex Auth - unique ID from the auth provider
         profileImage: v.optional(v.string()),
         role: v.string(), // "user", "admin", etc.
         createdAt: v.number(),
         lastLogin: v.optional(v.number()),
-    }).index("by_email", ["email"]),
+    })
+        .index("by_email", ["email"])
+        .index("by_token", ["tokenIdentifier"]),
 
     // Mevcut 'apis' tablosunu koruyalım, belki başka bir yerde kullanılıyordur.
     apis: defineTable({
