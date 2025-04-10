@@ -1,6 +1,6 @@
 import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import generateToken from "../lib/jwt-utils"; // Import the JWT utility functions
 
 // Helper function to hash passwords (in a real app, use a proper hashing library)
 function hashPassword(password) {
@@ -8,30 +8,48 @@ function hashPassword(password) {
     return password + "_hashed";
 }
 
-
 // Register a new user
 export const register = mutation({
     args: {
         name: v.string(),
         email: v.string(),
-        password: v.string(),
     },
+    // This will be updated to use Convex Auth context in a moment
     handler: async (ctx, args) => {
-        // Check if user already exists
+        // Get auth info
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Not authenticated");
+        }
+
+        const tokenIdentifier = identity.tokenIdentifier;
+
+        // Check if user already exists by token identifier
         const existingUser = await ctx.db
             .query("users")
-            .withIndex("by_email", q => q.eq("email", args.email))
+            .withIndex("by_token", q => q.eq("tokenIdentifier", tokenIdentifier))
             .first();
 
         if (existingUser) {
-            throw new Error("User with this email already exists");
+            // Update last login time
+            await ctx.db.patch(existingUser._id, {
+                lastLogin: Date.now(),
+            });
+
+            return {
+                userId: existingUser._id,
+                name: existingUser.name,
+                email: existingUser.email,
+                role: existingUser.role,
+                profileImage: existingUser.profileImage,
+            };
         }
 
         // Create new user
         const userId = await ctx.db.insert("users", {
             name: args.name,
             email: args.email,
-            passwordHash: hashPassword(args.password),
+            tokenIdentifier,
             role: "user", // Default role
             createdAt: Date.now(),
         });
@@ -40,8 +58,8 @@ export const register = mutation({
     },
 });
 
-// Login user (mutation)
-export const loginMutation = mutation({
+// Login user
+export const login = mutation({
     args: {
         email: v.string(),
         password: v.string(),
@@ -73,48 +91,34 @@ export const loginMutation = mutation({
             email: user.email,
             role: user.role,
             profileImage: user.profileImage,
+            token, // Include token in the response
         };
     },
 });
 
-// Login user (action)
-export const login = action({
-    args: {
-        email: v.string(),
-        password: v.string(),
-    },
-    handler: async (ctx, args) => {
-        // Kullanıcı bilgilerini al
-        const userData = await ctx.runMutation(internal.users.loginMutation, args);
-        
-        // Token oluştur
-        const tokenData = await ctx.runAction(internal.generateToken.generateToken, {
-            userId: userData.userId.toString(),
-        });
-
-        return {
-            ...userData,
-            token: tokenData.token
-        };
-    },
-});
-
-// Get current user
+// Get the currently authenticated user
 export const getMe = query({
-    args: {
-        userId: v.optional(v.id("users")),
-    },
-    handler: async (ctx, args) => {
-        if (!args.userId) {
+    args: {},
+    handler: async (ctx) => {
+        // Get auth info from Convex
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
             return null;
         }
 
-        const user = await ctx.db.get(args.userId);
+        const tokenIdentifier = identity.tokenIdentifier;
+
+        // Find user by token identifier
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_token", q => q.eq("tokenIdentifier", tokenIdentifier))
+            .first();
+
         if (!user) {
             return null;
         }
 
-        // Return user data (excluding password hash)
+        // Return user data
         return {
             userId: user._id,
             name: user.name,
@@ -128,48 +132,43 @@ export const getMe = query({
 // Update user profile
 export const updateProfile = mutation({
     args: {
-        userId: v.id("users"),
         name: v.optional(v.string()),
         profileImage: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const user = await ctx.db.get(args.userId);
+        // Get auth info
+        const identity = await ctx.auth.getUserIdentity();
+        if (!identity) {
+            throw new Error("Not authenticated");
+        }
+
+        const tokenIdentifier = identity.tokenIdentifier;
+
+        // Find user by token identifier
+        const user = await ctx.db
+            .query("users")
+            .withIndex("by_token", q => q.eq("tokenIdentifier", tokenIdentifier))
+            .first();
+
         if (!user) {
             throw new Error("User not found");
         }
 
+        // Update profile fields
         const updates = {};
         if (args.name !== undefined) updates.name = args.name;
         if (args.profileImage !== undefined) updates.profileImage = args.profileImage;
 
-        await ctx.db.patch(args.userId, updates);
-        return { success: true };
+        // Only update if there are changes
+        if (Object.keys(updates).length > 0) {
+            await ctx.db.patch(user._id, updates);
+        }
+        return {
+            userId: user._id,
+            ...updates
+        };
     },
 });
 
-// Change password
-export const changePassword = mutation({
-    args: {
-        userId: v.id("users"),
-        currentPassword: v.string(),
-        newPassword: v.string(),
-    },
-    handler: async (ctx, args) => {
-        const user = await ctx.db.get(args.userId);
-        if (!user) {
-            throw new Error("User not found");
-        }
-
-        // Verify current password
-        if (user.passwordHash !== hashPassword(args.currentPassword)) {
-            throw new Error("Current password is incorrect");
-        }
-
-        // Update password
-        await ctx.db.patch(args.userId, {
-            passwordHash: hashPassword(args.newPassword),
-        });
-
-        return { success: true };
-    },
-});
+// Remove the changePassword mutation as we no longer need it with Auth0
+// Password reset and changes will be handled through Auth0
