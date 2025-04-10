@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   Dialog,
   DialogContent,
@@ -23,48 +25,66 @@ import {
 } from "@/components/ui/select";
 import { X } from "lucide-react";
 
-export default function SaveRequestModal({ open, setOpen, darkMode, onSaveRequest }) {
+export default function SaveRequestModal({ 
+  open, 
+  setOpen, 
+  darkMode, 
+  onSaveRequest, 
+  selectedCollection,
+  initialData 
+}) {
   const [requestName, setRequestName] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedCollection, setSelectedCollection] = useState("");
   const [newCollectionName, setNewCollectionName] = useState("");
   const [showNewCollectionInput, setShowNewCollectionInput] = useState(false);
   const [addToFavorites, setAddToFavorites] = useState(false);
+  const [selectedCollectionState, setSelectedCollectionState] = useState(selectedCollection || "");
+
+  const createRequest = useMutation(api.requests.createRequest);
+
+  const collections = useQuery(api.collections.getCollections) || [];
   
   const handleCollectionChange = (value) => {
     if (value === "new") {
       setShowNewCollectionInput(true);
     } else {
       setShowNewCollectionInput(false);
-      setSelectedCollection(value);
+      setSelectedCollectionState(value);
     }
   };
   
-  const handleSaveRequest = () => {
-    // Create the request object
-    const requestData = {
-      name: requestName,
-      description,
-      collection: showNewCollectionInput ? newCollectionName : selectedCollection,
-      isFavorite: addToFavorites
-    };
-    
-    // Call the save function passed from parent
-    if (onSaveRequest) {
-      onSaveRequest(requestData);
+  const handleSaveRequest = async () => {
+    try {
+      const requestData = {
+        collectionId: showNewCollectionInput ? newCollectionName : selectedCollectionState,
+        name: requestName,
+        description: description || undefined,
+        method: initialData?.method || 'GET',
+        url: initialData?.url || '',
+        headers: initialData?.headers || undefined,
+        params: initialData?.params || undefined,
+        body: initialData?.body || undefined,
+        isFavorite: addToFavorites || undefined,
+      };
+      
+      console.log("Saving request data:", requestData);
+      
+      const result = await createRequest(requestData);
+      
+      setOpen(false);
+      resetForm();
+      
+      return result;
+    } catch (error) {
+      console.error("Failed to save request:", error);
+      throw error;
     }
-    
-    // Close the modal
-    setOpen(false);
-    
-    // Reset form after saving
-    resetForm();
   };
   
   const resetForm = () => {
     setRequestName("");
     setDescription("");
-    setSelectedCollection("");
+    setSelectedCollectionState("");
     setNewCollectionName("");
     setShowNewCollectionInput(false);
     setAddToFavorites(false);
@@ -131,7 +151,7 @@ export default function SaveRequestModal({ open, setOpen, darkMode, onSaveReques
                 Collection
               </Label>
               <Select
-                value={selectedCollection}
+                value={selectedCollectionState}
                 onValueChange={handleCollectionChange}
               >
                 <SelectTrigger 
@@ -141,8 +161,11 @@ export default function SaveRequestModal({ open, setOpen, darkMode, onSaveReques
                   <SelectValue placeholder="Select a collection" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user-api">User API</SelectItem>
-                  <SelectItem value="product-api">Product API</SelectItem>
+                  {collections.map((collection) => (
+                    <SelectItem key={collection._id} value={collection._id}>
+                      {collection.name}
+                    </SelectItem>
+                  ))}
                   <SelectItem value="new">+ Create new collection</SelectItem>
                 </SelectContent>
               </Select>

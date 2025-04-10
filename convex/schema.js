@@ -23,6 +23,7 @@ export default defineSchema({
     // API Test Aracı için Koleksiyonlar
     collections: defineTable({
         name: v.string(),
+        description: v.optional(v.string()),
         createdAt: v.number(),
         updatedAt: v.number(),
     }).index("by_name", ["name"]), // İsimle arama için index
@@ -30,12 +31,14 @@ export default defineSchema({
     // API Test Aracı için İstekler
     requests: defineTable({
         name: v.string(),
-        collectionId: v.id("collections"), // Bir koleksiyona ait olabilir
-        method: v.string(), // GET, POST, PUT, DELETE, etc.
+        description: v.optional(v.string()),
+        collectionId: v.id("collections"),
+        method: v.string(),
         url: v.string(),
-        headers: v.optional(v.string()), // JSON stringified headers
-        params: v.optional(v.string()), // JSON stringified query parameters
-        body: v.optional(v.string()), // Request body
+        headers: v.optional(v.string()),
+        params: v.optional(v.string()),
+        body: v.optional(v.string()),
+        isFavorite: v.optional(v.boolean()),
         createdAt: v.number(),
         updatedAt: v.number(),
     })

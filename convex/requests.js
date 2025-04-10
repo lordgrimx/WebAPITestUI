@@ -27,14 +27,17 @@ export const createRequest = mutation({
     args: {
         collectionId: v.id("collections"),
         name: v.string(),
+        description: v.optional(v.string()),
         method: v.string(),
         url: v.string(),
         headers: v.optional(v.string()),
         params: v.optional(v.string()),
         body: v.optional(v.string()),
+        isFavorite: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
         const now = Date.now();
+        console.log("Creating request with args:", args);
 
         // Ensure collection exists
         const collection = await ctx.db.get(args.collectionId);
@@ -43,13 +46,7 @@ export const createRequest = mutation({
         }
 
         const requestId = await ctx.db.insert("requests", {
-            collectionId: args.collectionId,
-            name: args.name,
-            method: args.method,
-            url: args.url,
-            headers: args.headers,
-            params: args.params,
-            body: args.body,
+            ...args,
             createdAt: now,
             updatedAt: now,
         });
@@ -102,15 +99,14 @@ export const recordHistory = mutation({
         status: v.optional(v.number()),
         duration: v.optional(v.number()),
         responseSize: v.optional(v.number()),
+        headers: v.optional(v.string()),
+        params: v.optional(v.string()),
+        body: v.optional(v.string()),
+        name: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const historyId = await ctx.db.insert("history", {
-            requestId: args.requestId,
-            method: args.method,
-            url: args.url,
-            status: args.status,
-            duration: args.duration,
-            responseSize: args.responseSize,
+            ...args,
             timestamp: Date.now(),
         });
 

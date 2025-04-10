@@ -6,8 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ResponseDisplay({ responseData }) {
-  // If no response data yet, show placeholder
-  if (!responseData) {
+  if (!responseData || responseData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
         <div className="text-gray-400 mb-4">
@@ -43,12 +42,8 @@ export default function ResponseDisplay({ responseData }) {
     <div className="flex flex-col h-full p-4">      {/* Status Bar */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
-          <Badge variant="default"
-            className={`${isSuccessStatus 
-              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" 
-              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"}`}
-          >
-            Response {responseData.status}
+          <Badge variant="default" className="bg-blue-100 text-blue-800">
+            {responseData.length} Responses
           </Badge>
           <span className="text-xs text-gray-500">{responseData.timeTaken}, {responseData.size}</span>
           {responseData.isTruncated && (

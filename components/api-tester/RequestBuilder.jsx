@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,6 +34,7 @@ import {
   DialogTitle,
   DialogClose
 } from "@/components/ui/dialog";
+import { useDebounce } from "@/hooks/useDebounce"; // Add this import
 
 // HTTP Methods
 const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"];
@@ -52,19 +53,32 @@ const methodColors = {
 // Params Tab Content
 function ParamsTab({ params, setParams }) {
   const handleParamChange = (id, field, value) => {
-    setParams(params.map(p => p.id === id ? { ...p, [field]: value } : p));
+    const updatedParams = params.map(p => 
+      p.id === id ? { ...p, [field]: value } : p
+    );
+    setParams(updatedParams);
   };
 
   const handleCheckboxChange = (id, checked) => {
-     setParams(params.map(p => p.id === id ? { ...p, enabled: checked } : p));
+    const updatedParams = params.map(p => 
+      p.id === id ? { ...p, enabled: checked } : p
+    );
+    setParams(updatedParams);
   };
 
   const addParamRow = () => {
-    setParams([...params, { id: Date.now(), key: "", value: "", enabled: false }]);
+    const newParam = {
+      id: Date.now(),
+      key: "",
+      value: "",
+      enabled: true
+    };
+    setParams(prevParams => [...prevParams, newParam]);
   };
 
   const removeParamRow = (id) => {
-    setParams(params.filter(p => p.id !== id));
+    const updatedParams = params.filter(p => p.id !== id);
+    setParams(updatedParams);
   };
 
   return (
@@ -116,19 +130,32 @@ function ParamsTab({ params, setParams }) {
 // Headers Tab Content
 function HeadersTab({ headers, setHeaders }) {
   const handleHeaderChange = (id, field, value) => {
-    setHeaders(headers.map(h => h.id === id ? { ...h, [field]: value } : h));
+    const updatedHeaders = headers.map(h => 
+      h.id === id ? { ...h, [field]: value } : h
+    );
+    setHeaders(updatedHeaders);
   };
 
   const handleCheckboxChange = (id, checked) => {
-     setHeaders(headers.map(h => h.id === id ? { ...h, enabled: checked } : h));
+    const updatedHeaders = headers.map(h => 
+      h.id === id ? { ...h, enabled: checked } : h
+    );
+    setHeaders(updatedHeaders);
   };
 
   const addHeaderRow = () => {
-    setHeaders([...headers, { id: Date.now(), key: "", value: "", enabled: false }]);
+    const newHeader = {
+      id: Date.now(),
+      key: "",
+      value: "",
+      enabled: true
+    };
+    setHeaders(prevHeaders => [...prevHeaders, newHeader]);
   };
 
   const removeHeaderRow = (id) => {
-    setHeaders(headers.filter(h => h.id !== id));
+    const updatedHeaders = headers.filter(h => h.id !== id);
+    setHeaders(updatedHeaders);
   };
 
   return (
@@ -178,7 +205,7 @@ function HeadersTab({ headers, setHeaders }) {
 }
 
 // Auth Tab Content
-function AuthTab({ auth, setAuth }) {
+function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken }) {
   const authTypes = [
     { value: "none", label: "No Auth" },
     { value: "basic", label: "Basic Auth" },
@@ -187,11 +214,19 @@ function AuthTab({ auth, setAuth }) {
     { value: "oauth2", label: "OAuth 2.0" }
   ];
 
+  const [tokenInput, setTokenInput] = useState(authToken || '');
+
   const handleAuthTypeChange = (type) => {
     setAuth({
       ...auth,
       type
     });
+  };
+
+  const handleTokenChange = (token) => {
+    setTokenInput(token);
+    onUpdateAuthToken?.(token);
+    setAuth({ ...auth, token });
   };
 
   return (
@@ -252,20 +287,20 @@ function AuthTab({ auth, setAuth }) {
       {auth.type === "bearer" && (
         <div>
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-            Token
+            Bearer Token
           </label>
           <div className="relative">
             <Input
               type="text"
-              placeholder="Bearer token"
-              value={auth.token || ""}
-              onChange={(e) => setAuth({ ...auth, token: e.target.value })}
+              placeholder="Enter your bearer token"
+              value={tokenInput}
+              onChange={(e) => handleTokenChange(e.target.value)}
               className="pl-8"
             />
             <Key className="h-4 w-4 absolute left-2 top-2 text-gray-400" />
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            The token will be prefixed with 'Bearer' in the Authorization header
+            Token will be included in Authorization header
           </p>
         </div>
       )}
@@ -455,9 +490,97 @@ pm.test("Response contains user data", function() {
   );
 }
 
-export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
+// Fetch API kullanarak gerçek HTTP isteği yapacak fonksiyon
+const makeHttpRequest = async (requestConfig, authToken) => {
+  const {
+    method,
+    url,
+    params,
+    headers,
+    body,
+    auth,
+    requestNumber,
+    totalRequests
+  } = requestConfig;
+
+  try {
+    const urlObj = new URL(url);
+    Object.entries(params).forEach(([key, value]) => {
+      urlObj.searchParams.append(key, value);
+    });
+
+    const startTime = Date.now();
+
+    const requestHeaders = {
+      ...headers,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    // Add bearer token if available
+    if (authToken) {
+      requestHeaders['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    const response = await fetch(urlObj.toString(), {
+      method: method,
+      headers: requestHeaders,
+      body: method !== 'GET' ? body : undefined,
+      mode: 'cors',
+      credentials: 'same-origin',
+    });
+
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+
+    let responseData;
+    const contentType = response.headers.get('content-type');
+    
+    try {
+      // Her zaman önce JSON olarak parse etmeyi dene
+      responseData = await response.json();
+    } catch (e) {
+      // JSON parse başarısız olursa text olarak al
+      responseData = await response.text();
+    }
+
+    const responseHeaders = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
+
+    console.log("MakeHttp :",responseData);
+    
+
+    return {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+      data: responseData, // Direkt responseData'yı kullan
+      size: typeof responseData === 'string' ? responseData.length : JSON.stringify(responseData).length,
+      timeTaken: `${duration} ms`,
+      requestNumber,
+      totalRequests
+    };
+
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes('CORS')) {
+      throw new Error(`CORS Error: The server must allow requests from ${window.location.origin}`);
+    }
+    throw new Error(`Request failed: ${error.message}`);
+  }
+};
+
+export default function RequestBuilder({ 
+  selectedRequestId, 
+  onSendRequest, 
+  onRequestDataChange, 
+  authToken, 
+  onUpdateAuthToken 
+}) {
   const [method, setMethod] = useState("GET");
   const [url, setUrl] = useState("https://api.example.com/v1/users");
+  const [debouncedUrl, setDebouncedUrl] = useState(url);
   const [params, setParams] = useState([
     { id: 1, key: "limit", value: "10", enabled: true },
     { id: 2, key: "", value: "", enabled: false },
@@ -470,113 +593,213 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
   const [auth, setAuth] = useState({ type: "none" });
   const [tests, setTests] = useState({ script: "", results: [] });
   const [error, setError] = useState(null);
+  const [isValidatingUrl, setIsValidatingUrl] = useState(false);
+  const [urlError, setUrlError] = useState(null);
   
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [parallelRequestCount, setParallelRequestCount] = useState(1);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   
-  // Fix for "Cannot convert undefined or null to object" error
+  // Memoize request data query
   const requestData = useQuery(
     api?.requests?.getRequestById, 
     selectedRequestId ? { id: selectedRequestId } : "skip"
   );
-  
+
+  // URL validation
+  const validateUrl = useCallback(async (url) => {
+    if (!url) return;
+    
+    setIsValidatingUrl(true);
+    setUrlError(null);
+    
+    try {
+      const urlObj = new URL(url);
+      // Optional: Add more validation logic here
+    } catch (error) {
+      setUrlError('Invalid URL format');
+    } finally {
+      setIsValidatingUrl(false);
+    }
+  }, []);
+
+  // Debounce URL updates
+  const debouncedSetUrl = useCallback((value) => {
+    requestAnimationFrame(() => {
+      setUrl(value);
+    });
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      validateUrl(url);
+      setDebouncedUrl(url);
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [url, validateUrl]);
+
+  // Memoize enabled params and headers for executeRequest
+  const enabledParams = useMemo(() => 
+    params
+      .filter(p => p.enabled && p.key.trim())
+      .reduce((obj, param) => {
+        obj[param.key] = param.value;
+        return obj;
+      }, {}),
+    [params]
+  );
+
+  const enabledHeaders = useMemo(() => 
+    headers
+      .filter(h => h.enabled && h.key.trim())
+      .reduce((obj, header) => {
+        obj[header.key] = header.value;
+        return obj;
+      }, {}),
+    [headers]
+  );
+
+  // Memoize the current request data
+  const currentData = useMemo(() => ({
+    method,
+    url: debouncedUrl, // Use debounced URL here
+    headers: headers.filter(h => h.enabled && h.key).length > 0 
+      ? JSON.stringify(headers.filter(h => h.enabled && h.key))
+      : undefined,
+    params: params.filter(p => p.enabled && p.key).length > 0
+      ? JSON.stringify(params.filter(p => p.enabled && p.key))
+      : undefined,
+    body: method !== "GET" ? body : undefined
+  }), [method, debouncedUrl, headers, params, body]); // Use debounced URL in dependencies
+
+  // Add this new useEffect for cleaning up state when selectedRequestId changes
+  useEffect(() => {
+    if (!selectedRequestId) {
+      // Reset state when no request is selected
+      setMethod("GET");
+      setUrl("");
+      setParams([
+        { id: 1, key: "", value: "", enabled: false }
+      ]);
+      setHeaders([
+        { id: 1, key: "", value: "", enabled: false }
+      ]);
+      setBody("");
+      setAuth({ type: "none" });
+      setTests({ script: "", results: [] });
+    }
+  }, [selectedRequestId]);
+
+  // Update executeRequest to always use the current state values
+  const executeRequest = useCallback(async () => {
+    if (!onSendRequest) return;
+
+    // Validate URL before sending request
+    try {
+      new URL(url); // This will throw if URL is invalid
+    } catch (error) {
+      setError('Invalid URL. Please enter a valid URL including http:// or https://');
+      setDialogOpen(false);
+      return;
+    }
+
+    const requests = Array.from({ length: parallelRequestCount }, (_, i) => {
+      const requestObject = {
+        method,
+        url, // Use current url state instead of debouncedUrl
+        params: enabledParams,
+        headers: enabledHeaders,
+        body: method !== "GET" ? body : undefined,
+        auth,
+        tests,
+        requestNumber: i + 1,
+        totalRequests: parallelRequestCount
+      };
+      
+      return makeHttpRequest(requestObject, authToken)
+        .then(response => {
+          // Clear any previous errors
+          setError(null);
+          onSendRequest(response);
+          return response;
+        })
+        .catch(error => {
+          setError(error.message);
+          console.error(`Request ${i + 1} failed:`, error);
+          onSendRequest({
+            status: 0,
+            statusText: error.message,
+            headers: {},
+            data: { error: error.message },
+            size: 0,
+            timeTaken: '0 ms',
+            requestNumber: i + 1,
+            totalRequests: parallelRequestCount
+          });
+        });
+    });
+
+    try {
+      await Promise.all(requests);
+    } catch (error) {
+      console.error('Error executing requests:', error);
+      setError(error.message);
+    }
+    
+    setDialogOpen(false);
+  }, [method, url, enabledParams, enabledHeaders, body, auth, tests, parallelRequestCount, onSendRequest, authToken]);
+
   // Update form when selectedRequestId changes and data is loaded
   useEffect(() => {
     if (requestData) {
+      // Set method and URL first to ensure they're available
       setMethod(requestData.method || "GET");
       setUrl(requestData.url || "");
+      setDebouncedUrl(requestData.url || ""); // Also update debounced URL
       
-      // Initialize params, headers, body if they exist in the loaded request
       if (requestData.params) {
         try {
           const parsedParams = JSON.parse(requestData.params);
-          if (Array.isArray(parsedParams)) {
-            setParams(parsedParams);
-          }
+          setParams(Array.isArray(parsedParams) ? parsedParams : [
+            { id: 1, key: "", value: "", enabled: false }
+          ]);
         } catch (e) {
           console.error("Error parsing params:", e);
+          setParams([{ id: 1, key: "", value: "", enabled: false }]);
         }
       }
       
       if (requestData.headers) {
         try {
           const parsedHeaders = JSON.parse(requestData.headers);
-          if (Array.isArray(parsedHeaders)) {
-            setHeaders(parsedHeaders);
-          }
+          setHeaders(Array.isArray(parsedHeaders) ? parsedHeaders : [
+            { id: 1, key: "", value: "", enabled: false }
+          ]);
         } catch (e) {
           console.error("Error parsing headers:", e);
+          setHeaders([{ id: 1, key: "", value: "", enabled: false }]);
         }
       }
       
       setBody(requestData.body || "");
       setAuth(requestData.auth || { type: "none" });
       setTests(requestData.tests || { script: "", results: [] });
+      setError(null); // Clear any previous errors
     }
   }, [requestData]);
-  const handleSendRequest = () => {
-    setDialogOpen(true);
-  };
-  
-  const executeRequest = () => {
-    // Get enabled params
-    const enabledParams = params
-      .filter(p => p.enabled && p.key.trim())
-      .reduce((obj, param) => {
-        obj[param.key] = param.value;
-        return obj;
-      }, {});
-    
-    // Get enabled headers
-    const enabledHeaders = headers
-      .filter(h => h.enabled && h.key.trim())
-      .reduce((obj, header) => {
-        obj[header.key] = header.value;
-        return obj;
-      }, {});
-      
-    // Apply auth headers if necessary
-    if (auth.type === "basic") {
-      const basicAuthValue = `Basic ${btoa(`${auth.username || ""}:${auth.password || ""}`)}`;
-      enabledHeaders["Authorization"] = basicAuthValue;
-    } else if (auth.type === "bearer" && auth.token) {
-      enabledHeaders["Authorization"] = `Bearer ${auth.token}`;
-    } else if (auth.type === "apiKey" && auth.apiKeyName && auth.apiKeyValue) {
-      if (auth.apiKeyLocation === "header") {
-        enabledHeaders[auth.apiKeyName] = auth.apiKeyValue;
-      } else if (auth.apiKeyLocation === "query") {
-        enabledParams[auth.apiKeyName] = auth.apiKeyValue;
-      }
-    }
-    
-    // Create request object
-    const requestObject = {
-      method,
-      url,
-      params: enabledParams,
-      headers: enabledHeaders,
-      body: method !== "GET" && body ? body : undefined,
-      auth,
-      tests,
-      parallelCount: parallelRequestCount
-    };
-    
-    if (onSendRequest) {
-      // Send multiple requests if parallelRequestCount > 1
-      for (let i = 0; i < parallelRequestCount; i++) {
-        onSendRequest({
-          ...requestObject,
-          requestNumber: i + 1,
-          totalRequests: parallelRequestCount
-        });
-      }
-    }
-    
-    setDialogOpen(false);
-  };
 
+  // Update parent component with current request data
+  useEffect(() => {
+    if (onRequestDataChange) {
+      onRequestDataChange(currentData);
+    }
+  }, [currentData, onRequestDataChange]);
+
+  const handleSendRequest = useCallback(() => {
+    setDialogOpen(true);
+  }, []);
+  
   return (
     <div className="flex flex-col h-full">
       {/* Display error if any */}
@@ -600,13 +823,25 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
             ))}
           </SelectContent>
         </Select>
-        <Input
-          type="url"
-          placeholder="https://api.example.com/v1/users"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          className="flex-grow"
-        />
+        <div className="flex-grow relative">
+          <Input
+            type="url"
+            placeholder="https://api.example.com/v1/users"
+            value={url}
+            onChange={(e) => debouncedSetUrl(e.target.value)}
+            className={`w-full ${urlError ? 'border-red-500' : ''}`}
+          />
+          {isValidatingUrl && (
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+            </div>
+          )}
+          {urlError && (
+            <div className="absolute -bottom-5 left-0 text-xs text-red-500">
+              {urlError}
+            </div>
+          )}
+        </div>
         <Button 
           onClick={handleSendRequest} 
           className={`${methodColors[method]} text-white flex items-center`}
@@ -645,7 +880,7 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
           </div>
         </TabsContent>
         <TabsContent value="auth" className="flex-1 overflow-auto">
-          <AuthTab auth={auth} setAuth={setAuth} />
+          <AuthTab auth={auth} setAuth={setAuth} authToken={authToken} onUpdateAuthToken={onUpdateAuthToken} />
         </TabsContent>
         <TabsContent value="tests" className="flex-1 overflow-auto">
           <TestsTab tests={tests} setTests={setTests} />
@@ -654,10 +889,10 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
 
       {/* Dialog for advanced options */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent aria-describedby="request-dialog-description">
           <DialogHeader>
             <DialogTitle>Advanced Options</DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="request-dialog-description">
               Configure advanced settings for your request.
             </DialogDescription>
           </DialogHeader>
@@ -672,19 +907,22 @@ export default function RequestBuilder({ selectedRequestId, onSendRequest }) {
                 max="10"
                 value={parallelRequestCount}
                 onChange={(e) => setParallelRequestCount(Number(e.target.value))}
+                aria-label="Number of parallel requests"
               />
             </div>
             <div>
               <Checkbox
                 checked={showAdvancedOptions}
                 onCheckedChange={setShowAdvancedOptions}
+                id="show-advanced"
                 aria-label="Show advanced options"
               />
-              <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+              <label htmlFor="show-advanced" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                 Show advanced options
-              </span>
+              </label>
             </div>
-          </div>          <DialogFooter>
+          </div>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>

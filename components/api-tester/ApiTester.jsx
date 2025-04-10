@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -14,18 +14,44 @@ import { toast } from "sonner"; // sonner'dan toast fonksiyonunu import et
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
+import Header from "../Header";
+import MonitorsPanel from "./MonitorsPanel";
 
 export default function ApiTester() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
-  const [responseData, setResponseData] = useState(null);
+  const [responseData, setResponseData] = useState([]);
   const [error, setError] = useState(null);
-  // const { toast } = useToast(); // Eski useToast kaldırıldı
-  
-  // Add the recordHistory mutation
+  const [sidebarError, setSidebarError] = useState(null);
+  const [currentRequestData, setCurrentRequestData] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+  const [authToken, setAuthToken] = useState(localStorage.getItem('authToken') || '');
+
   const recordHistory = useMutation(api.history.recordHistory);
-  // Use useCallback to prevent function recreation on each render
-  const handleSendRequest = useCallback(async (requestData) => {
+
+  // Add token persistence
+  const updateAuthToken = useCallback((token) => {
+    setAuthToken(token);
+    if (token) {
+      localStorage.setItem('authToken', token);
+    } else {
+      localStorage.removeItem('authToken');
+    }
+  }, []);
+
+  // Memoize the request data handler
+  const handleRequestDataChange = useCallback((data) => {
+    requestAnimationFrame(() => {
+      setCurrentRequestData(data);
+    });
+  }, []);
+
+  // Memoize the response handler
+  const handleSendRequest = useCallback(async (response) => {
     try {
+      if (response.requestNumber === 1) {
+        setResponseData([]);
+      }
+
       setError(null);
       console.log("Sending request:", requestData);
       
@@ -219,40 +245,51 @@ export default function ApiTester() {
     }
   }, [selectedRequestId, recordHistory]);
 
-  // Use useCallback for setSelectedRequestId to prevent re-renders
-  const handleRequestSelect = useCallback((id) => {
-    setSelectedRequestId(id);
+  // Memoize the request selection handler
+  const handleRequestSelect = useCallback((requestId) => {
+    requestAnimationFrame(() => {
+      setSelectedRequestId(requestId);
+      setResponseData([]);
+    });
   }, []);
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-gray-950">
-      <ResizablePanelGroup
-        direction="horizontal"
-        className="flex-1"
-      >
-        {/* Left Panel: Collections and History */}
-        <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-          <CollectionsSidebar 
-            setSelectedRequestId={handleRequestSelect} 
-            hasError={!!error}
-          />
-        </ResizablePanel>
-        <ResizableHandle withHandle />
+    <>
+      <Header
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        currentRequestData={currentRequestData}
+      />
+      <div className="h-screen flex flex-col bg-white dark:bg-gray-950">
+        <ResizablePanelGroup direction="horizontal" className="flex-1">
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+            <CollectionsSidebar
+              setSelectedRequestId={handleRequestSelect}
+              hasError={!!sidebarError}
+              onError={setSidebarError}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
 
-        {/* Middle Panel: Request Builder */}
-        <ResizablePanel defaultSize={40} minSize={30}>
-          <RequestBuilder 
-            selectedRequestId={selectedRequestId} 
-            onSendRequest={handleSendRequest} 
-          />
-        </ResizablePanel>
-        <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={40} minSize={30}>
+            <RequestBuilder
+              selectedRequestId={selectedRequestId}
+              onSendRequest={handleSendRequest}
+              onRequestDataChange={handleRequestDataChange}
+              authToken={authToken}
+              onUpdateAuthToken={updateAuthToken}
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
 
-        {/* Right Panel: Response */}
-        <ResizablePanel defaultSize={40} minSize={25}>
-          <ResponseDisplay responseData={responseData} />
-        </ResizablePanel>
-      </ResizablePanelGroup>
-    </div>
+          <ResizablePanel defaultSize={40} minSize={25}>
+            <ResponseDisplay responseData={responseData} />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+        <div className="h-64 border-t">
+          <MonitorsPanel />
+        </div>
+      </div>
+    </>
   );
 }

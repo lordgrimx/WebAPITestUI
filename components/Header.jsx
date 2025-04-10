@@ -29,16 +29,28 @@ import SaveRequestModal from "@/components/SaveRequestModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import { useAuth } from "@/lib/auth-context";
 
-export default function Header({ darkMode, setDarkMode, openSignupModal, openLoginModal }) {
+export default function Header({ darkMode, setDarkMode, currentRequestData,openSignupModal, openLoginModal }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
   const { user, isAuthenticated, login, logout, isLoading } = useAuth();
+  
+  const handleSaveRequest = async (requestData) => {
+    try {
+      const fullRequestData = {
+        ...requestData,
+        method: currentRequestData?.method || 'GET',
+        url: currentRequestData?.url || '',
+        headers: currentRequestData?.headers ? JSON.stringify(currentRequestData.headers) : undefined,
+        params: currentRequestData?.params ? JSON.stringify(currentRequestData.params) : undefined,
+        body: currentRequestData?.body,
+      };
 
-  const handleSaveRequest = (requestData) => {
-    console.log("Saving request:", requestData);
-    // Here you would implement the actual saving logic
-    // For example, calling an API endpoint or updating state
+      // Call the API to save the request
+      console.log('Saving request:', fullRequestData);
+    } catch (error) {
+      console.error('Failed to save request:', error);
+    }
   };
 
   // If the authentication process is still loading, show a minimal header
@@ -154,6 +166,7 @@ export default function Header({ darkMode, setDarkMode, openSignupModal, openLog
         setOpen={setShowSaveRequest}
         darkMode={darkMode}
         onSaveRequest={handleSaveRequest}
+        initialData={currentRequestData}
       />
       <header
         className={`${
