@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import generateToken from "../lib/jwt-utils"; // Import the JWT utility functions
 
 // Helper function to hash passwords (in a real app, use a proper hashing library)
 function hashPassword(password) {
@@ -65,6 +66,8 @@ export const login = mutation({
             lastLogin: Date.now(),
         });
 
+        const token = generateToken(user._id, "2h"); // Generate JWT token
+
         // Return user data (excluding password hash)
         return {
             userId: user._id,
@@ -72,6 +75,7 @@ export const login = mutation({
             email: user.email,
             role: user.role,
             profileImage: user.profileImage,
+            token, // Include token in the response
         };
     },
 });

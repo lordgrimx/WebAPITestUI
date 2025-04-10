@@ -40,7 +40,11 @@ export default function Home() {
 
   useEffect(() => {
     const checkLoginStatus = () => {
-      const userId = localStorage.getItem('userId');
+      const userId = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('userId='))
+        ?.split('=')[1];
+      console.log('User ID from cookie:', userId); // Debugging line
       setIsLoggedIn(!!userId);
     };
 
