@@ -44,30 +44,74 @@ export default function ApiTester() {
       setCurrentRequestData(data);
     });
   }, []);
-
   // Memoize the response handler
-  const handleSendRequest = useCallback(async (response) => {
+  const handleSendRequest = useCallback(async (requestData) => {
     try {
-      if (response.requestNumber === 1) {
+      if (requestData.requestNumber === 1) {
         setResponseData([]);
-      }
-
-      setError(null);
+      }      setError(null);
       console.log("Sending request:", requestData);
       
       const startTime = Date.now();
       
-      // Extract request data
-      const { method, url, headers: requestHeaders, body: requestBody, params } = requestData;
+      // Extract request data including auth details
+      const { method, url, headers: requestHeaders, body: requestBody, params, auth } = requestData; // Add auth here
+      
+      // URL kontrolü yap - undefined veya boş değer kontrolü
+      if (!url || url === 'undefined') {
+        console.error("URL tanımlı değil veya geçersiz:", url);
+        throw new Error("URL tanımlı değil veya geçersiz. Lütfen geçerli bir URL girin.");
+      }
       
       // Prepare axios config
       const axiosConfig = {
         method: method,
         url: url,
-        headers: requestHeaders || {},
-        params: params || {}
+        headers: { ...(requestHeaders || {}) }, // Start with existing headers, create a copy
+        params: { ...(params || {}) } // Start with existing params, create a copy
       };
       
+      // --- Authentication Logic ---
+      if (auth && auth.type) {
+        switch (auth.type) {
+          case 'bearer':
+            if (auth.token) {
+              axiosConfig.headers['Authorization'] = `Bearer ${auth.token}`;
+            } else {
+              console.warn("Bearer token selected but no token provided.");
+              toast.warning("Auth Warning", { description: "Bearer Token authentication selected, but no token was provided." });
+            }
+            break;
+          case 'basic':
+            if (auth.username && auth.password) {
+              const credentials = btoa(`${auth.username}:${auth.password}`); // Base64 encode username:password
+              axiosConfig.headers['Authorization'] = `Basic ${credentials}`;
+            } else {
+              console.warn("Basic Auth selected but username or password missing.");
+              toast.warning("Auth Warning", { description: "Basic Auth selected, but username or password was not provided." });
+            }
+            break;
+          case 'apiKey':
+            if (auth.key && auth.value) {
+              if (auth.addTo === 'header') {
+                axiosConfig.headers[auth.key] = auth.value;
+              } else if (auth.addTo === 'query') {
+                axiosConfig.params[auth.key] = auth.value;
+              }
+            } else {
+              console.warn("API Key selected but key or value missing.");
+              toast.warning("Auth Warning", { description: "API Key authentication selected, but Key or Value was not provided." });
+            }
+            break;
+          // Add cases for other auth types (e.g., OAuth 2.0) if implemented
+          case 'none':
+          default:
+            // No specific auth headers/params needed for 'none'
+            break;
+        }
+      }
+      // --- End Authentication Logic ---
+
       // Add request body for non-GET requests
       if (method !== 'GET' && method !== 'HEAD' && requestBody) {
         try {
@@ -81,7 +125,7 @@ export default function ApiTester() {
       }      
       
       // Make the actual API request
-      const axiosResponse = await axios(axiosConfig);
+      const axiosResponse = await axios(axiosConfig); // Use the modified config
       
       // Handle successful response
       console.log("Response received:", axiosResponse);
@@ -213,8 +257,7 @@ export default function ApiTester() {
         };
         
         // For network errors, set the error state
-        setError(errorMessage);
-      } else {
+        setError(errorMessage);      } else {
         // Handle HTTP errors (400, 500, etc.) - Do NOT set the error state for these
         status = error.response?.status || 500;
         const errorMessage = error.message || "An error occurred while sending the request";
@@ -224,17 +267,39 @@ export default function ApiTester() {
         // For HTTP errors, do NOT set the error state
         // setError(errorMessage); - Remove this line
         
+        // Create a more helpful message for common HTTP status codes
+        let errorDescription = errorMessage;
+        if (status === 404) {
+          errorDescription = "The requested resource could not be found. Please check if the URL is correct and the endpoint exists.";
+          errorData = {
+            ...errorData,
+            troubleshooting: [
+              "Verify the URL is spelled correctly",
+              "Check if the API endpoint path is correct",
+              "Confirm the resource or endpoint exists on the server",
+              "Ensure you're using the correct API version if applicable"
+            ]
+          };
+        } else if (status === 401) {
+          errorDescription = "Authentication is required. Please check your credentials or token.";
+        } else if (status === 403) {
+          errorDescription = "You don't have permission to access this resource.";
+        } else if (status === 500) {
+          errorDescription = "The server encountered an error. Please try again later or contact the API provider.";
+        }
+        
         errorResponse = {
           status: status,
           data: errorData,
           headers: errorHeaders,
           size: "0.2 KB",
-          timeTaken: "0 ms"
+          timeTaken: "0 ms",
+          url: error.config?.url || requestData.url // Include the attempted URL
         };
         
         // Display an appropriate toast message for HTTP errors
         toast.error(`HTTP Error ${status}`, {
-          description: errorMessage,
+          description: errorDescription,
         });
       }
       
@@ -243,7 +308,7 @@ export default function ApiTester() {
       // Do NOT record failed requests in history per requirements
       // Removed the recordHistory call for failed requests
     }
-  }, [selectedRequestId, recordHistory]);
+  }, [selectedRequestId, recordHistory]); // Removed authToken from dependency array as it's now part of requestData.auth
 
   // Memoize the request selection handler
   const handleRequestSelect = useCallback((requestId) => {

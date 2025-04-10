@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import axios from "axios";
 import {
   Dialog,
   DialogContent,
@@ -454,6 +453,7 @@ pm.test("Response contains user data", function() {
   pm.expect(responseJson).to.have.property("id");
   pm.expect(responseJson).to.have.property("name");
 });`}
+
           />
         </div>
       </div>
@@ -490,96 +490,15 @@ pm.test("Response contains user data", function() {
   );
 }
 
-// Fetch API kullanarak gerçek HTTP isteği yapacak fonksiyon
-const makeHttpRequest = async (requestConfig, authToken) => {
-  const {
-    method,
-    url,
-    params,
-    headers,
-    body,
-    auth,
-    requestNumber,
-    totalRequests
-  } = requestConfig;
-
-  try {
-    const urlObj = new URL(url);
-    Object.entries(params).forEach(([key, value]) => {
-      urlObj.searchParams.append(key, value);
-    });
-
-    const startTime = Date.now();
-
-    const requestHeaders = {
-      ...headers,
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    };
-
-    // Add bearer token if available
-    if (authToken) {
-      requestHeaders['Authorization'] = `Bearer ${authToken}`;
-    }
-
-    const response = await fetch(urlObj.toString(), {
-      method: method,
-      headers: requestHeaders,
-      body: method !== 'GET' ? body : undefined,
-      mode: 'cors',
-      credentials: 'same-origin',
-    });
-
-    const endTime = Date.now();
-    const duration = endTime - startTime;
-
-    let responseData;
-    const contentType = response.headers.get('content-type');
-    
-    try {
-      // Her zaman önce JSON olarak parse etmeyi dene
-      responseData = await response.json();
-    } catch (e) {
-      // JSON parse başarısız olursa text olarak al
-      responseData = await response.text();
-    }
-
-    const responseHeaders = {};
-    response.headers.forEach((value, key) => {
-      responseHeaders[key] = value;
-    });
-
-    console.log("MakeHttp :",responseData);
-    
-
-    return {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
-      data: responseData, // Direkt responseData'yı kullan
-      size: typeof responseData === 'string' ? responseData.length : JSON.stringify(responseData).length,
-      timeTaken: `${duration} ms`,
-      requestNumber,
-      totalRequests
-    };
-
-  } catch (error) {
-    if (error instanceof TypeError && error.message.includes('CORS')) {
-      throw new Error(`CORS Error: The server must allow requests from ${window.location.origin}`);
-    }
-    throw new Error(`Request failed: ${error.message}`);
-  }
-};
-
 export default function RequestBuilder({ 
   selectedRequestId, 
-  onSendRequest, 
+  onSendRequest, // This is ApiTester's handleSendRequest
   onRequestDataChange, 
   authToken, 
   onUpdateAuthToken 
 }) {
   const [method, setMethod] = useState("GET");
-  const [url, setUrl] = useState("https://api.example.com/v1/users");
+  const [url, setUrl] = useState(""); // Initialize URL as empty string
   const [debouncedUrl, setDebouncedUrl] = useState(url);
   const [params, setParams] = useState([
     { id: 1, key: "limit", value: "10", enabled: true },
@@ -691,64 +610,62 @@ export default function RequestBuilder({
     }
   }, [selectedRequestId]);
 
-  // Update executeRequest to always use the current state values
+  // Update executeRequest to pass the request config to onSendRequest
   const executeRequest = useCallback(async () => {
     if (!onSendRequest) return;
 
     // Validate URL before sending request
-    try {
-      new URL(url); // This will throw if URL is invalid
-    } catch (error) {
-      setError('Invalid URL. Please enter a valid URL including http:// or https://');
+    let isValid = false;
+    if (url && url !== 'undefined') {
+      try {
+        new URL(url); // Basic validation
+        isValid = true;
+      } catch (error) {
+        setError('Geçersiz URL. Lütfen http:// veya https:// içeren geçerli bir URL girin.');
+        setDialogOpen(false);
+        return;
+      }
+    } else {
+       setError('URL boş olamaz. Lütfen geçerli bir URL girin.');
+       setDialogOpen(false);
+       return;
+    }
+
+    if (!isValid) {
+      setError('Geçersiz URL formatı.');
       setDialogOpen(false);
       return;
     }
+    
+    // Clear previous errors before sending
+    setError(null);
 
-    const requests = Array.from({ length: parallelRequestCount }, (_, i) => {
-      const requestObject = {
-        method,
-        url, // Use current url state instead of debouncedUrl
-        params: enabledParams,
-        headers: enabledHeaders,
-        body: method !== "GET" ? body : undefined,
-        auth,
-        tests,
-        requestNumber: i + 1,
-        totalRequests: parallelRequestCount
-      };
-      
-      return makeHttpRequest(requestObject, authToken)
-        .then(response => {
-          // Clear any previous errors
-          setError(null);
-          onSendRequest(response);
-          return response;
-        })
-        .catch(error => {
-          setError(error.message);
-          console.error(`Request ${i + 1} failed:`, error);
-          onSendRequest({
-            status: 0,
-            statusText: error.message,
-            headers: {},
-            data: { error: error.message },
-            size: 0,
-            timeTaken: '0 ms',
-            requestNumber: i + 1,
-            totalRequests: parallelRequestCount
-          });
-        });
-    });
+    // Prepare the request configuration object
+    const requestConfig = {
+      method,
+      url, // Use the current, validated URL state
+      params: enabledParams,
+      headers: enabledHeaders,
+      body: method !== "GET" ? body : undefined,
+      auth,
+      tests, // Include tests if needed by the handler
+      // Note: Parallel request logic needs to be handled in ApiTester now if required
+      requestNumber: 1, // Assuming single request for now
+      totalRequests: 1 // Assuming single request for now
+    };
 
     try {
-      await Promise.all(requests);
+      // Pass the configuration object to ApiTester's handler
+      await onSendRequest(requestConfig); 
     } catch (error) {
-      console.error('Error executing requests:', error);
-      setError(error.message);
+      // Handle potential errors from the onSendRequest handler itself (e.g., validation errors thrown there)
+      setError(error.message || "İstek gönderilirken bir hata oluştu.");
+      console.error('Error during onSendRequest call:', error);
+    } finally {
+      setDialogOpen(false); // Close dialog regardless of success/failure
     }
-    
-    setDialogOpen(false);
-  }, [method, url, enabledParams, enabledHeaders, body, auth, tests, parallelRequestCount, onSendRequest, authToken]);
+
+  }, [method, url, enabledParams, enabledHeaders, body, auth, tests, onSendRequest, authToken]); // Removed parallelRequestCount dependency for now
 
   // Update form when selectedRequestId changes and data is loaded
   useEffect(() => {
@@ -827,8 +744,8 @@ export default function RequestBuilder({
           <Input
             type="url"
             placeholder="https://api.example.com/v1/users"
-            value={url}
-            onChange={(e) => debouncedSetUrl(e.target.value)}
+            value={url} // Bind directly to url state
+            onChange={(e) => setUrl(e.target.value)} // Update url state directly
             className={`w-full ${urlError ? 'border-red-500' : ''}`}
           />
           {isValidatingUrl && (
@@ -843,8 +760,9 @@ export default function RequestBuilder({
           )}
         </div>
         <Button 
-          onClick={handleSendRequest} 
+          onClick={handleSendRequest} // This opens the dialog
           className={`${methodColors[method]} text-white flex items-center`}
+          disabled={!url || urlError} // Disable send if URL is empty or invalid
         >
           <SendHorizontal className="h-4 w-4 mr-1" /> Send
         </Button>
@@ -926,7 +844,10 @@ export default function RequestBuilder({
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={executeRequest}>Send Request{parallelRequestCount > 1 ? `s (${parallelRequestCount})` : ''}</Button>
+            {/* This button triggers the actual request logic */}
+            <Button onClick={executeRequest} disabled={!url || !!urlError}> 
+              Send Request{/* Removed parallel count display for now */}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -64,12 +64,7 @@ export default function Home() {
         />
       ) : (
         <>
-          <Header
-            darkMode={darkMode}
-            setDarkMode={setDarkMode}
-            openSignupModal={openSignupModal}
-            openLoginModal={openLoginModal}
-          />
+
           <ApiTester
             darkMode={darkMode}
             setDarkMode={setDarkMode}
