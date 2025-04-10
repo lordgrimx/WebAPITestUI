@@ -52,13 +52,11 @@ export default function SaveRequestModal({
       setSelectedCollectionState(value);
     }
   };
-  
-  const handleSaveRequest = async () => {
+    const handleSaveRequest = async () => {
     try {
       const requestData = {
         collectionId: showNewCollectionInput ? newCollectionName : selectedCollectionState,
         name: requestName,
-        description: description || undefined,
         method: initialData?.method || 'GET',
         url: initialData?.url || '',
         headers: initialData?.headers || undefined,

@@ -27,7 +27,6 @@ export const createRequest = mutation({
     args: {
         collectionId: v.id("collections"),
         name: v.string(),
-        description: v.optional(v.string()),
         method: v.string(),
         url: v.string(),
         headers: v.optional(v.string()),
