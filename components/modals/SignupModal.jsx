@@ -7,11 +7,12 @@ import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { CheckCircle, Circle, Lock, Mail, User } from 'lucide-react';
-import { toast } from "sonner";
-import { useAuth } from "@/lib/auth-context"; // Import useAuth hook for Auth0 integration
+import { toast } from "sonner"; // Import toast directly from sonner
+import { useMutation } from "convex/react"; // Import useMutation hook from convex
+import { api } from "@/convex/_generated/api"; // Import API
 
 const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
-  const { login } = useAuth(); // Get login function from auth context (now using Auth0)
+  const register = useMutation(api.users.register); // Get register mutation
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -87,7 +88,7 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
     return Object.keys(newErrors).length === 0;
   };
   
-  // Handle form submission - Updated to use Auth0
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -95,21 +96,39 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
       setIsLoading(true);
       
       try {
-        // With Auth0, we don't handle registration directly
-        // Auth0 will handle the signup process and redirect back to the app
-        login(); // This calls loginWithRedirect from Auth0
-        
-        toast.success('Redirecting to secure sign up...', {
-          description: 'You will be redirected to complete your registration.',
-          duration: 3000,
+        // Call Convex register mutation
+        const result = await register({ 
+          name: fullName, 
+          email: email, 
+          password: password 
         });
         
-        // Close the modal since Auth0 will handle the registration process
-        onClose();
+        // Show success toast using sonner
+        toast.success('Account created!', {
+          description: 'Your account has been created successfully. You can now sign in.',
+          duration: 5000,
+        });
+        
+        // Reset form
+        setFullName('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setAcceptTerms(false);
+        
+        // Close modal after a short delay
+        setTimeout(() => {
+          onClose();
+          // Optionally switch to login modal
+          if (onSwitchToLogin) {
+            setTimeout(() => onSwitchToLogin(), 100);
+          }
+        }, 1000);
+        
       } catch (error) {
-        console.error("Signup redirect error:", error);
-        toast.error('Could not redirect to sign up', {
-          description: error.message || "Please try again later.",
+        // Show error toast using sonner
+        toast.error('Registration failed', {
+          description: error.message || "An error occurred during registration. Please try again.",
           duration: 5000,
         });
       } finally {
@@ -120,6 +139,7 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
+      {/* Add max height and overflow styles */}
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl font-bold text-[#1A2333]">
@@ -128,7 +148,7 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
           <p className="text-center text-gray-500 mt-2">Create your account</p>
         </DialogHeader>
         <div className="relative">
-          {/* 3D Background Elements */}
+          {/* 3D Background Elements - These will be visible behind the form */}
           <div className="absolute -top-20 -left-20 w-40 h-40 bg-blue-500/10 rounded-xl rotate-12 animate-float"></div>
           <div className="absolute top-40 -right-16 w-32 h-32 bg-cyan-500/10 rounded-xl -rotate-12 animate-float-delayed"></div>
           <div className="absolute -bottom-16 -left-10 w-24 h-24 bg-indigo-500/10 rounded-xl rotate-45 animate-float-slow"></div>
@@ -309,11 +329,9 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-600">
                 Already have an account?{' '}
-                <button 
-                  onClick={onSwitchToLogin}
-                  className="font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                <a href="#" className="font-medium text-blue-600 hover:text-blue-800 transition-colors">
                   Sign in
-                </button>
+                </a>
               </p>
             </div>
           </form>

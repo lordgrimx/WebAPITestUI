@@ -22,6 +22,13 @@ export async function POST(request) {
             httpOnly: true // This makes the cookie only accessible by the server
         });
 
+        cookies().set('userId', userId, {
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 2 * 60 * 60, // 2 hours in seconds
+            sameSite: 'strict',
+            path: '/'
+        });
+
         return Response.json({ success: true });
     } catch (error) {
         console.error('Login API error:', error);
