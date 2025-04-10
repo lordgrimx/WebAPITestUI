@@ -1,12 +1,13 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
 import { v } from "convex/values";
-import generateToken from "../lib/jwt-utils"; // Import the JWT utility functions
+import { internal } from "./_generated/api";
 
 // Helper function to hash passwords (in a real app, use a proper hashing library)
 function hashPassword(password) {
     // This is just for demo purposes, in production use bcrypt or similar
     return password + "_hashed";
 }
+
 
 // Register a new user
 export const register = mutation({
@@ -39,8 +40,8 @@ export const register = mutation({
     },
 });
 
-// Login user
-export const login = mutation({
+// Login user (mutation)
+export const loginMutation = mutation({
     args: {
         email: v.string(),
         password: v.string(),
@@ -66,16 +67,34 @@ export const login = mutation({
             lastLogin: Date.now(),
         });
 
-        const token = generateToken(user._id, "2h"); // Generate JWT token
-
-        // Return user data (excluding password hash)
         return {
             userId: user._id,
             name: user.name,
             email: user.email,
             role: user.role,
             profileImage: user.profileImage,
-            token, // Include token in the response
+        };
+    },
+});
+
+// Login user (action)
+export const login = action({
+    args: {
+        email: v.string(),
+        password: v.string(),
+    },
+    handler: async (ctx, args) => {
+        // Kullanıcı bilgilerini al
+        const userData = await ctx.runMutation(internal.users.loginMutation, args);
+        
+        // Token oluştur
+        const tokenData = await ctx.runAction(internal.generateToken.generateToken, {
+            userId: userData.userId.toString(),
+        });
+
+        return {
+            ...userData,
+            token: tokenData.token
         };
     },
 });
