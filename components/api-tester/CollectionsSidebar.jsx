@@ -90,17 +90,20 @@ const getPathFromUrl = (urlString) => {
 
 // Add onHistorySelect prop
 export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError }) {
-  const historyItems = useQuery(api?.history?.getRecentHistory, { limit: 10 });
+  const [currentUserID, setCurrentUserID] = useState(null); // For user ID from JWT token
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Add debouncing
+
+  const historyItems = useQuery(api?.history?.getHistoryByUserId, 
+    currentUserID ? { userId: currentUserID, limit: 10 } : "skip"
+  );
 
   const addCollection = useMutation(api?.collections?.addCollection);
   const deleteCollection = useMutation(api?.collections?.deleteCollection);
   const deleteRequest = useMutation(api?.requests?.deleteRequest);
   const deleteHistoryEntry = useMutation(api?.history?.deleteHistoryEntry);
-
-  const [newCollectionName, setNewCollectionName] = useState("");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Add debouncing
-  const [currentUserID, setCurrentUserID] = useState(null); // For user ID from JWT token
 
   // Fetch user session info from the server-side API endpoint
   useEffect(() => {
