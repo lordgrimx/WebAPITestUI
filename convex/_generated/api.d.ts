@@ -18,6 +18,7 @@ import type * as collections from "../collections.js";
 import type * as generateToken from "../generateToken.js";
 import type * as history from "../history.js";
 import type * as requests from "../requests.js";
+import type * as users from "../users.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   generateToken: typeof generateToken;
   history: typeof history;
   requests: typeof requests;
+  users: typeof users;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,
