@@ -22,6 +22,8 @@ import {
   Lock,
   Globe,
   User,
+  Save, // Added Save icon for consistency if needed later
+  Activity
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -34,8 +36,15 @@ import {
   DialogTitle,
   DialogClose
 } from "@/components/ui/dialog";
-import Cookies from "js-cookie";
-// verifyToken import removed as verification is now done server-side
+import { useDebounce } from "@/hooks/useDebounce"; // Add this import
+import { toast } from "react-toastify";
+import LoadTestDialog from "@/components/api-tester/LoadTestDialog"; // Assuming LoadTestDialog is a component
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // HTTP Methods
 const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"];
@@ -572,8 +581,9 @@ export default function RequestBuilder({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [parallelRequestCount, setParallelRequestCount] = useState(1);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-  
-  // Memoize request data query - don't filter by userId since we want to load any request
+  const [showLoadTestDialog, setShowLoadTestDialog] = useState(false);
+
+  // Memoize request data query
   const requestData = useQuery(
     api?.requests?.getRequestById,
     selectedRequestId ? { id: selectedRequestId } : "skip"
@@ -891,14 +901,33 @@ export default function RequestBuilder({
             </div>
           )}
         </div>
-        <Button
-          onClick={handleSendClick} // Opens the dialog after validation
-          className={`${methodColors[method]} text-white flex items-center`}
-          disabled={isValidatingUrl} // Disable while validating
-        >
-          <SendHorizontal className="h-4 w-4 mr-1" /> Send
-        </Button>
-        {/* Removed Generate Code Button from here */}
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={handleSendClick} // Opens the dialog after validation
+            className={`${methodColors[method]} text-white flex items-center`}
+            disabled={isValidatingUrl} // Disable while validating
+          >
+            <SendHorizontal className="h-4 w-4 mr-1" /> Send
+          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={() => setShowLoadTestDialog(true)}
+                  variant="outline"
+                  className="flex items-center"
+                  disabled={!url || !!urlError}
+                >
+                  <Activity className="h-4 w-4 mr-1" /> Load Test
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Create k6 load test</p>
+                <p className="text-xs text-gray-500">Results will be shown in the Load Tests page</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
 
       {/* Tabs: Params, Headers, Body, Auth, Tests */}
@@ -987,6 +1016,23 @@ export default function RequestBuilder({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Load Test Dialog */}
+      <LoadTestDialog
+        open={showLoadTestDialog}
+        onOpenChange={setShowLoadTestDialog}
+        requestData={{
+          id: selectedRequestId,
+          method,
+          url,
+          headers: JSON.stringify(enabledHeaders),
+          params: JSON.stringify(enabledParams),
+          body
+        }}
+        onTestCreated={(testId) => {
+          toast.success("Load test created successfully");
+        }}
+      />
     </div>
   );
 }

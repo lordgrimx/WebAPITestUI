@@ -91,4 +91,47 @@ export default defineSchema({
             }))
         }))
     }).index("by_collectionId", ["collectionId"]),
+
+    // K6 Load Tests table
+    k6Tests: defineTable({
+        name: v.string(),
+        description: v.optional(v.string()),
+        script: v.string(),
+        options: v.optional(v.object({
+            vus: v.number(),
+            duration: v.string()
+        })),
+        logs: v.optional(v.array(v.object({
+            timestamp: v.number(),
+            message: v.string(),
+            level: v.string(),
+            data: v.optional(v.string()),
+            error: v.optional(v.object({
+                name: v.string(),
+                message: v.string(),
+                stack: v.optional(v.string()),
+                code: v.optional(v.string())
+            }))
+        }))),
+        errorDetails: v.optional(v.object({
+            name: v.string(),
+            message: v.string(),
+            stack: v.optional(v.string()),
+            code: v.optional(v.string())
+        })),
+        requestId: v.optional(v.id("requests")),
+        status: v.string(),
+        results: v.optional(v.object({
+            vus: v.number(),
+            duration: v.string(),
+            requestsPerSecond: v.number(),
+            failureRate: v.number(),
+            averageResponseTime: v.number(),
+            p95ResponseTime: v.number(),
+            timestamp: v.number()
+        })),
+        createdAt: v.number(),
+        updatedAt: v.number()
+    }).index("by_requestId", ["requestId"])
+      .index("by_status", ["status"])
 });
