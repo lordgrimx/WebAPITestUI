@@ -4,7 +4,7 @@ import { v } from "convex/values";
 // Record a new history entry for an API request
 export const recordHistory = mutation({
     args: {
-        userId: v.id("users"),
+        userId: v.id("users"), // Make userId optional
         requestId: v.optional(v.id("requests")),
         method: v.string(),
         url: v.string(),
@@ -16,10 +16,9 @@ export const recordHistory = mutation({
         isTruncated: v.optional(v.boolean()),
         error: v.optional(v.string()), // Add error field
         isError: v.optional(v.boolean()), // Add isError field
-    },
-    handler: async (ctx, args) => {
+    }, handler: async (ctx, args) => {
         const historyId = await ctx.db.insert("history", {
-            userId: args.userId,
+            userId: args.userId, // Now this can be undefined
             requestId: args.requestId,
             method: args.method,
             url: args.url,

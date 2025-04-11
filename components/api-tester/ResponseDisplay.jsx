@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useSettings } from "@/lib/settings-context";
 
 export default function ResponseDisplay({ responseData, darkMode = true }) {
   if (!responseData || responseData.length === 0) {
@@ -39,6 +40,8 @@ export default function ResponseDisplay({ responseData, darkMode = true }) {
 
   const isSuccessStatus = responseData.status >= 200 && responseData.status < 300;
   const [expanded, setExpanded] = useState(false);
+  const { settings } = useSettings();
+  const maxResponseSize = settings.responseSize ; // Convert MB to bytes
 
   return (
     <div className="flex flex-col h-full p-4">      {/* Status Bar */}
@@ -50,7 +53,7 @@ export default function ResponseDisplay({ responseData, darkMode = true }) {
           <span className="text-xs text-gray-500">{responseData.timeTaken}, {responseData.size}</span>
           {responseData.isTruncated && (
             <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-              Truncated (1MB limit)
+              Truncated ({maxResponseSize}KB limit)
             </Badge>
           )}
         </div>

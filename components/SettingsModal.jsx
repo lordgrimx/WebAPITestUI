@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSettings } from "@/lib/settings-context";
+import { useTheme } from "next-themes";
 import {
   Dialog,
   DialogContent,
@@ -24,26 +26,41 @@ import {
 } from "@/components/ui/select";
 import { X, Plus, Trash2 } from "lucide-react";
 
-export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) {
-  const [defaultHeaders, setDefaultHeaders] = useState([
-    { id: 1, name: "Content-Type", value: "application/json" },
-    { id: 2, name: "Authorization", value: "Bearer YOUR_TOKEN_HERE" },
-    { id: 3, name: "", value: "" }
-  ]);
-
-  const [apiKeys, setApiKeys] = useState([
-    { id: 1, name: "Production API Key", value: "sk_live_example123456789" },
-    { id: 2, name: "Test API Key", value: "sk_test_example123456789" },
-    { id: 3, name: "", value: "" }
-  ]);
-
-  const [proxyEnabled, setProxyEnabled] = useState(false);
-  const [requestTimeout, setRequestTimeout] = useState(30000);
-  const [responseSize, setResponseSize] = useState(50);
-  const [jsonIndentation, setJsonIndentation] = useState("2");
-  const [defaultResponseView, setDefaultResponseView] = useState("pretty");
-  const [wrapLines, setWrapLines] = useState(true);
-  const [highlightSyntax, setHighlightSyntax] = useState(true);
+export default function SettingsModal({ open, setOpen }) {
+  // Get global settings from context
+  const { settings, updateSettings } = useSettings();
+  const { theme, setTheme } = useTheme();
+  
+  // Local state for form values
+  const [defaultHeaders, setDefaultHeaders] = useState([...settings.defaultHeaders, { id: Date.now(), name: "", value: "" }]);
+  const [apiKeys, setApiKeys] = useState([...settings.apiKeys, { id: Date.now(), name: "", value: "" }]);
+  const [proxyEnabled, setProxyEnabled] = useState(settings.proxyEnabled);
+  const [proxyUrl, setProxyUrl] = useState(settings.proxyUrl || "");
+  const [proxyUsername, setProxyUsername] = useState(settings.proxyUsername || "");
+  const [proxyPassword, setProxyPassword] = useState(settings.proxyPassword || "");
+  const [requestTimeout, setRequestTimeout] = useState(settings.requestTimeout);
+  const [responseSize, setResponseSize] = useState(settings.responseSize);
+  const [jsonIndentation, setJsonIndentation] = useState(settings.jsonIndentation);
+  const [defaultResponseView, setDefaultResponseView] = useState(settings.defaultResponseView);
+  const [wrapLines, setWrapLines] = useState(settings.wrapLines);
+  const [highlightSyntax, setHighlightSyntax] = useState(settings.highlightSyntax);
+  // Sync local state with global settings when modal opens
+  useEffect(() => {
+    if (open) {
+      setDefaultHeaders([...settings.defaultHeaders, { id: Date.now(), name: "", value: "" }]);
+      setApiKeys([...settings.apiKeys, { id: Date.now(), name: "", value: "" }]);
+      setProxyEnabled(settings.proxyEnabled);
+      setProxyUrl(settings.proxyUrl || "");
+      setProxyUsername(settings.proxyUsername || "");
+      setProxyPassword(settings.proxyPassword || "");
+      setRequestTimeout(settings.requestTimeout);
+      setResponseSize(settings.responseSize);
+      setJsonIndentation(settings.jsonIndentation);
+      setDefaultResponseView(settings.defaultResponseView);
+      setWrapLines(settings.wrapLines);
+      setHighlightSyntax(settings.highlightSyntax);
+    }
+  }, [open, settings]);
 
   const addHeader = () => {
     setDefaultHeaders([...defaultHeaders, { id: Date.now(), name: "", value: "" }]);
@@ -74,20 +91,38 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
   };
 
   const handleSaveChanges = () => {
-    // Here you would implement saving the settings
+    // Clean up empty entries before saving
+    const cleanedHeaders = defaultHeaders.filter(header => header.name.trim() !== "" || header.value.trim() !== "");
+    const cleanedApiKeys = apiKeys.filter(key => key.name.trim() !== "" || key.value.trim() !== "");
+    
+    // Update global settings
+    updateSettings({
+      // We don't update darkMode here as it's handled by next-themes
+      defaultHeaders: cleanedHeaders,
+      apiKeys: cleanedApiKeys,
+      proxyEnabled,
+      proxyUrl,
+      proxyUsername,
+      proxyPassword,
+      requestTimeout,
+      responseSize,
+      jsonIndentation,
+      defaultResponseView,
+      wrapLines,
+      highlightSyntax
+    });
+    
+    // Close the modal
     setOpen(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} className="w-full">
-      <DialogContent 
-        className={`min-w-3xl max-h-[90vh] overflow-hidden flex flex-col ${
-          darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"
-        }`}
+    <Dialog open={open} onOpenChange={setOpen} className="w-full">      <DialogContent 
+        className="min-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
       >
-        <DialogHeader className="px-6 py-4 border-b border-gray-200">
+        <DialogHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <DialogTitle className="text-xl font-semibold">Settings</DialogTitle>
-          <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700">
+          <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             <X className="h-4 w-4" />
           </DialogClose>
         </DialogHeader>
@@ -96,15 +131,13 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* General Settings */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">General</h4>
-
-              <div>
+              <h4 className="font-medium text-lg">General</h4>              <div>
                 <Label className="block text-sm font-medium mb-1">Theme</Label>
                 <div className="flex space-x-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroup 
-                      defaultValue={darkMode ? "dark" : "light"} 
-                      onValueChange={(value) => setDarkMode(value === "dark")}
+                      value={theme}
+                      onValueChange={setTheme}
                       className="flex space-x-4"
                     >
                       <div className="flex items-center space-x-2">
@@ -124,9 +157,7 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
                     </RadioGroup>
                   </div>
                 </div>
-              </div>
-
-              <div>
+              </div>              <div>
                 <Label className="block text-sm font-medium mb-1">
                   Request Timeout (ms)
                 </Label>
@@ -136,13 +167,12 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
                   onChange={(e) => setRequestTimeout(Number(e.target.value))}
                   min={1000}
                   max={120000}
-                  className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                 />
               </div>
 
               <div>
                 <Label className="block text-sm font-medium mb-1">
-                  Response Size Limit (MB)
+                  Response Size Limit (KB)
                 </Label>
                 <Input
                   type="number"
@@ -150,7 +180,6 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
                   onChange={(e) => setResponseSize(Number(e.target.value))}
                   min={1}
                   max={100}
-                  className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                 />
               </div>
             </div>
@@ -162,13 +191,11 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
               <div className="space-y-2">
                 {defaultHeaders.map((header, index) => (
                   <div key={header.id} className="grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-5">
-                      <Input
+                    <div className="col-span-5">                      <Input
                         type="text"
                         placeholder="Header name"
                         value={header.name}
                         onChange={(e) => updateHeader(header.id, 'name', e.target.value)}
-                        className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                       />
                     </div>
                     <div className="col-span-6">
@@ -177,7 +204,6 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
                         placeholder="Header value"
                         value={header.value}
                         onChange={(e) => updateHeader(header.id, 'value', e.target.value)}
-                        className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                       />
                     </div>
                     <div className="col-span-1 flex justify-center">
@@ -221,16 +247,16 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
                   </Label>
                 </div>
 
-                <div className="space-y-2">
-                  <div>
+                <div className="space-y-2">                  <div>
                     <Label className="block text-sm font-medium mb-1">
                       Proxy URL
                     </Label>
                     <Input
                       type="text"
                       placeholder="http://proxy.example.com:8080"
+                      value={proxyUrl}
+                      onChange={(e) => setProxyUrl(e.target.value)}
                       disabled={!proxyEnabled}
-                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                     />
                   </div>
 
@@ -241,8 +267,9 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
                       </Label>
                       <Input
                         type="text"
+                        value={proxyUsername}
+                        onChange={(e) => setProxyUsername(e.target.value)}
                         disabled={!proxyEnabled}
-                        className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                       />
                     </div>
                     <div>
@@ -251,8 +278,9 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
                       </Label>
                       <Input
                         type="password"
+                        value={proxyPassword}
+                        onChange={(e) => setProxyPassword(e.target.value)}
                         disabled={!proxyEnabled}
-                        className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                       />
                     </div>
                   </div>
@@ -267,13 +295,11 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
               <div className="space-y-2">
                 {apiKeys.map((key, index) => (
                   <div key={key.id} className="grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-4">
-                      <Input
+                    <div className="col-span-4">                      <Input
                         type="text"
                         placeholder="Key name"
                         value={key.name}
                         onChange={(e) => updateApiKey(key.id, 'name', e.target.value)}
-                        className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                       />
                     </div>
                     <div className="col-span-7">
@@ -282,7 +308,6 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
                         placeholder="API key value"
                         value={key.value}
                         onChange={(e) => updateApiKey(key.id, 'value', e.target.value)}
-                        className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                       />
                     </div>
                     <div className="col-span-1 flex justify-center">
@@ -317,12 +342,11 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
               <div>
                 <Label className="block text-sm font-medium mb-1">
                   JSON Indentation
-                </Label>
-                <Select 
+                </Label>                <Select 
                   value={jsonIndentation} 
                   onValueChange={setJsonIndentation}
                 >
-                  <SelectTrigger className={`w-full ${darkMode ? "bg-gray-700 border-gray-700" : ""}`}>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select indentation" />
                   </SelectTrigger>
                   <SelectContent>
@@ -336,12 +360,11 @@ export default function SettingsModal({ open, setOpen, darkMode, setDarkMode }) 
               <div>
                 <Label className="block text-sm font-medium mb-1">
                   Default Response View
-                </Label>
-                <Select 
+                </Label>                <Select 
                   value={defaultResponseView} 
                   onValueChange={setDefaultResponseView}
                 >
-                  <SelectTrigger className={`w-full ${darkMode ? "bg-gray-700 border-gray-700" : ""}`}>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select view" />
                   </SelectTrigger>
                   <SelectContent>

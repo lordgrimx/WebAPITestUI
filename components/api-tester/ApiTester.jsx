@@ -10,15 +10,15 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import axios from "axios"; // axios kütüphanesini import ediyorum
 import { toast } from "sonner"; // sonner'dan toast fonksiyonunu import et
+import { useSettings } from "@/lib/settings-context"; // Import the settings hook
 
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
-// verifyToken import removed as verification is now done server-side
-import Cookies from "js-cookie"; // Keep Cookies import if needed elsewhere, or remove if not
-
 export default function ApiTester() {
+  const { settings, updateSetting } = useSettings(); // Get settings from context
+  
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
@@ -26,7 +26,7 @@ export default function ApiTester() {
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
   const [currentRequestData, setCurrentRequestData] = useState(null); // State to hold current request builder data
   const [initialDataFromHistory, setInitialDataFromHistory] = useState(null); // State to hold data from selected history item
-  const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
+const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
   const [authToken, setAuthToken] = useState(''); // Initialize empty
 
   // Move localStorage access to useEffect
@@ -159,9 +159,9 @@ export default function ApiTester() {
           // If not valid JSON, send as plain text
           axiosConfig.data = requestBody;
         }
-      }
-
-      // Make the actual API request
+      }      // Make the actual API request
+      // Use the timeout setting from settings context
+      axiosConfig.timeout = settings.requestTimeout; // Use the timeout from settings
       const axiosResponse = await axios(axiosConfig); // Use the modified config
 
       // Handle successful response
@@ -172,11 +172,11 @@ export default function ApiTester() {
       const responseText = JSON.stringify(axiosResponse.data);
       const responseSize = new Blob([responseText]).size;
 
-      const MAX_RESPONSE_SIZE = 304857; // 1MB limit
+      const MAX_RESPONSE_SIZE_byte = settings.responseSize * 1024
       let truncatedData = axiosResponse.data;
       let truncatedResponseText = responseText;
       let isTruncated = false;
-        if (responseSize > MAX_RESPONSE_SIZE) {
+        if (responseSize > MAX_RESPONSE_SIZE_byte) {
         // Mark as truncated but keep the full structure for display
         isTruncated = true;
 
@@ -185,7 +185,7 @@ export default function ApiTester() {
           // For arrays, truncate to fewer items
           if (Array.isArray(axiosResponse.data)) {
             const originalLength = axiosResponse.data.length;
-            const maxItems = Math.max(20, Math.floor(MAX_RESPONSE_SIZE / 5000)); // Estimate based on size
+            const maxItems = Math.max(20, Math.floor(MAX_RESPONSE_SIZE_byte / 5000)); // Estimate based on size
             truncatedData = axiosResponse.data.slice(0, maxItems);
             if (originalLength > maxItems) {
               truncatedData.push({
@@ -240,17 +240,24 @@ export default function ApiTester() {
       };
 
       setResponseData(formattedResponse);
-      
-      // Record ALL requests in history
-      await recordHistory({
+        // Record ALL requests in history - use truncated data when applicable
+      const dataToStore = isTruncated 
+        ? JSON.stringify(truncatedData) // Use the truncated data object
+        : responseText; // Use the original response text when not truncated
+        
+      // Store the size of what we're actually storing
+      const storedResponseSize = isTruncated 
+        ? new Blob([dataToStore]).size 
+        : responseSize;
+          await recordHistory({
         requestId: selectedRequestId || undefined,
-        userId: currentUserID || undefined, // Include user ID if available
+        userId: currentUserID, // Always include user ID - no fallback to undefined
         method: requestData.method,
         url: requestData.url,
         status: axiosResponse.status,
         duration: duration,
-        responseSize: responseSize,
-        responseData: isTruncated ? truncatedResponseText : responseText,
+        responseSize: storedResponseSize, // Store the actual size of the saved data
+        responseData: dataToStore, // Store the truncated version when applicable
         responseHeaders: JSON.stringify(axiosResponse.headers),
         isTruncated: isTruncated
       });

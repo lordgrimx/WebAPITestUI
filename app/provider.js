@@ -4,6 +4,7 @@ import { ThemeProvider as NextThemesProvider } from "next-themes"
 import { ConvexProvider } from "convex/react"
 import { convex } from "@/convex/client"
 import { AuthProvider } from "@/lib/auth-context"
+import { SettingsProvider } from "@/lib/settings-context"
 import LoadingWrapper from "@/components/LoadingWrapper"
 
 function Provider({ children }) {
@@ -16,9 +17,11 @@ function Provider({ children }) {
                 disableTransitionOnChange
             >
                 <AuthProvider>
-                    <LoadingWrapper>
-                        {children}
-                    </LoadingWrapper>
+                    <SettingsProvider>
+                        <LoadingWrapper>
+                            {children}
+                        </LoadingWrapper>
+                    </SettingsProvider>
                 </AuthProvider>
             </NextThemesProvider>
         </ConvexProvider>
