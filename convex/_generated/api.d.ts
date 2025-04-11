@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as client from "../client.js";
 import type * as collections from "../collections.js";
+import type * as generateToken from "../generateToken.js";
 import type * as history from "../history.js";
 import type * as requests from "../requests.js";
 
@@ -29,6 +30,7 @@ import type * as requests from "../requests.js";
 declare const fullApi: ApiFromModules<{
   client: typeof client;
   collections: typeof collections;
+  generateToken: typeof generateToken;
   history: typeof history;
   requests: typeof requests;
 }>;
