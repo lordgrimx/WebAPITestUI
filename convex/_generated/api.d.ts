@@ -17,6 +17,7 @@ import type * as client from "../client.js";
 import type * as collections from "../collections.js";
 import type * as generateToken from "../generateToken.js";
 import type * as history from "../history.js";
+import type * as k6tests from "../k6tests.js";
 import type * as requests from "../requests.js";
 import type * as users from "../users.js";
 
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   collections: typeof collections;
   generateToken: typeof generateToken;
   history: typeof history;
+  k6tests: typeof k6tests;
   requests: typeof requests;
   users: typeof users;
 }>;
