@@ -45,6 +45,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSettings } from "@/lib/settings-context"; // Import the useSettings hook
 
 // HTTP Methods
 const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"];
@@ -562,14 +563,34 @@ export default function RequestBuilder({
   onRequestDataChange,
   authToken,
   onUpdateAuthToken
-}) {
+}) {  // Access settings using the hook
+  const { settings } = useSettings();
+  
   // Initialize state based on initialData if provided, otherwise default
   const [method, setMethod] = useState(initialData?.method || "GET");
   const [url, setUrl] = useState(initialData?.url || ""); // Initialize URL
   const [debouncedUrl, setDebouncedUrl] = useState(url);
   // Initialize with a single default row
-  const [params, setParams] = useState([createDefaultRow()]);
-  const [headers, setHeaders] = useState([createDefaultRow()]);
+  const [params, setParams] = useState([createDefaultRow()]);  // Initialize headers from settings.defaultHeaders if available
+  const [headers, setHeaders] = useState(() => {
+    // Check if settings and defaultHeaders exist
+    console.log("Settings in headers initialization:", settings);
+    if (settings?.defaultHeaders && Array.isArray(settings.defaultHeaders) && settings.defaultHeaders.length > 0) {
+      // Map default headers to the format expected by our component
+      console.log("Using default headers from settings:", settings.defaultHeaders);
+      const mappedHeaders = settings.defaultHeaders.map(header => ({
+        id: header.id || Date.now() + Math.random(),
+        key: header.name || "", // Map name to key
+        value: header.value || "",
+        enabled: true
+      }));
+      console.log("Mapped headers:", mappedHeaders);
+      return mappedHeaders;
+    }
+    // Fallback to a single empty row if no default headers
+    console.log("No default headers found in settings, using empty row");
+    return [createDefaultRow()];
+  });
   const [body, setBody] = useState("");
   const [auth, setAuth] = useState({ type: "none" });
   const [tests, setTests] = useState({ script: "", results: [] });
@@ -794,6 +815,22 @@ export default function RequestBuilder({
       onRequestDataChange(currentData);
     }
   }, [currentData, onRequestDataChange]);
+  // Update headers when settings change
+  useEffect(() => {
+    if (settings?.defaultHeaders && Array.isArray(settings.defaultHeaders) && settings.defaultHeaders.length > 0) {
+      console.log("Settings changed, updating headers with default headers");
+      const mappedHeaders = settings.defaultHeaders.map(header => ({
+        id: header.id || Date.now() + Math.random(),
+        key: header.name || "", // Map name to key
+        value: header.value || "",
+        enabled: true
+      }));
+      
+      // Update headers regardless of current state to ensure they are always populated
+      console.log("Updating headers with default values:", mappedHeaders);
+      setHeaders(mappedHeaders);
+    }
+  }, [settings]); // Only depend on settings, not headers
 
   const handleSendClick = useCallback(() => {
      // Validate URL one last time before opening dialog or sending
