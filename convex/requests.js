@@ -22,11 +22,52 @@ export const getRequestById = query({
     },
 });
 
+// Get a request by exact URL match - compare full URLs including paths
+export const getRequestByUrl = query({
+    args: { url: v.string() },
+    handler: async (ctx, args) => {
+        // Parse the URL to ensure we're comparing apples to apples
+        let urlObj;
+        try {
+            urlObj = new URL(args.url);
+        } catch (e) {
+            console.error("Invalid URL in getRequestByUrl:", args.url);
+            return null; // Return null for invalid URLs
+        }
+
+        // Normalize the URL to ensure consistent comparison
+        const normalizedUrl = args.url.trim();
+
+        // Find all requests
+        const requests = await ctx.db
+            .query("requests")
+            .collect();
+
+        // Find a match with exact URL (case-sensitive)
+        const matchingRequest = requests.find(req => {
+            // Early return if URL is missing
+            if (!req.url) return false;
+
+            try {
+                // Compare the full URLs including the path
+                return req.url.trim() === normalizedUrl;
+            } catch (e) {
+                console.error("Error comparing URLs:", e);
+                return false;
+            }
+        });
+
+        return matchingRequest || null;
+    },
+});
+
 // Create a new request
 export const createRequest = mutation({
     args: {
+        userId: v.id("users"),
         collectionId: v.id("collections"),
         name: v.string(),
+        description: v.optional(v.string()),
         method: v.string(),
         url: v.string(),
         headers: v.optional(v.string()),
@@ -104,8 +145,14 @@ export const recordHistory = mutation({
         name: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
+        // Use the provided requestId if available
+        let requestId = args.requestId;
+        // Don't try to find a matching request by URL - this was causing the issue
+        // when different endpoints from the same base URL were being treated as the same
+
         const historyId = await ctx.db.insert("history", {
             ...args,
+            requestId, // Use the found requestId or keep it null
             timestamp: Date.now(),
         });
 

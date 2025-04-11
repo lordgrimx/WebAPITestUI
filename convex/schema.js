@@ -18,18 +18,20 @@ export default defineSchema({
         method: v.string(),
         isReqAuth: v.boolean(),
         endpoint: v.string()
-    }),
-
-    // API Test Aracı için Koleksiyonlar
+    }),    // API Test Aracı için Koleksiyonlar
     collections: defineTable({
+        userId: v.id("users"),
         name: v.string(),
         description: v.optional(v.string()),
         createdAt: v.number(),
         updatedAt: v.number(),
-    }).index("by_name", ["name"]), // İsimle arama için index
+    })
+        .index("by_name", ["name"])
+        .index("by_userId", ["userId"]),
 
     // API Test Aracı için İstekler
     requests: defineTable({
+        userId: v.id("users"),
         name: v.string(),
         description: v.optional(v.string()),
         collectionId: v.id("collections"),
@@ -45,6 +47,7 @@ export default defineSchema({
         .index("by_collectionId", ["collectionId"]) // Koleksiyona göre istekleri getirmek için index
         .index("by_name", ["name"]), // İsme göre arama için index    // İstek Geçmişi (History) - İsteğe bağlı olarak eklenebilir
     history: defineTable({
+        userId: v.id("users"),
         requestId: v.optional(v.id("requests")),
         method: v.string(),
         url: v.string(),

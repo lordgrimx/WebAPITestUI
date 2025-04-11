@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 export async function POST(request) {
     try {
         // Tüm kimlik doğrulama cookie'lerini temizle
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         cookieStore.delete('token');
         cookieStore.delete('userId');
 

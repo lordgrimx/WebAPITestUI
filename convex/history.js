@@ -4,6 +4,7 @@ import { v } from "convex/values";
 // Record a new history entry for an API request
 export const recordHistory = mutation({
     args: {
+        userId: v.id("users"),
         requestId: v.optional(v.id("requests")),
         method: v.string(),
         url: v.string(),
@@ -18,6 +19,7 @@ export const recordHistory = mutation({
     },
     handler: async (ctx, args) => {
         const historyId = await ctx.db.insert("history", {
+            userId: args.userId,
             requestId: args.requestId,
             method: args.method,
             url: args.url,
@@ -59,6 +61,24 @@ export const getHistoryByRequestId = query({
             .filter((q) => q.eq(q.field("requestId"), args.requestId))
             .order("desc")
             .collect();
+        return history;
+    },
+});
+
+// Get history for a specific user
+export const getHistoryByUserId = query({
+    args: {
+        userId: v.id("users"),
+        limit: v.optional(v.number())
+    },
+    handler: async (ctx, args) => {
+        const limit = args.limit || 50;
+        const history = await ctx.db
+            .query("history")
+            .withIndex("by_timestamp")
+            .order("desc")
+            .filter((q) => q.eq(q.field("userId"), args.userId))
+            .take(limit);
         return history;
     },
 });

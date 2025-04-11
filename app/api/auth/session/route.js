@@ -4,7 +4,7 @@ import { verifyToken } from '../../../../lib/jwt-utils';
 export async function GET(request) {
     try {
         // Sunucu tarafındaki token cookie'sini al
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         const token = cookieStore.get('token')?.value;
 
         if (!token) {

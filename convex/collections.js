@@ -9,6 +9,18 @@ export const getCollections = query({
     },
 });
 
+// Get collections for a specific user
+export const getCollectionsByUserId = query({
+    args: { userId: v.id("users") },
+    handler: async (ctx, args) => {
+        const collections = await ctx.db
+            .query("collections")
+            .withIndex("by_userId", q => q.eq("userId", args.userId))
+            .collect();
+        return collections;
+    },
+});
+
 // Get a single collection by ID
 export const getCollection = query({
     args: { id: v.id("collections") },
@@ -21,6 +33,7 @@ export const getCollection = query({
 // Add a new collection
 export const addCollection = mutation({
     args: {
+        userId: v.id("users"),
         name: v.string(),
         description: v.optional(v.string())
     },
@@ -36,6 +49,7 @@ export const addCollection = mutation({
         try {
             console.log("Server: Inserting new collection into database");
             const collectionId = await ctx.db.insert("collections", {
+                userId: args.userId,
                 name: args.name,
                 description: args.description || "",
                 createdAt: now,

@@ -14,7 +14,7 @@ export async function POST(request) {
         const token = generateToken(userId, '2h');
 
         // Set cookie
-        cookies().set('token', token, {
+        await cookies().set('token', token, {
             secure: process.env.NODE_ENV === 'production',
             maxAge: 2 * 60 * 60, // 2 hours in seconds
             sameSite: 'strict',
@@ -22,7 +22,7 @@ export async function POST(request) {
             httpOnly: true // This makes the cookie only accessible by the server
         });
 
-        cookies().set('userId', userId, {
+        await cookies().set('userId', userId, {
             secure: process.env.NODE_ENV === 'production',
             maxAge: 2 * 60 * 60, // 2 hours in seconds
             sameSite: 'strict',
