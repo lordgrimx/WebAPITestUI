@@ -56,5 +56,36 @@ export default defineSchema({
         timestamp: v.number(),
         isTruncated: v.optional(v.boolean()),
     })
-        .index("by_timestamp", ["timestamp"])
+        .index("by_timestamp", ["timestamp"]),
+
+    // Monitors table for API monitoring
+    monitors: defineTable({
+        name: v.string(),
+        collectionId: v.id("collections"),
+        collectionName: v.string(),
+        interval: v.number(),
+        method: v.string(),
+        url: v.string(),
+        headers: v.optional(v.string()),
+        body: v.optional(v.string()),
+        status: v.string(),
+        uptime: v.string(),
+        lastChecked: v.string(),
+        responseTime: v.number(),
+        createdAt: v.string(),
+        metrics: v.optional(v.object({
+            avgResponseTime: v.number(),
+            requestCount: v.number(),
+            errorRate: v.number(),
+            statusCodes: v.array(v.object({
+                code: v.number(),
+                count: v.number()
+            })),
+            historicalData: v.array(v.object({
+                timestamp: v.string(),
+                responseTime: v.number(),
+                status: v.number()
+            }))
+        }))
+    }).index("by_collectionId", ["collectionId"]),
 });

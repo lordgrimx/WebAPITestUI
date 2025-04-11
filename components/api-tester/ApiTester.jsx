@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react"; // Add useEffect
 import {
   ResizableHandle,
   ResizablePanel,
@@ -10,12 +10,13 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import axios from "axios"; // axios kütüphanesini import ediyorum
 import { toast } from "sonner"; // sonner'dan toast fonksiyonunu import et
+import Link from 'next/link';
+import { Activity } from "lucide-react";
 
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
-import MonitorsPanel from "./MonitorsPanel";
 
 export default function ApiTester() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
@@ -24,17 +25,28 @@ export default function ApiTester() {
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
   const [currentRequestData, setCurrentRequestData] = useState(null); // State to hold current request builder data
   const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
-  const [authToken, setAuthToken] = useState(localStorage.getItem('authToken') || ''); // Auth token state
+  const [authToken, setAuthToken] = useState(''); // Initialize empty
+
+  // Move localStorage access to useEffect
+  useEffect(() => {
+    // Only access localStorage after component mounts (client-side)
+    const storedToken = localStorage.getItem('authToken');
+    if (storedToken) {
+      setAuthToken(storedToken);
+    }
+  }, []);
 
   const recordHistory = useMutation(api.history.recordHistory);
 
-  // Add token persistence
+  // Update token persistence with safety check
   const updateAuthToken = useCallback((token) => {
     setAuthToken(token);
-    if (token) {
-      localStorage.setItem('authToken', token);
-    } else {
-      localStorage.removeItem('authToken');
+    if (typeof window !== 'undefined') { // Check if we're on client side
+      if (token) {
+        localStorage.setItem('authToken', token);
+      } else {
+        localStorage.removeItem('authToken');
+      }
     }
   }, []);
 
@@ -47,12 +59,11 @@ export default function ApiTester() {
 
   // Memoize the response handler
   const handleSendRequest = useCallback(async (requestData) => {
+    const startTime = Date.now();
     try {
       setResponseData(null); // Reset response before sending
       setError(null); // Clear previous errors
       console.log("Sending request:", requestData);
-
-      const startTime = Date.now();
 
       // Extract request data including auth details
       const { method, url, headers: requestHeaders, body: requestBody, params, auth } = requestData; // Add auth here
@@ -144,8 +155,7 @@ export default function ApiTester() {
         // Mark as truncated but keep the full structure for display
         isTruncated = true;
 
-        // Keep the original data structure but indicate truncation in a safer way
-        // We'll preserve the JSON structure by creating a safe truncated version
+        // Keep the original data structure by creating a safe truncated version
         try {
           // For arrays, truncate to fewer items
           if (Array.isArray(axiosResponse.data)) {
@@ -205,31 +215,52 @@ export default function ApiTester() {
       };
 
       setResponseData(formattedResponse);
-      // Record this request in history - ONLY for successful requests
-      if (axiosResponse.status >= 200 && axiosResponse.status < 300) {
-        await recordHistory({
-          requestId: selectedRequestId || undefined,
-          method: requestData.method,
-          url: requestData.url,
-          status: axiosResponse.status,
-          duration: duration,
-          responseSize: responseSize,
-          responseData: isTruncated ? truncatedResponseText : responseText, // Store potentially truncated text
-          responseHeaders: JSON.stringify(axiosResponse.headers),
-          isTruncated: isTruncated
-        });
-        toast.success("Request Sent", {
-          description: isTruncated
-            ? "The request was successful but the response was truncated due to size limits (1MB)."
-            : "The request was sent successfully and recorded in history.",
-        });
-      }
+      
+      // Record ALL requests in history
+      await recordHistory({
+        requestId: selectedRequestId || undefined,
+        method: requestData.method,
+        url: requestData.url,
+        status: axiosResponse.status,
+        duration: duration,
+        responseSize: responseSize,
+        responseData: isTruncated ? truncatedResponseText : responseText,
+        responseHeaders: JSON.stringify(axiosResponse.headers),
+        isTruncated: isTruncated
+      });
+
+      toast.success("Request Sent", {
+        description: isTruncated
+          ? "The request was successful but the response was truncated due to size limits (1MB)."
+          : "The request was sent successfully and recorded in history.",
+      });
+
     } catch (error) {
       console.error("Error sending request:", error);
 
+      // Record failed requests in history too
+      const endTime = Date.now();
+      const duration = endTime - startTime;
+      
+      const errorResponse = error.response || {
+        status: 0,
+        data: { error: error.message },
+        headers: {}
+      };
+
+      await recordHistory({
+        requestId: selectedRequestId || undefined,
+        method: requestData.method,
+        url: requestData.url,
+        status: errorResponse.status,
+        duration: duration,
+        responseSize: 0,
+        responseData: JSON.stringify(errorResponse.data),
+        responseHeaders: JSON.stringify(errorResponse.headers),
+        isTruncated: false
+      });
+
       // Check if this is a network error (like invalid URL, no internet, etc.)
-      let errorResponse;
-      let status;
       let errorData;
       let errorHeaders;
 
@@ -241,72 +272,35 @@ export default function ApiTester() {
           description: "İstek sunucuya ulaşamadı. URL'yi veya internet bağlantınızı kontrol edin.",
         });
 
-        status = 0; // Ağ hatasını belirtmek için 0 kullan
         errorData = {
           error: errorMessage,
           details: "The request could not reach the server. Check the URL and your internet connection."
         };
         errorHeaders = { "content-type": "application/json" };
 
-        errorResponse = {
-          status: status,
-          data: errorData,
-          headers: errorHeaders,
-          size: "0.2 KB", // Placeholder size
-          timeTaken: "0 ms", // Placeholder time
-          isNetworkError: true
-        };
-
-        // For network errors, set the error state
-        setError(errorMessage);      } else {
+        setError(errorMessage);
+      } else {
         // Handle HTTP errors (400, 500, etc.) - Do NOT set the error state for these
-        status = error.response?.status || 500;
+        const status = error.response?.status || 500;
         const errorMessage = error.message || "An error occurred while sending the request";
         errorData = error.response?.data || { error: errorMessage };
         errorHeaders = error.response?.headers || { "content-type": "application/json" };
 
-        // Create a more helpful message for common HTTP status codes
-        let errorDescription = errorMessage;
-        if (status === 404) {
-          errorDescription = "The requested resource could not be found. Please check if the URL is correct and the endpoint exists.";
-          errorData = {
-            ...errorData,
-            troubleshooting: [
-              "Verify the URL is spelled correctly",
-              "Check if the API endpoint path is correct",
-              "Confirm the resource or endpoint exists on the server",
-              "Ensure you're using the correct API version if applicable"
-            ]
-          };
-        } else if (status === 401) {
-          errorDescription = "Authentication is required. Please check your credentials or token.";
-        } else if (status === 403) {
-          errorDescription = "You don't have permission to access this resource.";
-        } else if (status === 500) {
-          errorDescription = "The server encountered an error. Please try again later or contact the API provider.";
-        }
-
-        errorResponse = {
-          status: status,
-          data: errorData,
-          headers: errorHeaders,
-          size: "0.2 KB", // Placeholder size
-          timeTaken: "0 ms", // Placeholder time
-          url: error.config?.url || requestData.url // Include the attempted URL
-        };
-
         // Display an appropriate toast message for HTTP errors
         toast.error(`HTTP Error ${status}`, {
-          description: errorDescription,
+          description: errorMessage,
         });
       }
 
-      setResponseData(errorResponse);
-
-      // Do NOT record failed requests in history per requirements
-      // Removed the recordHistory call for failed requests
+      setResponseData({
+        status: error.response?.status || 0,
+        data: errorData,
+        headers: errorHeaders,
+        size: "0.2 KB", // Placeholder size
+        timeTaken: "0 ms", // Placeholder time
+      });
     }
-  }, [selectedRequestId, recordHistory]); // Removed authToken from dependency array as it's now part of requestData.auth
+  }, [selectedRequestId, recordHistory]);
 
   // Memoize the request selection handler
   const handleRequestSelect = useCallback((requestId) => {
@@ -328,40 +322,51 @@ export default function ApiTester() {
       <Header
         darkMode={darkMode}
         setDarkMode={setDarkMode}
-        currentRequestData={currentRequestData} // Pass current request data to Header
-        // Pass openSignupModal and openLoginModal if needed by Header when logged out
-        // openSignupModal={openSignupModal}
-        // openLoginModal={openLoginModal}
+        currentRequestData={currentRequestData}
       />
       <div className="h-screen flex flex-col bg-white dark:bg-gray-950">
-        <ResizablePanelGroup direction="horizontal" className="flex-1">
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-            <CollectionsSidebar
-              setSelectedRequestId={handleRequestSelect}
-              hasError={!!sidebarError}
-              onError={setSidebarError} // Pass error handler if needed
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={40} minSize={30}>
-            <RequestBuilder
-              selectedRequestId={selectedRequestId}
-              onSendRequest={handleSendRequest}
-              onRequestDataChange={handleRequestDataChange} // Pass handler to RequestBuilder
-              authToken={authToken}
-              onUpdateAuthToken={updateAuthToken}
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={40} minSize={25}>
-            <ResponseDisplay responseData={responseData} />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-        <div className="h-64 border-t">
-          <MonitorsPanel />
+        {/* Move the monitoring link into a header-like section */}
+        <div className="p-2 border-b border-gray-200 dark:border-gray-800">
+          <Link 
+            href="/monitor" 
+            className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+          >
+            <Activity className="h-4 w-4 mr-2" />
+            Monitoring
+          </Link>
         </div>
+        
+        {/* Rest of the layout */}
+        <div className="flex-1 min-h-0"> {/* Add min-h-0 to allow proper flex shrinking */}
+          <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]"> {/* Adjust height to account for header and monitor panel */}
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+              <CollectionsSidebar
+                setSelectedRequestId={handleRequestSelect}
+                hasError={!!sidebarError}
+                onError={setSidebarError}
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+
+            <ResizablePanel defaultSize={40} minSize={30}>
+              <RequestBuilder
+                selectedRequestId={selectedRequestId}
+                onSendRequest={handleSendRequest}
+                onRequestDataChange={handleRequestDataChange}
+                authToken={authToken}
+                onUpdateAuthToken={updateAuthToken}
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+
+            <ResizablePanel defaultSize={40} minSize={25}>
+              <ResponseDisplay responseData={responseData} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+        
+        {/* Fixed height for monitor panel */}
+        
       </div>
     </>
   );

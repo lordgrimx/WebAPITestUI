@@ -126,3 +126,14 @@ export const getRecentRequests = query({
         return history;
     },
 });
+
+export const getRequestsByCollectionId = query({
+    args: { collectionId: v.id("collections") },
+    handler: async (ctx, args) => {
+        const requests = await ctx.db
+            .query("requests")
+            .filter((q) => q.eq(q.field("collectionId"), args.collectionId))
+            .collect();
+        return requests;
+    },
+});

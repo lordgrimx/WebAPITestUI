@@ -85,68 +85,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
     );
   }
 
-  // If no user is authenticated, show the landing page header from the mock
-  if (!isAuthenticated) {
-    return (
-      <header className="container mx-auto px-6 py-4">
-        <nav className="flex items-center justify-between">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-white">API Testing Tool</h1>
-          </div>
-
-          <div className="hidden md:flex items-center space-x-6">
-            <a
-              href="#features"
-              className="text-white hover:text-blue-200 transition-colors"
-            >
-              Features
-            </a>
-            <a
-              href="#pricing"
-              className="text-white hover:text-blue-200 transition-colors"
-            >
-              Pricing
-            </a>
-            <a
-              href="#docs"
-              className="text-white hover:text-blue-200 transition-colors"
-            >
-              Documentation
-            </a>
-            <a
-              href="#about"
-              className="text-white hover:text-blue-200 transition-colors"
-            >
-              About
-            </a>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setDarkMode(!darkMode)}
-              className="text-white"
-            >
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-            <Button
-              className="px-4 py-2 text-blue-600 bg-white rounded-lg font-medium hover:bg-gray-100 transition-colors"
-              onClick={openLoginModal}
-            >
-              Sign In
-            </Button>
-            <Button
-              className="px-4 py-2 text-white bg-blue-600 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              onClick={openSignupModal}
-            >
-              Sign Up Free
-            </Button>
-          </div>
-        </nav>
-      </header>
-    );
-  }
+  // If no user is authenticated, show the landing page header from the moc
 
   // If user is authenticated, show the full app header
   return (

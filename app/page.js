@@ -55,26 +55,14 @@ export default function Home() {
   }, []);
   return (
     <div className={`h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
-      {!isLoggedIn ? (
-        <LandingPage
-          darkMode={darkMode}
-          setDarkMode={setDarkMode}
-          openSignupModal={openSignupModal}
-          openLoginModal={openLoginModal}
-        />
-      ) : (
-        <>
+      <ApiTester
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        openSignupModal={openSignupModal}
+        openLoginModal={openLoginModal}
+      />
 
-          <ApiTester
-            darkMode={darkMode}
-            setDarkMode={setDarkMode}
-            openSignupModal={openSignupModal}
-            openLoginModal={openLoginModal}
-          />
-        </>
-      )}
-
-      {/* Render Modals */}
+      {/* Modals */}
       <SignupModal
         isOpen={showSignupModal}
         onClose={closeSignupModal}
