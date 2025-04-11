@@ -172,7 +172,7 @@ export default function ApiTester() {
       const responseText = JSON.stringify(axiosResponse.data);
       const responseSize = new Blob([responseText]).size;
 
-      const MAX_RESPONSE_SIZE = 1048576; // 1MB limit
+      const MAX_RESPONSE_SIZE = 304857; // 1MB limit
       let truncatedData = axiosResponse.data;
       let truncatedResponseText = responseText;
       let isTruncated = false;
