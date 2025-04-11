@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useDebounce } from "@/hooks/useDebounce"; // Add this import
+import { useDebounce } from "@/hooks/useDebounce";
+// verifyToken import removed as verification is now done server-side
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -25,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Folder, Trash2, History } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import Cookies from "js-cookie";
 
 // HTTP Method renkleri ve Badge variantları
 const methodStyles = {
@@ -68,6 +71,8 @@ const formatTimeAgo = (timestamp) => {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+
+
 // Helper to get path part from URL
 const getPathFromUrl = (urlString) => {
   try {
@@ -84,7 +89,6 @@ const getPathFromUrl = (urlString) => {
 };
 
 export default function CollectionsSidebar({ setSelectedRequestId, hasError }) {
-  const collections = useQuery(api?.collections?.getCollections);
   const historyItems = useQuery(api?.history?.getRecentHistory, { limit: 10 });
 
   const addCollection = useMutation(api?.collections?.addCollection);
@@ -93,15 +97,44 @@ export default function CollectionsSidebar({ setSelectedRequestId, hasError }) {
   const deleteHistoryEntry = useMutation(api?.history?.deleteHistoryEntry);
 
   const [newCollectionName, setNewCollectionName] = useState("");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);  const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300); // Add debouncing
+  const [currentUserID, setCurrentUserID] = useState(null); // For user ID from JWT token
+
+  // Fetch user session info from the server-side API endpoint
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session'); // Use the session API route
+        const data = await response.json();
+
+        if (response.ok && data.success && data.userId) {
+          console.log("CollectionsSidebar: Session verified, setting user ID:", data.userId);
+          setCurrentUserID(data.userId);
+        } else {
+          console.error("CollectionsSidebar: Session verification failed:", data.error || 'No user ID returned');
+          setCurrentUserID(null); // Ensure user ID is null if session is invalid
+        }
+      } catch (error) {
+        console.error("CollectionsSidebar: Error fetching session:", error);
+        setCurrentUserID(null); // Ensure user ID is null on fetch error
+      }
+    };
+
+    fetchSession();
+  }, []); // Runs once on component mount
+
+  const collections = useQuery(
+    api.collections.getCollectionsByUserId,
+    currentUserID ? { userId: currentUserID } : "skip"
+  );
 
   const handleAddCollection = async () => {
     if (newCollectionName.trim()) {
       try {
         console.log("Trying to add collection:", newCollectionName);
         const result = await addCollection({
+          userId: currentUserID,
           name: newCollectionName.trim(),
           description: ""
         });

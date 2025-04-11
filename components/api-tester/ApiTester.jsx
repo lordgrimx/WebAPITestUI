@@ -10,16 +10,17 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import axios from "axios"; // axios kütüphanesini import ediyorum
 import { toast } from "sonner"; // sonner'dan toast fonksiyonunu import et
-import Link from 'next/link';
-import { Activity } from "lucide-react";
 
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
+// verifyToken import removed as verification is now done server-side
+import Cookies from "js-cookie"; // Keep Cookies import if needed elsewhere, or remove if not
 
 export default function ApiTester() {
   const [selectedRequestId, setSelectedRequestId] = useState(null);
+  const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
   const [error, setError] = useState(null); // General request error state
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
@@ -35,6 +36,29 @@ export default function ApiTester() {
       setAuthToken(storedToken);
     }
   }, []);
+
+  // Fetch user session info from the server-side API endpoint
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session'); // Use the session API route
+        const data = await response.json();
+
+        if (response.ok && data.success && data.userId) {
+          console.log("ApiTester: Session verified, setting user ID:", data.userId);
+          setCurrentUserID(data.userId);
+        } else {
+          console.error("ApiTester: Session verification failed:", data.error || 'No user ID returned');
+          setCurrentUserID(null); // Ensure user ID is null if session is invalid
+        }
+      } catch (error) {
+        console.error("ApiTester: Error fetching session:", error);
+        setCurrentUserID(null); // Ensure user ID is null on fetch error
+      }
+    };
+
+    fetchSession();
+  }, []); // Runs once on component mount
 
   const recordHistory = useMutation(api.history.recordHistory);
 
@@ -219,6 +243,7 @@ export default function ApiTester() {
       // Record ALL requests in history
       await recordHistory({
         requestId: selectedRequestId || undefined,
+        userId: currentUserID || undefined, // Include user ID if available
         method: requestData.method,
         url: requestData.url,
         status: axiosResponse.status,
@@ -324,17 +349,7 @@ export default function ApiTester() {
         setDarkMode={setDarkMode}
         currentRequestData={currentRequestData}
       />
-      <div className="h-screen flex flex-col bg-white dark:bg-gray-950">
-        {/* Move the monitoring link into a header-like section */}
-        <div className="p-2 border-b border-gray-200 dark:border-gray-800">
-          <Link 
-            href="/monitor" 
-            className="flex items-center px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-          >
-            <Activity className="h-4 w-4 mr-2" />
-            Monitoring
-          </Link>
-        </div>
+      <div className="flex flex-col h-screen overflow-hidden"> {/* Use flex-col for vertical layout */}
         
         {/* Rest of the layout */}
         <div className="flex-1 min-h-0"> {/* Add min-h-0 to allow proper flex shrinking */}

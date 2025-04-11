@@ -8,26 +8,18 @@ export async function POST(request) {
 
         if (!userId) {
             return Response.json({ success: false, error: 'User ID is required' }, { status: 400 });
-        }
-
-        // Generate token
+        }        // Generate token
         const token = generateToken(userId, '2h');
 
-        // Set cookie
+        // Set token cookie - NOT httpOnly so it can be accessed by client JavaScript
         await cookies().set('token', token, {
             secure: process.env.NODE_ENV === 'production',
             maxAge: 2 * 60 * 60, // 2 hours in seconds
             sameSite: 'strict',
             path: '/',
-            httpOnly: true // This makes the cookie only accessible by the server
+            httpOnly: true // Making it accessible from client-side JavaScript
         });
 
-        await cookies().set('userId', userId, {
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 2 * 60 * 60, // 2 hours in seconds
-            sameSite: 'strict',
-            path: '/'
-        });
 
         return Response.json({ success: true });
     } catch (error) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,6 +23,7 @@ import {
   Check,
   Pencil,
   ChevronDown,
+  Activity,
 } from "lucide-react";
 import SettingsModal from "@/components/SettingsModal";
 import GenerateCodeModal from "@/components/GenerateCodeModal";
@@ -199,8 +201,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
             }`}
           >
             API Testing Tool
-          </h1>
-          <div className="flex space-x-2 ml-6">
+          </h1>          <div className="flex space-x-2 ml-6">
             <Button
               variant="ghost"
               size="sm"
@@ -228,6 +229,13 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               <Settings className="h-4 w-4" />
               <span>Settings</span>
             </Button>
+            <Link 
+              href="/monitor" 
+              className="inline-flex items-center px-2 py-1 text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+            >
+              <Activity className="h-4 w-4 mr-1" />
+              <span>Monitoring</span>
+            </Link>
           </div>
         </div>
         <div className="flex items-center space-x-4">

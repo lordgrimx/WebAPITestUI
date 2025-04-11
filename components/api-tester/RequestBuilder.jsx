@@ -22,7 +22,6 @@ import {
   Lock,
   Globe,
   User,
-  Save // Added Save icon for consistency if needed later
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -35,7 +34,8 @@ import {
   DialogTitle,
   DialogClose
 } from "@/components/ui/dialog";
-import { useDebounce } from "@/hooks/useDebounce"; // Add this import
+import Cookies from "js-cookie";
+// verifyToken import removed as verification is now done server-side
 
 // HTTP Methods
 const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"];
@@ -564,17 +564,24 @@ export default function RequestBuilder({
   const [error, setError] = useState(null);
   const [isValidatingUrl, setIsValidatingUrl] = useState(false);
   const [urlError, setUrlError] = useState(null);
-
+  const [currentUserID, setCurrentUserID] = useState(null); // For user ID from JWT token
   // Dialog states
   const [dialogOpen, setDialogOpen] = useState(false);
   const [parallelRequestCount, setParallelRequestCount] = useState(1);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-
-  // Memoize request data query
+  
+  // Memoize request data query - don't filter by userId since we want to load any request
   const requestData = useQuery(
     api?.requests?.getRequestById,
     selectedRequestId ? { id: selectedRequestId } : "skip"
   );
+  
+  // Log when request data is loaded
+  useEffect(() => {
+    if (selectedRequestId && requestData) {
+      console.log("Loaded request data:", requestData);
+    }
+  }, [selectedRequestId, requestData]);
 
   // URL validation
   const validateUrl = useCallback(async (urlToValidate) => {
@@ -584,9 +591,7 @@ export default function RequestBuilder({
     };
 
     setIsValidatingUrl(true);
-    setUrlError(null);
-
-    try {
+    setUrlError(null);    try {
       // Basic check for protocol
       if (!urlToValidate.startsWith('http://') && !urlToValidate.startsWith('https://')) {
          throw new Error("URL must start with http:// or https://");
@@ -599,6 +604,29 @@ export default function RequestBuilder({
       setIsValidatingUrl(false);
     }
   }, []);
+
+  // Fetch user session info from the server-side API endpoint
+  useEffect(() => {
+    const fetchSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session'); // Use the session API route
+        const data = await response.json();
+
+        if (response.ok && data.success && data.userId) {
+          console.log("Session verified, setting user ID:", data.userId);
+          setCurrentUserID(data.userId);
+        } else {
+          console.error("Session verification failed:", data.error || 'No user ID returned');
+          setCurrentUserID(null); // Ensure user ID is null if session is invalid
+        }
+      } catch (error) {
+        console.error("Error fetching session:", error);
+        setCurrentUserID(null); // Ensure user ID is null on fetch error
+      }
+    };
+
+    fetchSession();
+  }, []); // Runs once on component mount
 
 
   // Debounce URL updates and validation
@@ -654,77 +682,114 @@ export default function RequestBuilder({
     tests: tests // Pass the tests object
   }), [method, debouncedUrl, headers, params, body, auth, tests]);
 
-
   // Update form when selectedRequestId changes OR when requestData for the current ID becomes available
   useEffect(() => {
-    // Condition 1: A request ID is selected
-    if (selectedRequestId) {
-      // Only populate if the fetched data actually corresponds to the selected ID
-      // This prevents populating with stale data if the query is slow
-      if (requestData && requestData._id === selectedRequestId) {
-        console.log("Populating form for selected request:", selectedRequestId, requestData);
-        setMethod(requestData.method || "GET");
-        setUrl(requestData.url || "");
-        // setDebouncedUrl(requestData.url || ""); // Let the debounce handle this
-
-        // Safely parse and set Params
-        let parsedParams = [createDefaultRow()]; // Default if parsing fails or no data
-        if (requestData.params && typeof requestData.params === 'string') {
-          try {
-            const tempParsed = JSON.parse(requestData.params);
-            if (Array.isArray(tempParsed) && tempParsed.every(p => typeof p === 'object' && p !== null && 'id' in p && 'key' in p && 'value' in p && 'enabled' in p)) {
-              parsedParams = tempParsed.length > 0 ? tempParsed : [createDefaultRow()]; // Ensure at least one row
-            } else {
-              console.warn("Parsed params is not a valid array, using default.");
-            }
-          } catch (e) {
-            console.error("Error parsing params:", e);
+    // Condition 1: A request ID is selected and data is available
+    if (selectedRequestId && requestData) {
+      // Now we're sure we have the data for this request
+      console.log("Populating form for selected request:", selectedRequestId, requestData);
+      
+      // Set basic request properties
+      setMethod(requestData.method || "GET");
+      setUrl(requestData.url || "");
+      
+      // Safely parse and set Params
+      let parsedParams = [createDefaultRow()]; // Default if parsing fails or no data
+      if (requestData.params && typeof requestData.params === 'string') {
+        try {
+          const tempParsed = JSON.parse(requestData.params);
+          if (Array.isArray(tempParsed) && tempParsed.length > 0) {
+            // Less strict validation to handle different object structures
+            parsedParams = tempParsed.map(p => ({
+              id: p.id || Date.now() + Math.random(),
+              key: p.key || "",
+              value: p.value || "",
+              enabled: p.enabled !== undefined ? p.enabled : true
+            }));
+          } else {
+            console.warn("Parsed params is not a valid array, using default.");
           }
-        } else {
-           console.log("No valid params string found, using default.");
+        } catch (e) {
+          console.error("Error parsing params:", e);
         }
-        setParams(parsedParams);
-
-        // Safely parse and set Headers
-        let parsedHeaders = [createDefaultRow()]; // Default
-        if (requestData.headers && typeof requestData.headers === 'string') {
-          try {
-            const tempParsed = JSON.parse(requestData.headers);
-            if (Array.isArray(tempParsed) && tempParsed.every(h => typeof h === 'object' && h !== null && 'id' in h && 'key' in h && 'value' in h && 'enabled' in h)) {
-              parsedHeaders = tempParsed.length > 0 ? tempParsed : [createDefaultRow()]; // Ensure at least one row
-            } else {
-              console.warn("Parsed headers is not a valid array, using default.");
-            }
-          } catch (e) {
-            console.error("Error parsing headers:", e);
-          }
-        } else {
-           console.log("No valid headers string found, using default.");
-        }
-        setHeaders(parsedHeaders);
-
-        setBody(requestData.body || "");
-        // Auth and Tests are not stored in the request schema, so reset them or load from elsewhere if needed
-        setAuth(requestData.auth || { type: "none" }); // Assuming auth might be added later
-        setTests(requestData.tests || { script: "", results: [] }); // Assuming tests might be added later
-        setError(null); // Clear previous errors
+      } else {
+        console.log("No valid params string found, using default.");
       }
-      // If requestData is loading or doesn't match, do nothing yet, wait for re-render
+      setParams(parsedParams);
+
+      // Safely parse and set Headers
+      let parsedHeaders = [createDefaultRow()]; // Default
+      if (requestData.headers && typeof requestData.headers === 'string') {
+        try {
+          const tempParsed = JSON.parse(requestData.headers);
+          if (Array.isArray(tempParsed) && tempParsed.length > 0) {
+            // Less strict validation to handle different object structures
+            parsedHeaders = tempParsed.map(h => ({
+              id: h.id || Date.now() + Math.random(),
+              key: h.key || "",
+              value: h.value || "",
+              enabled: h.enabled !== undefined ? h.enabled : true
+            }));
+          } else {
+            console.warn("Parsed headers is not a valid array, using default.");
+          }
+        } catch (e) {
+          console.error("Error parsing headers:", e);
+        }
+      } else {
+        console.log("No valid headers string found, using default.");
+      }
+      setHeaders(parsedHeaders);
+
+      // Set body and other properties
+      setBody(requestData.body || "");
+      
+      // Handle auth data if available
+      if (requestData.auth && typeof requestData.auth === 'object') {
+        setAuth(requestData.auth);
+      } else if (requestData.auth && typeof requestData.auth === 'string') {
+        try {
+          const parsedAuth = JSON.parse(requestData.auth);
+          setAuth(parsedAuth);
+        } catch (e) {
+          console.error("Error parsing auth data:", e);
+          setAuth({ type: "none" });
+        }
+      } else {
+        setAuth({ type: "none" });
+      }
+      
+      // Handle tests data if available
+      if (requestData.tests && typeof requestData.tests === 'object') {
+        setTests(requestData.tests);
+      } else if (requestData.tests && typeof requestData.tests === 'string') {
+        try {
+          const parsedTests = JSON.parse(requestData.tests);
+          setTests(parsedTests);
+        } catch (e) {
+          console.error("Error parsing tests data:", e);
+          setTests({ script: "", results: [] });
+        }
+      } else {
+        setTests({ script: "", results: [] });
+      }
+      
+      setError(null); // Clear previous errors
     }
     // Condition 2: No request ID is selected (explicitly null)
-    else {
-       // Explicitly reset form if no request is selected
-       console.log("No request selected, resetting form.");
-       setMethod("GET");
-       setUrl("");
-       // setDebouncedUrl(""); // Let debounce handle this
-       setParams([createDefaultRow()]);
-       setHeaders([createDefaultRow()]);
-       setBody("");
-       setAuth({ type: "none" });
-       setTests({ script: "", results: [] });
-       setError(null);
+    else if (selectedRequestId === null) {
+      // Explicitly reset form if no request is selected
+      console.log("No request selected, resetting form.");
+      setMethod("GET");
+      setUrl("");
+      setParams([createDefaultRow()]);
+      setHeaders([createDefaultRow()]);
+      setBody("");
+      setAuth({ type: "none" });
+      setTests({ script: "", results: [] });
+      setError(null);
     }
+    // If selectedRequestId is set but requestData is still loading, wait for it
   }, [requestData, selectedRequestId]); // Depend on both requestData and selectedRequestId
 
 

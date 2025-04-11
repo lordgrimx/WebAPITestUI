@@ -4,8 +4,10 @@ import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { tomorrow, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-export default function ResponseDisplay({ responseData }) {
+export default function ResponseDisplay({ responseData, darkMode = true }) {
   if (!responseData || responseData.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
@@ -63,30 +65,53 @@ export default function ResponseDisplay({ responseData }) {
           <TabsTrigger value="headers">Headers</TabsTrigger>
         </TabsList>
         
-        {/* Tab Content with improved ScrollArea for scrollable content */}        <TabsContent value="pretty" className="flex-1 p-0 mt-0 h-full">
+        {/* Tab Content with improved ScrollArea for scrollable content */}          <TabsContent value="pretty" className="flex-1 p-0 mt-0 h-full">
           <ScrollArea className="h-full w-full">
-            <pre className="bg-gray-50 dark:bg-gray-900 p-4 rounded border text-sm w-full overflow-visible">
-              {responseData.isTruncated && (
-                <div className="text-yellow-600 dark:text-yellow-400 mb-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded border border-yellow-200 dark:border-yellow-800">
-                  ⚠️ Response was truncated due to large size ({responseData.size}). Some data may not be shown.
-                </div>
-              )}
-              {JSON.stringify(responseData.data, null, 2)}
-            </pre>
-          </ScrollArea>
-        </TabsContent>
-          <TabsContent value="raw" className="flex-1 mt-0 h-full"> 
-          <div className="h-full overflow-auto">
-            <div style={{ minWidth: "100%", overflow: "auto" }}>
-              <pre className="font-mono text-sm p-4 whitespace-pre" style={{ overflowX: "auto" }}>
-                {JSON.stringify(responseData.data)}
-              </pre>
+            {responseData.isTruncated && (
+              <div className="text-yellow-600 dark:text-yellow-400 mb-2 p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded border border-yellow-200 dark:border-yellow-800 mx-4 mt-4">
+                ⚠️ Response was truncated due to large size ({responseData.size}). Some data may not be shown.
+              </div>
+            )}
+            <div className="p-4">
+              <SyntaxHighlighter
+                language="json"
+                style={darkMode ? tomorrow : oneLight}
+                customStyle={{
+                  borderRadius: '4px',
+                  padding: '16px',
+                  margin: 0,
+                  fontSize: '0.875rem',
+                  lineHeight: '1.5'
+                }}
+                showLineNumbers={true}
+                wrapLines={true}
+              >
+                {JSON.stringify(responseData.data, null, 2)}
+              </SyntaxHighlighter>
             </div>
-          </div>
-        </TabsContent>
-          <TabsContent value="preview" className="flex-1 mt-0 h-full">
+          </ScrollArea>
+        </TabsContent>          <TabsContent value="raw" className="flex-1 mt-0 h-full"> 
           <ScrollArea className="h-full w-full">
-            <div className="bg-gray-50 dark:bg-gray-900 p-4 rounded border text-sm text-gray-500 w-full">
+            <div className="p-4">
+              <SyntaxHighlighter
+                language="json"
+                style={darkMode ? tomorrow : oneLight}
+                customStyle={{
+                  borderRadius: '4px',
+                  padding: '16px',
+                  margin: 0,
+                  fontSize: '0.875rem',
+                  fontFamily: 'monospace',
+                  lineHeight: '1.5'
+                }}
+              >
+                {JSON.stringify(responseData.data)}
+              </SyntaxHighlighter>
+            </div>
+          </ScrollArea>
+        </TabsContent>          <TabsContent value="preview" className="flex-1 mt-0 h-full">
+          <ScrollArea className="h-full w-full">
+            <div className="p-4 text-sm dark:text-gray-300 w-full">
               {responseData.isTruncated && (
                 <div className="text-yellow-600 dark:text-yellow-400 mb-4 p-2 bg-yellow-50 dark:bg-yellow-900/30 rounded border border-yellow-200 dark:border-yellow-800">
                   ⚠️ Response was truncated due to large size ({responseData.size}). Some data may not be shown.
@@ -158,16 +183,22 @@ export default function ResponseDisplay({ responseData }) {
             </div>
           </ScrollArea>
         </TabsContent>
-        
-        <TabsContent value="headers" className="flex-1 mt-0 h-full">
+          <TabsContent value="headers" className="flex-1 mt-0 h-full">
           <ScrollArea className="h-full w-full">
-            <div className="space-y-2 p-4 text-sm w-full">
-              {Object.entries(responseData.headers || {}).map(([key, value]) => (
-                <div key={key} className="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
-                  <span className="text-gray-500">{key}</span>
-                  <span className="break-all">{value}</span>
-                </div>
-              ))}
+            <div className="p-4">
+              <SyntaxHighlighter
+                language="json"
+                style={darkMode ? tomorrow : oneLight}
+                customStyle={{
+                  borderRadius: '4px',
+                  padding: '16px',
+                  margin: 0,
+                  fontSize: '0.875rem',
+                  lineHeight: '1.5'
+                }}
+              >
+                {JSON.stringify(responseData.headers || {}, null, 2)}
+              </SyntaxHighlighter>
             </div>
           </ScrollArea>
         </TabsContent>
