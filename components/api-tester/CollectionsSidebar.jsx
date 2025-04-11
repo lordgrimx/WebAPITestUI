@@ -88,7 +88,8 @@ const getPathFromUrl = (urlString) => {
   }
 };
 
-export default function CollectionsSidebar({ setSelectedRequestId, hasError }) {
+// Add onHistorySelect prop
+export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError }) {
   const historyItems = useQuery(api?.history?.getRecentHistory, { limit: 10 });
 
   const addCollection = useMutation(api?.collections?.addCollection);
@@ -305,7 +306,8 @@ export default function CollectionsSidebar({ setSelectedRequestId, hasError }) {
                 <HistoryItem
                   key={item._id}
                   item={item}
-                  setSelectedRequestId={setSelectedRequestId}
+                  // Pass onHistorySelect down to HistoryItem
+                  onHistorySelect={onHistorySelect}
                   onDeleteHistoryEntry={handleDeleteHistoryEntry}
                 />
               ))}
@@ -388,10 +390,11 @@ const CollectionItem = React.memo(function CollectionItem({
   return prevProps.collection._id === nextProps.collection._id;
 });
 
-const HistoryItem = React.memo(function HistoryItem({ 
-  item, 
-  setSelectedRequestId, 
-  onDeleteHistoryEntry 
+// Accept onHistorySelect prop in HistoryItem
+const HistoryItem = React.memo(function HistoryItem({
+  item,
+  onHistorySelect, // Use onHistorySelect instead of setSelectedRequestId for click action
+  onDeleteHistoryEntry
 }) {
   const style = getMethodStyle(item.method);
   const timeAgo = formatTimeAgo(item.timestamp);
@@ -399,9 +402,10 @@ const HistoryItem = React.memo(function HistoryItem({
 
   return (
     <AccordionItem value={item._id} className="border-b-0 mb-1">
+      {/* Call onHistorySelect with the full item when clicked */}
       <div
         className="flex items-center justify-between group hover:bg-gray-100 dark:hover:bg-gray-800 px-2 py-1.5 rounded cursor-pointer text-sm"
-        onClick={() => item.requestId && setSelectedRequestId(item.requestId)}
+        onClick={() => onHistorySelect(item)} // Changed onClick handler
       >
         <div className="flex items-center truncate flex-1 mr-2">
           <Badge variant={style.variant} className={`mr-2 w-14 justify-center flex-shrink-0 ${style.className}`}>

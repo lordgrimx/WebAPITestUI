@@ -25,6 +25,7 @@ export default function ApiTester() {
   const [error, setError] = useState(null); // General request error state
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
   const [currentRequestData, setCurrentRequestData] = useState(null); // State to hold current request builder data
+  const [initialDataFromHistory, setInitialDataFromHistory] = useState(null); // State to hold data from selected history item
   const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
   const [authToken, setAuthToken] = useState(''); // Initialize empty
 
@@ -325,22 +326,43 @@ export default function ApiTester() {
         timeTaken: "0 ms", // Placeholder time
       });
     }
-  }, [selectedRequestId, recordHistory]);
+  }, [selectedRequestId, recordHistory, currentUserID]); // Added currentUserID dependency
 
-  // Memoize the request selection handler
+  // Handler for selecting a request from a collection
   const handleRequestSelect = useCallback((requestId) => {
-    // Force a state change even if the ID is the same
-    // Set to null first, then back to the actual ID in the next render cycle
-    setSelectedRequestId(null);
-    setResponseData(null); // Reset response immediately
+    setInitialDataFromHistory(null); // Clear any history data
+    setResponseData(null); // Reset response
+    setSelectedRequestId(null); // Reset request ID first
 
-    // Use setTimeout to ensure the state update to null is processed before setting the actual ID
+    // Use setTimeout to ensure the state update to null is processed
     setTimeout(() => {
-        setSelectedRequestId(requestId);
-        console.log("Selected Request ID set to:", requestId); // Debug log
+      setSelectedRequestId(requestId);
+      console.log("Selected Request ID set to:", requestId);
     }, 0);
+  }, []);
 
-  }, []); // Keep dependencies empty or add if necessary, but the core logic relies on the null -> ID sequence
+  // Handler for selecting an item from history
+  const handleHistorySelect = useCallback((historyItem) => {
+    console.log("Selected History Item:", historyItem);
+    setSelectedRequestId(null); // Clear selected request ID
+    setResponseData(null); // Reset response
+
+    // Extract relevant data from history item to populate RequestBuilder
+    // Assuming historyItem has 'method' and 'url' fields.
+    // We might need to parse 'responseData' if we want to populate the body,
+    // but let's start with method and url.
+    // We also reset other fields like params, headers, auth, tests.
+    setInitialDataFromHistory({
+      method: historyItem.method,
+      url: historyItem.url,
+      // Reset other fields that might not be directly in history
+      params: JSON.stringify([{ id: Date.now(), key: "", value: "", enabled: true }]), // Default empty row
+      headers: JSON.stringify([{ id: Date.now(), key: "", value: "", enabled: true }]), // Default empty row
+      body: "", // Reset body
+      auth: { type: "none" }, // Reset auth
+      tests: { script: "", results: [] } // Reset tests
+    });
+  }, []);
 
   return (
     <>
@@ -356,7 +378,8 @@ export default function ApiTester() {
           <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]"> {/* Adjust height to account for header and monitor panel */}
             <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
               <CollectionsSidebar
-                setSelectedRequestId={handleRequestSelect}
+                setSelectedRequestId={handleRequestSelect} // For collection requests
+                onHistorySelect={handleHistorySelect}     // For history items
                 hasError={!!sidebarError}
                 onError={setSidebarError}
               />
@@ -365,7 +388,9 @@ export default function ApiTester() {
 
             <ResizablePanel defaultSize={40} minSize={30}>
               <RequestBuilder
+                key={selectedRequestId || initialDataFromHistory?.url} // Add key to force re-render/reset on selection change
                 selectedRequestId={selectedRequestId}
+                initialData={initialDataFromHistory} // Pass history data
                 onSendRequest={handleSendRequest}
                 onRequestDataChange={handleRequestDataChange}
                 authToken={authToken}

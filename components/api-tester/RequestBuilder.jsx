@@ -545,15 +545,18 @@ pm.test("Response contains user data", function() {
 // Default empty row factory
 const createDefaultRow = () => ({ id: Date.now(), key: "", value: "", enabled: true });
 
+// Add initialData prop
 export default function RequestBuilder({
   selectedRequestId,
+  initialData, // Data from history item
   onSendRequest, // This is ApiTester's handleSendRequest
   onRequestDataChange,
   authToken,
   onUpdateAuthToken
 }) {
-  const [method, setMethod] = useState("GET");
-  const [url, setUrl] = useState(""); // Initialize URL as empty string
+  // Initialize state based on initialData if provided, otherwise default
+  const [method, setMethod] = useState(initialData?.method || "GET");
+  const [url, setUrl] = useState(initialData?.url || ""); // Initialize URL
   const [debouncedUrl, setDebouncedUrl] = useState(url);
   // Initialize with a single default row
   const [params, setParams] = useState([createDefaultRow()]);
@@ -682,104 +685,86 @@ export default function RequestBuilder({
     tests: tests // Pass the tests object
   }), [method, debouncedUrl, headers, params, body, auth, tests]);
 
-  // Update form when selectedRequestId changes OR when requestData for the current ID becomes available
+  // Update form based on initialData (from history) or selectedRequestId (from collection)
   useEffect(() => {
-    // Condition 1: A request ID is selected and data is available
-    if (selectedRequestId && requestData) {
-      // Now we're sure we have the data for this request
+    // Priority 1: Populate from initialData (history item)
+    if (initialData) {
+      console.log("Populating form from initial history data:", initialData);
+      setMethod(initialData.method || "GET");
+      setUrl(initialData.url || "");
+
+      // Reset other fields as they are not directly from history item in this setup
+      setParams([createDefaultRow()]);
+      setHeaders([createDefaultRow()]);
+      setBody("");
+      setAuth({ type: "none" });
+      setTests({ script: "", results: [] });
+      setError(null);
+    }
+    // Priority 2: Populate from selectedRequestId (collection item)
+    else if (selectedRequestId && requestData) {
       console.log("Populating form for selected request:", selectedRequestId, requestData);
-      
-      // Set basic request properties
       setMethod(requestData.method || "GET");
       setUrl(requestData.url || "");
-      
+
       // Safely parse and set Params
-      let parsedParams = [createDefaultRow()]; // Default if parsing fails or no data
+      let parsedParams = [createDefaultRow()];
       if (requestData.params && typeof requestData.params === 'string') {
         try {
           const tempParsed = JSON.parse(requestData.params);
           if (Array.isArray(tempParsed) && tempParsed.length > 0) {
-            // Less strict validation to handle different object structures
             parsedParams = tempParsed.map(p => ({
               id: p.id || Date.now() + Math.random(),
               key: p.key || "",
               value: p.value || "",
               enabled: p.enabled !== undefined ? p.enabled : true
             }));
-          } else {
-            console.warn("Parsed params is not a valid array, using default.");
-          }
-        } catch (e) {
-          console.error("Error parsing params:", e);
-        }
-      } else {
-        console.log("No valid params string found, using default.");
-      }
+          } else { console.warn("Parsed params is not a valid array, using default."); }
+        } catch (e) { console.error("Error parsing params:", e); }
+      } else { console.log("No valid params string found, using default."); }
       setParams(parsedParams);
 
       // Safely parse and set Headers
-      let parsedHeaders = [createDefaultRow()]; // Default
+      let parsedHeaders = [createDefaultRow()];
       if (requestData.headers && typeof requestData.headers === 'string') {
         try {
           const tempParsed = JSON.parse(requestData.headers);
           if (Array.isArray(tempParsed) && tempParsed.length > 0) {
-            // Less strict validation to handle different object structures
             parsedHeaders = tempParsed.map(h => ({
               id: h.id || Date.now() + Math.random(),
               key: h.key || "",
               value: h.value || "",
               enabled: h.enabled !== undefined ? h.enabled : true
             }));
-          } else {
-            console.warn("Parsed headers is not a valid array, using default.");
-          }
-        } catch (e) {
-          console.error("Error parsing headers:", e);
-        }
-      } else {
-        console.log("No valid headers string found, using default.");
-      }
+          } else { console.warn("Parsed headers is not a valid array, using default."); }
+        } catch (e) { console.error("Error parsing headers:", e); }
+      } else { console.log("No valid headers string found, using default."); }
       setHeaders(parsedHeaders);
 
-      // Set body and other properties
+      // Set body
       setBody(requestData.body || "");
-      
-      // Handle auth data if available
+
+      // Handle auth data
       if (requestData.auth && typeof requestData.auth === 'object') {
         setAuth(requestData.auth);
       } else if (requestData.auth && typeof requestData.auth === 'string') {
-        try {
-          const parsedAuth = JSON.parse(requestData.auth);
-          setAuth(parsedAuth);
-        } catch (e) {
-          console.error("Error parsing auth data:", e);
-          setAuth({ type: "none" });
-        }
-      } else {
-        setAuth({ type: "none" });
-      }
-      
-      // Handle tests data if available
+        try { setAuth(JSON.parse(requestData.auth)); }
+        catch (e) { console.error("Error parsing auth data:", e); setAuth({ type: "none" }); }
+      } else { setAuth({ type: "none" }); }
+
+      // Handle tests data
       if (requestData.tests && typeof requestData.tests === 'object') {
         setTests(requestData.tests);
       } else if (requestData.tests && typeof requestData.tests === 'string') {
-        try {
-          const parsedTests = JSON.parse(requestData.tests);
-          setTests(parsedTests);
-        } catch (e) {
-          console.error("Error parsing tests data:", e);
-          setTests({ script: "", results: [] });
-        }
-      } else {
-        setTests({ script: "", results: [] });
-      }
-      
+        try { setTests(JSON.parse(requestData.tests)); }
+        catch (e) { console.error("Error parsing tests data:", e); setTests({ script: "", results: [] }); }
+      } else { setTests({ script: "", results: [] }); }
+
       setError(null); // Clear previous errors
     }
-    // Condition 2: No request ID is selected (explicitly null)
-    else if (selectedRequestId === null) {
-      // Explicitly reset form if no request is selected
-      console.log("No request selected, resetting form.");
+    // Priority 3: Reset form if neither initialData nor selectedRequestId is active
+    else if (!initialData && !selectedRequestId) {
+      console.log("Resetting form (no initialData or selectedRequestId).");
       setMethod("GET");
       setUrl("");
       setParams([createDefaultRow()]);
@@ -789,8 +774,8 @@ export default function RequestBuilder({
       setTests({ script: "", results: [] });
       setError(null);
     }
-    // If selectedRequestId is set but requestData is still loading, wait for it
-  }, [requestData, selectedRequestId]); // Depend on both requestData and selectedRequestId
+    // If selectedRequestId is set but requestData is still loading, wait.
+  }, [initialData, selectedRequestId, requestData]); // Depend on all three
 
 
   // Update parent component (ApiTester) with current request data from RequestBuilder
