@@ -5,7 +5,7 @@ import LandingPage from '@/components/api-tester/LandingPage';
 import LoginModal from '@/components/modals/LoginModal'; // Import LoginModal
 import SignupModal from '@/components/modals/SignupModal'; // Ensure SignupModal is imported
 import ApiTester from '@/components/api-tester/ApiTester'; // Import ApiTester
-import Header from '@/components/Header';
+
 
 export default function Home() {
   const [darkMode, setDarkMode] = useState(false);
@@ -55,14 +55,26 @@ export default function Home() {
   }, []);
   return (
     <div className={`h-screen ${darkMode ? 'dark bg-gray-900' : 'bg-gray-50'}`}>
-      <ApiTester
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-        openSignupModal={openSignupModal}
-        openLoginModal={openLoginModal}
-      />
+      {!isLoggedIn ? (
+        <LandingPage
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          openSignupModal={openSignupModal}
+          openLoginModal={openLoginModal}
+        />
+      ) : (
+        <>
 
-      {/* Modals */}
+          <ApiTester
+            darkMode={darkMode}
+            setDarkMode={setDarkMode}
+            openSignupModal={openSignupModal}
+            openLoginModal={openLoginModal}
+          />
+        </>
+      )}
+
+      {/* Render Modals */}
       <SignupModal
         isOpen={showSignupModal}
         onClose={closeSignupModal}
