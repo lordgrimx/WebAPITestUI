@@ -16,6 +16,9 @@ export async function POST(request) {
 
     try {
         const { script, testId, options } = await request.json();
+        
+        // The auth headers are now included in the script itself
+        // from the generateK6Script mutation, so no changes needed here
 
         // Create temporary script file
         const tempFile = join(tmpdir(), `k6-test-${Date.now()}-${Math.random().toString(36).substring(2)}.js`);
@@ -39,7 +42,32 @@ export async function POST(request) {
                 failureRate: 0,
                 averageResponseTime: 0,
                 p95ResponseTime: 0,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                detailedMetrics: {
+                    checksRate: 0,
+                    dataReceived: "0 B",
+                    dataSent: "0 B",
+                    httpReqRate: 0,
+                    httpReqFailed: 0,
+                    successRate: 0,
+                    iterations: 0,
+                    httpReqDuration: {
+                        avg: 0,
+                        min: 0,
+                        med: 0,
+                        max: 0,
+                        p90: 0,
+                        p95: 0
+                    },
+                    iterationDuration: {
+                        avg: 0,
+                        min: 0,
+                        med: 0,
+                        max: 0,
+                        p90: 0,
+                        p95: 0
+                    }
+                }
             };
             
             // Parse the metrics from console output
@@ -86,6 +114,69 @@ export async function POST(request) {
                 const successMatch = stdout.match(/success_rate[\s\S]+?:\s+([0-9.]+)%/);
                 if (successMatch && successMatch[1]) {
                     results.successRate = parseFloat(successMatch[1]);
+                }
+
+                // Extract checks rate
+                const checksMatch = stdout.match(/checks\.+:\s+([0-9.]+)%/);
+                if (checksMatch) {
+                    results.detailedMetrics.checksRate = parseFloat(checksMatch[1]);
+                }
+
+                // Extract data metrics
+                const dataReceivedMatch = stdout.match(/data_received\.+:\s+([0-9.]+ [A-Z]B)/);
+                if (dataReceivedMatch) {
+                    results.detailedMetrics.dataReceived = dataReceivedMatch[1];
+                }
+                
+                const dataSentMatch = stdout.match(/data_sent\.+:\s+([0-9.]+ [A-Z]B)/);
+                if (dataSentMatch) {
+                    results.detailedMetrics.dataSent = dataSentMatch[1];
+                }
+
+                // Extract http request metrics
+                const httpReqsMatch = stdout.match(/http_reqs\.+:\s+(\d+)\s+([0-9.]+)\/s/);
+                if (httpReqsMatch) {
+                    results.detailedMetrics.httpReqRate = parseFloat(httpReqsMatch[2]);
+                }
+
+                // Extract http request duration metrics
+                const durationRegex = /http_req_duration\.+:\s+avg=([0-9.]+)ms\s+min=([0-9.]+)ms\s+med=([0-9.]+)ms\s+max=([0-9.]+)ms\s+p\(90\)=([0-9.]+)ms\s+p\(95\)=([0-9.]+)ms/;
+                const durationMatch = stdout.match(durationRegex);
+                if (durationMatch) {
+                    results.detailedMetrics.httpReqDuration = {
+                        avg: parseFloat(durationMatch[1]),
+                        min: parseFloat(durationMatch[2]),
+                        med: parseFloat(durationMatch[3]),
+                        max: parseFloat(durationMatch[4]),
+                        p90: parseFloat(durationMatch[5]),
+                        p95: parseFloat(durationMatch[6])
+                    };
+                }
+
+                // Extract iteration duration metrics
+                const iterDurationRegex = /iteration_duration\.+:\s+avg=([0-9.]+)s\s+min=([0-9.]+)s\s+med=([0-9.]+)s\s+max=([0-9.]+)s\s+p\(90\)=([0-9.]+)s\s+p\(95\)=([0-9.]+)s/;
+                const iterMatch = stdout.match(iterDurationRegex);
+                if (iterMatch) {
+                    results.detailedMetrics.iterationDuration = {
+                        avg: parseFloat(iterMatch[1]) * 1000, // Convert to ms
+                        min: parseFloat(iterMatch[2]) * 1000,
+                        med: parseFloat(iterMatch[3]) * 1000,
+                        max: parseFloat(iterMatch[4]) * 1000,
+                        p90: parseFloat(iterMatch[5]) * 1000,
+                        p95: parseFloat(iterMatch[6]) * 1000
+                    };
+                }
+
+                // Extract iterations
+                const iterationsMatch = stdout.match(/iterations\.+:\s+(\d+)/);
+                if (iterationsMatch) {
+                    results.detailedMetrics.iterations = parseInt(iterationsMatch[1]);
+                }
+
+                // Extract success rate
+                const successRateMatch = stdout.match(/success_rate\.+:\s+([0-9.]+)%/);
+                if (successRateMatch) {
+                    results.detailedMetrics.successRate = parseFloat(successRateMatch[1]);
                 }
                 
             } catch (parseError) {

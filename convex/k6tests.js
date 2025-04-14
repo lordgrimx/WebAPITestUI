@@ -56,7 +56,32 @@ export const updateK6TestResults = mutation({
             failureRate: v.number(),
             averageResponseTime: v.number(),
             p95ResponseTime: v.number(),
-            timestamp: v.number()
+            timestamp: v.number(),
+            detailedMetrics: v.optional(v.object({
+                checksRate: v.number(),
+                dataReceived: v.string(),
+                dataSent: v.string(),
+                httpReqRate: v.number(),
+                httpReqFailed: v.number(),
+                successRate: v.number(),
+                iterations: v.number(),
+                httpReqDuration: v.object({
+                    avg: v.number(),
+                    min: v.number(),
+                    med: v.number(),
+                    max: v.number(),
+                    p90: v.number(),
+                    p95: v.number()
+                }),
+                iterationDuration: v.object({
+                    avg: v.number(),
+                    min: v.number(),
+                    med: v.number(),
+                    max: v.number(),
+                    p90: v.number(),
+                    p95: v.number()
+                })
+            }))
         })
     },
     handler: async (ctx, args) => {
@@ -85,9 +110,11 @@ export const generateK6Script = mutation({
             method: v.string(),
             url: v.string(),
             headers: v.optional(v.string()),
+            authType: v.optional(v.string()),
+            authToken: v.optional(v.string()),
             body: v.optional(v.string()),
             params: v.optional(v.string()),
-            id: v.optional(v.string()) // Add id to the validator
+            id: v.optional(v.string())
         }),
         options: v.object({
             vus: v.number(),
@@ -97,7 +124,23 @@ export const generateK6Script = mutation({
     handler: async (ctx, args) => {
         const { requestData, options } = args;
         
-        // Generate K6 script template
+        // Parse existing headers or create new object
+        let headers = requestData.headers ? JSON.parse(requestData.headers) : {};
+        
+        // Add auth header if provided
+        if (requestData.authToken && requestData.authType) {
+            switch (requestData.authType.toLowerCase()) {
+                case 'bearer':
+                    headers['Authorization'] = `Bearer ${requestData.authToken}`;
+                    break;
+                case 'basic':
+                    headers['Authorization'] = `Basic ${requestData.authToken}`;
+                    break;
+                // Add other auth types as needed
+            }
+        }
+
+        // Generate K6 script template with auth headers
         const script = `
 import http from 'k6/http';
 import { check, sleep } from 'k6';
@@ -109,7 +152,7 @@ export const options = {
 
 export default function() {
     const params = {
-        headers: ${requestData.headers || '{}'},
+        headers: ${JSON.stringify(headers, null, 2)},
         ${requestData.body ? `body: ${requestData.body},` : ''}
     };
 
@@ -137,9 +180,11 @@ export const generateAndSaveK6Script = mutation({
             method: v.string(),
             url: v.string(),
             headers: v.optional(v.string()),
+            authType: v.optional(v.string()),
+            authToken: v.optional(v.string()),
             body: v.optional(v.string()),
             params: v.optional(v.string()),
-            id: v.optional(v.string()) // Add id to the validator
+            id: v.optional(v.string())
         }),
         options: v.object({
             vus: v.number(),
@@ -148,8 +193,27 @@ export const generateAndSaveK6Script = mutation({
     },
     handler: async (ctx, args) => {
         const { requestData, options, ...testData } = args;
+
+        let headers = requestData.headers ? JSON.parse(requestData.headers) : {};
         
-        // Generate K6 script with proper imports and no Console usage
+        // Add Content-Type header for POST/PUT/PATCH requests with JSON body
+        if (requestData.body && ['POST', 'PUT', 'PATCH'].includes(requestData.method.toUpperCase())) {
+            headers['Content-Type'] = 'application/json';
+        }
+        
+        // Add auth header if provided
+        if (requestData.authToken && requestData.authType) {
+            switch (requestData.authType.toLowerCase()) {
+                case 'bearer':
+                    headers['Authorization'] = `Bearer ${requestData.authToken}`;
+                    break;
+                case 'basic':
+                    headers['Authorization'] = `Basic ${requestData.authToken}`;
+                    break;
+            }
+        }
+        
+        // Generate K6 script with proper imports and headers
         const script = `
 import http from 'k6/http';
 import { check, sleep } from 'k6';
@@ -171,16 +235,16 @@ export const options = {
 
 export default function() {
     const params = {
-        headers: ${requestData.headers || '{}'},
+        headers: ${JSON.stringify(headers, null, 2)},
     };
 
-    const payload = ${requestData.body ? `JSON.stringify(${requestData.body})` : 'null'};
+    ${requestData.method !== 'GET' ? `const payload = JSON.stringify(${requestData.body});` : ''}
     
     const startTime = new Date().getTime();
     const response = http.${requestData.method.toLowerCase()}('${requestData.url}', 
-        ${requestData.method !== 'GET' ? 'payload,' : ''} params);
+        ${requestData.method !== 'GET' ? 'payload, ' : ''}params);
     const endTime = new Date().getTime();
-    console.log('Response: ', response.status);
+
     // Record metrics
     requestDuration.add(endTime - startTime);
     
@@ -196,11 +260,13 @@ export default function() {
     sleep(1);
 }`;
 
-        // Save test to database
+        // Save test to database with auth information
         const now = Date.now();
         const testId = await ctx.db.insert("k6Tests", {
             ...testData,
             script,
+            authType: requestData.authType,
+            authToken: requestData.authToken,
             options: {
                 vus: options.vus,
                 duration: options.duration

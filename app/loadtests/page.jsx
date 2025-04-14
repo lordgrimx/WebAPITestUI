@@ -39,6 +39,15 @@ import { toast } from 'sonner';
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+function MetricItem({ label, value }) {
+  return (
+    <div className="p-3 bg-slate-50 rounded-lg">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="text-lg font-semibold">{value?.toFixed(2) || '0.00'}</p>
+    </div>
+  );
+}
+
 export default function LoadTestsPage() {
   const k6Tests = useQuery(api.k6tests.getK6Tests);
   const executeK6Test = useMutation(api.k6tests.executeK6Test);
@@ -85,7 +94,8 @@ export default function LoadTestsPage() {
           failureRate: results.failureRate || 0,
           averageResponseTime: results.averageResponseTime || 0,
           p95ResponseTime: results.p95ResponseTime || 0,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          detailedMetrics: results.detailedMetrics // Add detailed metrics
         }
       });
 
@@ -324,7 +334,8 @@ export default function LoadTestsPage() {
         <TabsList className="w-full">
           <TabsTrigger value="results" className="flex-1">Results</TabsTrigger>
           <TabsTrigger value="script" className="flex-1">Script</TabsTrigger>
-          <TabsTrigger value="logs" className="flex-1">Execution Logs</TabsTrigger>
+          <TabsTrigger value="metrics" className="flex-1">Metrics</TabsTrigger>
+          <TabsTrigger value="logs" className="flex-1">Logs</TabsTrigger>
         </TabsList>
         
         <div className="h-[500px] overflow-hidden">
@@ -414,7 +425,7 @@ export default function LoadTestsPage() {
                   </CardHeader>
                   <CardContent>
                     <pre className="bg-slate-50 p-4 rounded-lg overflow-x-auto text-sm">
-                      {JSON.stringify(selectedTest.results, null, 2)}
+                      {JSON.stringify(selectedTest.results, null, 1)}
                     </pre>
                   </CardContent>
                 </Card>
@@ -450,6 +461,101 @@ export default function LoadTestsPage() {
                   </pre>
                 </CardContent>
               </Card>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="metrics" className="h-full">
+            <ScrollArea className="h-full pr-4">
+              {selectedTest?.results?.detailedMetrics ? (
+                <div className="space-y-6">
+                  {/* General Metrics */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>General Metrics</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Checks Rate</p>
+                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.checksRate.toFixed(2)}%</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Data Received</p>
+                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.dataReceived}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Data Sent</p>
+                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.dataSent}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Duration Metrics */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Duration Metrics (ms)</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {/* HTTP Request Duration */}
+                        <div>
+                          <h4 className="font-medium mb-2">HTTP Request Duration</h4>
+                          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                            <MetricItem label="AVG" value={selectedTest.results.detailedMetrics.httpReqDuration.avg} />
+                            <MetricItem label="MIN" value={selectedTest.results.detailedMetrics.httpReqDuration.min} />
+                            <MetricItem label="MED" value={selectedTest.results.detailedMetrics.httpReqDuration.med} />
+                            <MetricItem label="MAX" value={selectedTest.results.detailedMetrics.httpReqDuration.max} />
+                            <MetricItem label="P90" value={selectedTest.results.detailedMetrics.httpReqDuration.p90} />
+                            <MetricItem label="P95" value={selectedTest.results.detailedMetrics.httpReqDuration.p95} />
+                          </div>
+                        </div>
+
+                        {/* Iteration Duration */}
+                        <div>
+                          <h4 className="font-medium mb-2">Iteration Duration</h4>
+                          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                            <MetricItem label="AVG" value={selectedTest.results.detailedMetrics.iterationDuration.avg} />
+                            <MetricItem label="MIN" value={selectedTest.results.detailedMetrics.iterationDuration.min} />
+                            <MetricItem label="MED" value={selectedTest.results.detailedMetrics.iterationDuration.med} />
+                            <MetricItem label="MAX" value={selectedTest.results.detailedMetrics.iterationDuration.max} />
+                            <MetricItem label="P90" value={selectedTest.results.detailedMetrics.iterationDuration.p90} />
+                            <MetricItem label="P95" value={selectedTest.results.detailedMetrics.iterationDuration.p95} />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Rates and Counts */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Rates and Counts</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">HTTP Request Rate</p>
+                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.httpReqRate.toFixed(2)}/s</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Success Rate</p>
+                        <p className="text-2xl font-semibold text-green-600">{selectedTest.results.detailedMetrics.successRate.toFixed(2)}%</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Failed Requests</p>
+                        <p className="text-2xl font-semibold text-red-600">{selectedTest.results.detailedMetrics.httpReqFailed.toFixed(2)}%</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Total Iterations</p>
+                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.iterations}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                  <AlertTriangle className="h-12 w-12 mb-4 text-slate-400" />
+                  <p>No detailed metrics available for this test.</p>
+                </div>
+              )}
             </ScrollArea>
           </TabsContent>
           
