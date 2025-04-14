@@ -389,6 +389,7 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
                 onHistorySelect={handleHistorySelect}     // For history items
                 hasError={!!sidebarError}
                 onError={setSidebarError}
+                darkMode={darkMode} // Pass dark mode state
               />
             </ResizablePanel>
             <ResizableHandle withHandle />
@@ -402,12 +403,13 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
                 onRequestDataChange={handleRequestDataChange}
                 authToken={authToken}
                 onUpdateAuthToken={updateAuthToken}
+                darkMode={darkMode} // Pass dark mode state
               />
             </ResizablePanel>
             <ResizableHandle withHandle />
 
             <ResizablePanel defaultSize={40} minSize={25}>
-              <ResponseDisplay responseData={responseData} />
+              <ResponseDisplay responseData={responseData} darkMode={darkMode} /> 
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>
