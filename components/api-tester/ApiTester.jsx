@@ -27,8 +27,108 @@ export default function ApiTester() {
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
   const [currentRequestData, setCurrentRequestData] = useState(null); // State to hold current request builder data
   const [initialDataFromHistory, setInitialDataFromHistory] = useState(null); // State to hold data from selected history item
-const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
+  const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
   const [authToken, setAuthToken] = useState(''); // Initialize empty
+
+  // Test execution helper function
+  const runTests = (testScript, environment) => {
+    const results = [];
+    
+    // Create Postman-like test environment
+    const pm = {
+      response: environment.response,
+      test: (testName, testFunction) => {
+        try {
+          // Create an expectation object similar to Chai
+          const expect = (actual) => ({
+            to: {
+              equal: (expected) => {
+                if (actual === expected) return true;
+                throw new Error(`Expected ${expected} but got ${actual}`);
+              },
+              include: (expected) => {
+                if (String(actual).includes(expected)) return true;
+                throw new Error(`Expected "${actual}" to include "${expected}"`);
+              },
+              have: {
+                property: (prop) => {
+                  if (actual && typeof actual === 'object' && prop in actual) return true;
+                  throw new Error(`Expected object to have property "${prop}"`);
+                }
+              }
+            },
+            be: {
+              above: (expected) => {
+                if (actual > expected) return true;
+                throw new Error(`Expected ${actual} to be above ${expected}`);
+              },
+              below: (expected) => {
+                if (actual < expected) return true;
+                throw new Error(`Expected ${actual} to be below ${expected}`);
+              }
+            }
+          });
+
+          // Execute the test
+          testFunction();
+          results.push({ name: testName, passed: true });
+        } catch (error) {
+          results.push({ name: testName, passed: false, error: error.message });
+        }
+      },
+      expect: (actual) => ({
+        to: {
+          equal: (expected) => {
+            if (actual === expected) return true;
+            throw new Error(`Expected ${expected} but got ${actual}`);
+          },
+          include: (expected) => {
+            if (String(actual).includes(expected)) return true;
+            throw new Error(`Expected "${actual}" to include "${expected}"`);
+          },
+          have: {
+            property: (prop) => {
+              if (actual && typeof actual === 'object' && prop in actual) return true;
+              throw new Error(`Expected object to have property "${prop}"`);
+            },
+            header: (header) => {
+              if (environment.response.headers.get(header)) return true;
+              throw new Error(`Expected response to have header "${header}"`);
+            }
+          }
+        },
+        be: {
+          above: (expected) => {
+            if (actual > expected) return true;
+            throw new Error(`Expected ${actual} to be above ${expected}`);
+          },
+          below: (expected) => {
+            if (actual < expected) return true;
+            throw new Error(`Expected ${actual} to be below ${expected}`);
+          }
+        }
+      })
+    };
+
+    // Execute the test script
+    try {
+      // Safely evaluate the test script
+      const scriptWithContext = `
+        (function(pm) {
+          ${testScript}
+        })(pm);
+      `;
+      eval(scriptWithContext);
+    } catch (error) {
+      results.push({
+        name: "Script error",
+        passed: false,
+        error: error.message
+      });
+    }
+
+    return results;
+  };
 
   // Move localStorage access to useEffect
   useEffect(() => {
@@ -226,11 +326,48 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
       const responseText = JSON.stringify(axiosResponse.data);
       const responseSize = new Blob([responseText]).size;
 
+      // Run tests if there's a test script
+      let testResults = [];
+      if (requestData.tests && requestData.tests.script) {
+        try {
+          // Run the tests using the PM-like environment
+          testResults = runTests(
+            requestData.tests.script, 
+            {
+              response: {
+                code: axiosResponse.status,
+                status: axiosResponse.status,
+                data: axiosResponse.data,
+                json: () => axiosResponse.data,
+                text: () => JSON.stringify(axiosResponse.data),
+                headers: {
+                  get: (name) => axiosResponse.headers[name.toLowerCase()] || null
+                },
+                to: {
+                  have: {
+                    header: (name) => !!axiosResponse.headers[name.toLowerCase()]
+                  }
+                },
+                responseTime: duration
+              }
+            }
+          );
+          console.log("Test results:", testResults);
+        } catch (testError) {
+          console.error("Error running tests:", testError);
+          testResults = [{
+            name: "Test script error",
+            passed: false,
+            error: testError.message
+          }];
+        }
+      }
+
       const MAX_RESPONSE_SIZE_byte = settings.responseSize * 1024
       let truncatedData = axiosResponse.data;
       let truncatedResponseText = responseText;
       let isTruncated = false;
-        if (responseSize > MAX_RESPONSE_SIZE_byte) {
+      if (responseSize > MAX_RESPONSE_SIZE_byte) {
         // Mark as truncated but keep the full structure for display
         isTruncated = true;
 
@@ -292,10 +429,26 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
         isTruncated: isTruncated,
         originalSize: responseSize,
         // Add a flag indicating if the response came via proxy
-        viaProxy: settings.proxyEnabled && settings.proxyUrl
+        viaProxy: settings.proxyEnabled && settings.proxyUrl,
+        // Add test results
+        testResults: testResults 
       };
 
       setResponseData(formattedResponse);
+
+      // Update the test results in the current request data
+      if (currentRequestData && testResults.length > 0) {
+        const updatedTests = {
+          ...(currentRequestData.tests || {}),
+          results: testResults
+        };
+        
+        // Update the current request data with test results
+        setCurrentRequestData({
+          ...currentRequestData,
+          tests: updatedTests
+        });
+      }
 
       // Record ALL requests in history - use truncated data when applicable
       const dataToStore = isTruncated
@@ -448,9 +601,7 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
                 darkMode={darkMode} // Pass dark mode state
               />
             </ResizablePanel>
-            <ResizableHandle withHandle />
-
-            <ResizablePanel defaultSize={40} minSize={30}>
+            <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={30}>
               <RequestBuilder
                 key={selectedRequestId || initialDataFromHistory?.url} // Add key to force re-render/reset on selection change
                 selectedRequestId={selectedRequestId}
@@ -461,6 +612,7 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
                 onUpdateAuthToken={updateAuthToken}
                 darkMode={darkMode} // Pass dark mode state
                 apiKeys={settings.apiKeys || []} // Pass apiKeys from settings
+                testResults={responseData?.testResults} // Pass test results
               />
             </ResizablePanel>
             <ResizableHandle withHandle />

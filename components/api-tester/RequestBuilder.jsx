@@ -528,12 +528,58 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
 
 
 // Tests Tab Content
-function TestsTab({ tests, setTests, darkMode }) { // Add darkMode prop
+function TestsTab({ tests, setTests, darkMode, receivedTestResults = [] }) { // Add receivedTestResults prop
+
+  // Function to handle opening documentation
+  const openDocumentation = () => {
+    // Open Postman's test script documentation in a new tab
+    window.open('https://learning.postman.com/docs/writing-scripts/test-scripts/', '_blank', 'noopener,noreferrer');
+    // You could also open MDN JavaScript docs or other relevant resources
+    // window.open('https://developer.mozilla.org/en-US/docs/Web/JavaScript', '_blank', 'noopener,noreferrer');
+  };
+
+  // Function to insert example test script
+  const insertExampleScript = () => {
+    const exampleScript = `// Example: Check for status code 200
+pm.test("Status code is 200", function () {
+    pm.expect(pm.response.code).to.equal(200);
+});
+
+// Example: Check if response body contains a specific property
+pm.test("Response body contains 'userId'", function () {
+    const jsonData = pm.response.json();
+    pm.expect(jsonData).to.have.property('userId');
+});
+
+// Example: Check response time is below a threshold (e.g., 500ms)
+pm.test("Response time is less than 500ms", function () {
+    pm.expect(pm.response.responseTime).to.be.below(500);
+});
+
+// Example: Check for a specific header
+pm.test("Content-Type header is present", function () {
+    pm.response.to.have.header("Content-Type");
+});
+
+// Example: Check if header value matches
+pm.test("Content-Type header is application/json", function () {
+    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');
+});
+`;
+    // Update the tests state with the example script
+    setTests({ ...tests, script: exampleScript });
+  };
+
+  // Use received test results if available, otherwise use the ones in state
+  const testResultsToDisplay = receivedTestResults && receivedTestResults.length > 0 
+    ? receivedTestResults 
+    : tests?.results || [];
+
   return (
     <div className={`p-4 space-y-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
       <div>
         <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-          Test Script <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>(JavaScript)</span>
+          Test Script <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>(JavaScript - Postman API)</span>
         </label>
         <div className={`border rounded overflow-hidden ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'} p-2 border-b flex justify-between items-center`}>
@@ -542,10 +588,20 @@ function TestsTab({ tests, setTests, darkMode }) { // Add darkMode prop
               Tests
             </div>
             <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" className={`text-xs h-7 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'}`}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`text-xs h-7 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'}`}
+                onClick={insertExampleScript} // Add onClick handler
+              >
                 Examples
               </Button>
-              <Button variant="ghost" size="sm" className={`text-xs h-7 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'}`}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`text-xs h-7 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'}`}
+                onClick={openDocumentation} // Add onClick handler
+              >
                 Documentation
               </Button>
             </div>
@@ -554,28 +610,16 @@ function TestsTab({ tests, setTests, darkMode }) { // Add darkMode prop
             value={tests?.script || ""} // Use optional chaining
             onChange={(e) => setTests({ ...tests, script: e.target.value })}
             className={`w-full h-64 p-3 font-mono text-sm focus:outline-none ${darkMode ? 'bg-gray-900 text-white placeholder-gray-500' : 'bg-white text-black placeholder-gray-400'}`}
-            placeholder={`// Example test script
-pm.test("Status code is 200", function() {
-  pm.expect(pm.response.code).to.equal(200);
-});
-
-pm.test("Response contains user data", function() {
-  const responseJson = pm.response.json();
-  pm.expect(responseJson).to.have.property("id");
-  pm.expect(responseJson).to.have.property("name");
-});`}
-
+            placeholder={`// Write your tests here using the Postman API (pm.*)\npm.test("Status code is 200", function() {\n  pm.expect(pm.response.code).to.equal(200);\n});`}
           />
         </div>
-      </div>
-
-      <div>
+      </div>      <div>
         <h3 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
           Test Results
         </h3>
-        {tests?.results && tests.results.length > 0 ? ( // Use optional chaining
+        {testResultsToDisplay.length > 0 ? (
           <div className="space-y-2">
-            {tests.results.map((result, index) => (
+            {testResultsToDisplay.map((result, index) => (
               <div
                 key={index}
                 className={`p-2 border rounded flex items-center ${
@@ -594,12 +638,17 @@ pm.test("Response contains user data", function() {
                 }>
                   {result.name}
                 </span>
+                {result.error && (
+                  <div className={`text-xs mt-1 ml-6 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>
+                    {result.error}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         ) : (
           <div className={`${darkMode ? 'text-gray-400 bg-gray-800 border-gray-700' : 'text-gray-500 bg-gray-50 border-gray-200'} text-sm border rounded p-3`}>
-            Tests will run when you send a request
+            Test results will appear here after sending the request.
           </div>
         )}
       </div>
@@ -619,7 +668,8 @@ export default function RequestBuilder({
   authToken,
   onUpdateAuthToken,
   darkMode, // Receive darkMode prop
-  apiKeys = [] // Receive apiKeys prop
+  apiKeys = [], // Receive apiKeys prop
+  testResults = [] // Receive test results from ApiTester
 }) {
   const { settings } = useSettings();
 
@@ -1141,9 +1191,8 @@ export default function RequestBuilder({
             darkMode={darkMode}
             apiKeys={apiKeys} // Pass apiKeys down
           />
-        </TabsContent>
-        <TabsContent value="tests" className="flex-1 overflow-auto">
-          <TestsTab tests={tests} setTests={setTests} darkMode={darkMode} />
+        </TabsContent>        <TabsContent value="tests" className="flex-1 overflow-auto">
+          <TestsTab tests={tests} setTests={setTests} darkMode={darkMode} receivedTestResults={testResults} />
         </TabsContent>
       </Tabs>
 
