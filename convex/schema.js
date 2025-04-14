@@ -1,7 +1,8 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-export default defineSchema({    // Users table for authentication and user data
+export default defineSchema({
+    // Users table for authentication and user data
     users: defineTable({
         name: v.string(),
         email: v.string(),
@@ -12,6 +13,8 @@ export default defineSchema({    // Users table for authentication and user data
         address: v.optional(v.string()),
         website: v.optional(v.string()),
         twoFactorEnabled: v.optional(v.boolean()),
+        twoFactorCode: v.optional(v.string()),      // Temporary code for verification
+        twoFactorCodeExpiry: v.optional(v.number()), // Timestamp for code expiry
         role: v.string(), // "user", "admin", etc.
         createdAt: v.number(),
         lastLogin: v.optional(v.number()),
