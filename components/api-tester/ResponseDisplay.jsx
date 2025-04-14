@@ -6,9 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { useSettings } from "@/lib/settings-context";
+import { useSettings } from "@/lib/settings-context"; // Import useSettings
 
-export default function ResponseDisplay({ responseData, darkMode }) { // Remove default value, rely on parent
+export default function ResponseDisplay({ responseData, darkMode }) {
+  const { settings } = useSettings(); // Get settings from context
+
+  // Determine JSON indentation based on settings
+  const getJsonIndentation = () => {
+    if (settings.jsonIndentation === 'tab') {
+      return '\t';
+    }
+    return parseInt(settings.jsonIndentation, 10) || 2; // Default to 2 spaces if invalid
+  };
+  const jsonIndent = getJsonIndentation();
+
   if (!responseData || responseData.length === 0) {
     return (
       <div className={`flex flex-col items-center justify-center h-full p-4 text-center ${darkMode ? 'bg-gray-900 text-gray-400' : 'bg-white text-gray-500'}`}>
@@ -39,12 +50,12 @@ export default function ResponseDisplay({ responseData, darkMode }) { // Remove 
   }
 
   const isSuccessStatus = responseData.status >= 200 && responseData.status < 300;
-  const [expanded, setExpanded] = useState(false);
-  const { settings } = useSettings();
+  // const [expanded, setExpanded] = useState(false); // expanded state seems unused, removing
   const maxResponseSize = settings.responseSize ; // Convert KB to bytes
 
   return (
-    <div className={`flex flex-col h-full p-4 ${darkMode ? 'bg-gray-900 text-gray-300' : 'bg-white text-gray-700'}`}>      {/* Status Bar */}
+    <div className={`flex flex-col h-full p-4 ${darkMode ? 'bg-gray-900 text-gray-300' : 'bg-white text-gray-700'}`}>
+      {/* Status Bar */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
           <Badge variant="default" className={`${darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'}`}>
@@ -60,7 +71,8 @@ export default function ResponseDisplay({ responseData, darkMode }) { // Remove 
       </div>
 
       {/* Tabs: Pretty, Raw, Preview, Headers */}
-      <Tabs defaultValue="pretty" className="flex-1 flex flex-col h-full">
+      {/* Use defaultResponseView from settings for the defaultValue */}
+      <Tabs defaultValue={settings.defaultResponseView || "pretty"} className="flex-1 flex flex-col h-full">
         <TabsList className={`border-b rounded-none justify-start px-0 pt-0 bg-transparent ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <TabsTrigger value="pretty" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Pretty</TabsTrigger>
           <TabsTrigger value="raw" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Raw</TabsTrigger>
@@ -76,43 +88,45 @@ export default function ResponseDisplay({ responseData, darkMode }) { // Remove 
               </div>
             )}
             <div className="p-4">
-              <SyntaxHighlighter
-                language="json"
-                style={darkMode ? tomorrow : oneLight}
-                customStyle={{
-                  borderRadius: '4px',
-                  padding: '16px',
-                  margin: 0,
-                  fontSize: '0.875rem',
-                  lineHeight: '1.5'
-                }}
-                showLineNumbers={true}
-                wrapLines={true}
-              >
-                {JSON.stringify(responseData.data, null, 2)}
-              </SyntaxHighlighter>
+              {settings.highlightSyntax ? (
+                <SyntaxHighlighter
+                  language="json"
+                  style={darkMode ? tomorrow : oneLight}
+                  customStyle={{
+                    borderRadius: '4px',
+                    padding: '16px',
+                    margin: 0,
+                    fontSize: '0.875rem',
+                    lineHeight: '1.5',
+                    whiteSpace: settings.wrapLines ? 'pre-wrap' : 'pre', // Apply wrapLines setting
+                    wordBreak: settings.wrapLines ? 'break-all' : 'normal', // Ensure word breaking works with wrapping
+                  }}
+                  showLineNumbers={true}
+                  wrapLines={settings.wrapLines} // Pass wrapLines setting
+                >
+                  {/* Use jsonIndent from settings */}
+                  {JSON.stringify(responseData.data, null, jsonIndent)}
+                </SyntaxHighlighter>
+              ) : (
+                <pre className={`text-sm p-4 rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`}>
+                  {JSON.stringify(responseData.data, null, jsonIndent)}
+                </pre>
+              )}
             </div>
           </ScrollArea>
-        </TabsContent>          <TabsContent value="raw" className="flex-1 mt-0 h-full"> 
+        </TabsContent>
+        <TabsContent value="raw" className="flex-1 mt-0 h-full">
           <ScrollArea className="h-full w-full">
             <div className="p-4">
-              <SyntaxHighlighter
-                language="json"
-                style={darkMode ? tomorrow : oneLight}
-                customStyle={{
-                  borderRadius: '4px',
-                  padding: '16px',
-                  margin: 0,
-                  fontSize: '0.875rem',
-                  fontFamily: 'monospace',
-                  lineHeight: '1.5'
-                }}
-              >
+              {/* Raw view typically doesn't use indentation or syntax highlighting, but respects wrapping */}
+              <pre className={`text-sm p-4 rounded font-mono ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`}>
+                {/* Stringify without indentation for raw view */}
                 {JSON.stringify(responseData.data)}
-              </SyntaxHighlighter>
+              </pre>
             </div>
           </ScrollArea>
-        </TabsContent>          <TabsContent value="preview" className="flex-1 mt-0 h-full">
+        </TabsContent>
+        <TabsContent value="preview" className="flex-1 mt-0 h-full">
           <ScrollArea className="h-full w-full">
             <div className={`p-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} w-full`}>
               {responseData.isTruncated && (
@@ -186,22 +200,32 @@ export default function ResponseDisplay({ responseData, darkMode }) { // Remove 
             </div>
           </ScrollArea>
         </TabsContent>
-          <TabsContent value="headers" className="flex-1 mt-0 h-full">
+        <TabsContent value="headers" className="flex-1 mt-0 h-full">
           <ScrollArea className="h-full w-full">
             <div className="p-4">
-              <SyntaxHighlighter
-                language="json"
-                style={darkMode ? tomorrow : oneLight}
-                customStyle={{
-                  borderRadius: '4px',
-                  padding: '16px',
-                  margin: 0,
-                  fontSize: '0.875rem',
-                  lineHeight: '1.5'
-                }}
-              >
-                {JSON.stringify(responseData.headers || {}, null, 2)}
-              </SyntaxHighlighter>
+              {settings.highlightSyntax ? (
+                <SyntaxHighlighter
+                  language="json" // Keep as JSON for header object formatting
+                  style={darkMode ? tomorrow : oneLight}
+                  customStyle={{
+                    borderRadius: '4px',
+                    padding: '16px',
+                    margin: 0,
+                    fontSize: '0.875rem',
+                    lineHeight: '1.5',
+                    whiteSpace: settings.wrapLines ? 'pre-wrap' : 'pre', // Apply wrapLines setting
+                    wordBreak: settings.wrapLines ? 'break-all' : 'normal',
+                  }}
+                  wrapLines={settings.wrapLines} // Pass wrapLines setting
+                >
+                  {/* Use jsonIndent for headers too for consistency */}
+                  {JSON.stringify(responseData.headers || {}, null, jsonIndent)}
+                </SyntaxHighlighter>
+              ) : (
+                 <pre className={`text-sm p-4 rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`}>
+                  {JSON.stringify(responseData.headers || {}, null, jsonIndent)}
+                </pre>
+              )}
             </div>
           </ScrollArea>
         </TabsContent>

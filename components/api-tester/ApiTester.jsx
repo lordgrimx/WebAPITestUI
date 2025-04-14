@@ -8,16 +8,17 @@ import {
 } from "@/components/ui/resizable";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import axios from "axios"; // axios kütüphanesini import ediyorum
-import { toast } from "sonner"; // sonner'dan toast fonksiyonunu import et
+import axios from "axios";
+import { toast } from "sonner";
 import { useSettings } from "@/lib/settings-context"; // Import the settings hook
+// Proxy için https-proxy-agent gerekebilir, ancak bunu API rotasında kullanacağız.
 
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
 export default function ApiTester() {
-  const { settings, updateSetting } = useSettings(); // Get settings from context
+  const { settings } = useSettings(); // Get settings from context (updateSetting kaldırıldı, kullanılmıyor)
   
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
@@ -85,87 +86,140 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
   // Memoize the response handler
   const handleSendRequest = useCallback(async (requestData) => {
     const startTime = Date.now();
+    // Extract request data including auth details - Moved outside try block
+    const { method, url, headers: requestHeaders, body: requestBody, params, auth } = requestData;
+
     try {
       setResponseData(null); // Reset response before sending
       setError(null); // Clear previous errors
-      console.log("Sending request:", requestData);
+      console.log("Sending request with settings:", requestData, settings);
 
-      // Extract request data including auth details
-      const { method, url, headers: requestHeaders, body: requestBody, params, auth } = requestData; // Add auth here
-
-      // URL kontrolü yap - undefined veya boş değer kontrolü
-      if (!url || url === 'undefined') {
+      // URL kontrolü yap - Moved inside try block for early exit on error
+      if (!url || typeof url !== 'string' || !url.trim()) {
         console.error("URL tanımlı değil veya geçersiz:", url);
         throw new Error("URL tanımlı değil veya geçersiz. Lütfen geçerli bir URL girin.");
       }
 
-      // Prepare axios config
-      const axiosConfig = {
-        method: method,
-        url: url,
-        headers: { ...(requestHeaders || {}) }, // Start with existing headers, create a copy
-        params: { ...(params || {}) } // Start with existing params, create a copy
-      };
+      // --- Proxy Logic ---
+      let targetUrl = url;
+      let requestPayload = { ...requestData }; // Copy original request data
+      let axiosConfig = {}; // Initialize config
 
-      // --- Authentication Logic ---
-      if (auth && auth.type) {
-        switch (auth.type) {
-          case 'bearer':
-            if (auth.token) {
-              axiosConfig.headers['Authorization'] = `Bearer ${auth.token}`;
-            } else {
-              console.warn("Bearer token selected but no token provided.");
-              toast.warning("Auth Warning", { description: "Bearer Token authentication selected, but no token was provided." });
-            }
-            break;
-          case 'basic':
-            if (auth.username && auth.password) {
-              const credentials = btoa(`${auth.username}:${auth.password}`); // Base64 encode username:password
-              axiosConfig.headers['Authorization'] = `Basic ${credentials}`;
-            } else {
-              console.warn("Basic Auth selected but username or password missing.");
-              toast.warning("Auth Warning", { description: "Basic Auth selected, but username or password was not provided." });
-            }
-            break;
-          case 'apiKey':
-             // Corrected logic for API Key
-             if (auth.apiKeyName && auth.apiKeyValue) { // Check for apiKeyName and apiKeyValue
-               if (auth.apiKeyLocation === 'header') { // Check for apiKeyLocation
-                 axiosConfig.headers[auth.apiKeyName] = auth.apiKeyValue;
-               } else if (auth.apiKeyLocation === 'query') {
-                 axiosConfig.params[auth.apiKeyName] = auth.apiKeyValue;
+      if (settings.proxyEnabled && settings.proxyUrl) {
+        console.log("Proxy enabled. Sending request via backend proxy route.");
+        targetUrl = '/api/proxy'; // Target the backend proxy route
+        // Prepare payload for the proxy route
+        requestPayload = {
+          originalRequest: {
+            method,
+            url, // Original target URL
+            headers: requestHeaders || {},
+            params: params || {},
+            body: requestBody,
+            auth // Include auth details for the proxy route to handle if needed (e.g., proxy auth)
+          },
+          proxySettings: {
+            url: settings.proxyUrl,
+            username: settings.proxyUsername,
+            password: settings.proxyPassword,
+          }
+        };
+        // The proxy route will handle the actual method, headers, params, body for the target API
+        axiosConfig = {
+          method: 'POST', // Always POST to the proxy route
+          url: targetUrl,
+          data: requestPayload, // Send the combined payload
+          headers: { 'Content-Type': 'application/json' }, // Ensure correct content type for proxy route
+          timeout: settings.requestTimeout, // Apply timeout to the proxy request itself
+        };
+
+      } else {
+        console.log("Proxy disabled. Sending request directly.");
+        // Prepare direct axios config, starting with headers from RequestBuilder
+        let finalAxiosHeaders = { ...(requestHeaders || {}) }; // Start with headers from RequestBuilder (includes defaults + manual)
+        let finalAxiosParams = { ...(params || {}) }; // Start with params from RequestBuilder
+
+        console.log("Initial headers before ApiTester auth logic:", finalAxiosHeaders);
+
+        // --- Authentication Logic (Only for Direct Requests) ---
+        // Apply auth logic, potentially modifying finalAxiosHeaders or finalAxiosParams
+        if (auth && auth.type && auth.type !== 'none') {
+          switch (auth.type) {
+            case 'bearer':
+              if (auth.token) { // Only apply if token exists
+                finalAxiosHeaders['Authorization'] = `Bearer ${auth.token}`; // Override existing Authorization if any
+                console.log("Applied Bearer token to headers.");
+              } else {
+                console.warn("Bearer token selected but no token provided. Auth header not applied by ApiTester.");
+                toast.warning("Auth Warning", { description: "Bearer Token selected, but no token was provided. Authentication header not applied." });
+              }
+              break;
+            case 'basic':
+              if (auth.username && auth.password) { // Only apply if both username and password exist
+                const credentials = btoa(`${auth.username}:${auth.password}`);
+                finalAxiosHeaders['Authorization'] = `Basic ${credentials}`; // Override existing Authorization if any
+                console.log("Applied Basic auth to headers.");
+              } else {
+                console.warn("Basic Auth selected but username or password missing. Auth header not applied by ApiTester.");
+                toast.warning("Auth Warning", { description: "Basic Auth selected, but username or password was not provided. Authentication header not applied." });
+              }
+              break;
+            case 'apiKey':
+               if (auth.apiKeyName && auth.apiKeyValue) { // Only apply if both name and value exist
+                 if (auth.apiKeyLocation === 'header') {
+                   finalAxiosHeaders[auth.apiKeyName] = auth.apiKeyValue; // Add/Override header
+                   console.log(`Applied API Key '${auth.apiKeyName}' to headers.`);
+                 } else if (auth.apiKeyLocation === 'query') {
+                   finalAxiosParams[auth.apiKeyName] = auth.apiKeyValue; // Add/Override query param
+                   console.log(`Applied API Key '${auth.apiKeyName}' to query params.`);
+                 }
+               } else {
+                 console.warn("API Key selected but key name or value missing. API Key not applied by ApiTester.");
+                 toast.warning("Auth Warning", { description: "API Key authentication selected, but Key Name or Value was not provided. API Key not applied." });
                }
-             } else {
-               console.warn("API Key selected but key name or value missing.");
-               toast.warning("Auth Warning", { description: "API Key authentication selected, but Key Name or Value was not provided." });
-             }
-             break;
-          // Add cases for other auth types (e.g., OAuth 2.0) if implemented
-          case 'none':
-          default:
-            // No specific auth headers/params needed for 'none'
-            break;
+               break;
+            // Add cases for other auth types (e.g., OAuth 2.0) if implemented
+            // case 'managedApiKey' is handled in RequestBuilder, resulting in 'apiKey' type here if valid.
+            default:
+              // Includes 'none' type - do nothing, headers/params remain as they were from RequestBuilder
+              console.log("Auth type is 'none' or unhandled. No auth applied by ApiTester.");
+              break;
+          }
+        } else {
+            console.log("Auth type is 'none' or auth object missing. No auth applied by ApiTester.");
+        }
+        // --- End Authentication Logic ---
+
+        // Final axios config for direct request
+        axiosConfig = {
+          method: method,
+          url: targetUrl,
+          headers: finalAxiosHeaders, // Use the potentially modified headers
+          params: finalAxiosParams,   // Use the potentially modified params
+          timeout: settings.requestTimeout,
+        };
+
+        // Add request body for non-GET/HEAD requests (Only for Direct Requests)
+        if (method !== 'GET' && method !== 'HEAD' && requestBody) {
+          try {
+            // Try to parse as JSON first
+            const parsedBody = JSON.parse(requestBody);
+            axiosConfig.data = parsedBody;
+          } catch (e) {
+            // If not valid JSON, send as plain text
+            axiosConfig.data = requestBody;
+          }
         }
       }
-      // --- End Authentication Logic ---
+      // --- End Proxy Logic ---
 
-      // Add request body for non-GET requests
-      if (method !== 'GET' && method !== 'HEAD' && requestBody) {
-        try {
-          // Try to parse as JSON first
-          const parsedBody = JSON.parse(requestBody);
-          axiosConfig.data = parsedBody;
-        } catch (e) {
-          // If not valid JSON, send as plain text
-          axiosConfig.data = requestBody;
-        }
-      }      // Make the actual API request
-      // Use the timeout setting from settings context
-      axiosConfig.timeout = settings.requestTimeout; // Use the timeout from settings
-      const axiosResponse = await axios(axiosConfig); // Use the modified config
 
-      // Handle successful response
-      console.log("Response received:", axiosResponse);
+      // Make the actual API request (either direct or via proxy)
+      console.log("Final Axios Config:", axiosConfig);
+      const axiosResponse = await axios(axiosConfig);
+
+      // Handle successful response (Proxy route should return the target API's response structure)
+      console.log("Response received (potentially via proxy):", axiosResponse);
 
       const endTime = Date.now();
       const duration = endTime - startTime;      // Calculate response size - convert to string and measure
@@ -236,30 +290,37 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
         size: `${(responseSize / 1024).toFixed(2)} KB`,
         timeTaken: `${duration} ms`,
         isTruncated: isTruncated,
-        originalSize: responseSize
+        originalSize: responseSize,
+        // Add a flag indicating if the response came via proxy
+        viaProxy: settings.proxyEnabled && settings.proxyUrl
       };
 
       setResponseData(formattedResponse);
-        // Record ALL requests in history - use truncated data when applicable
-      const dataToStore = isTruncated 
+
+      // Record ALL requests in history - use truncated data when applicable
+      const dataToStore = isTruncated
         ? JSON.stringify(truncatedData) // Use the truncated data object
         : responseText; // Use the original response text when not truncated
-        
+
       // Store the size of what we're actually storing
-      const storedResponseSize = isTruncated 
-        ? new Blob([dataToStore]).size 
+      const storedResponseSize = isTruncated
+        ? new Blob([dataToStore]).size
         : responseSize;
-          await recordHistory({
+
+      // Use the ORIGINAL method and URL for history recording
+      await recordHistory({
         requestId: selectedRequestId || undefined,
         userId: currentUserID, // Always include user ID - no fallback to undefined
-        method: requestData.method,
-        url: requestData.url,
+        method: method, // Original method
+        url: url, // Original URL
         status: axiosResponse.status,
         duration: duration,
         responseSize: storedResponseSize, // Store the actual size of the saved data
         responseData: dataToStore, // Store the truncated version when applicable
         responseHeaders: JSON.stringify(axiosResponse.headers),
-        isTruncated: isTruncated
+        isTruncated: isTruncated,
+        // Optionally record if proxy was used
+        // proxyUsed: settings.proxyEnabled && settings.proxyUrl
       });
 
       toast.success("Request Sent", {
@@ -274,66 +335,61 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
       // Record failed requests in history too
       const endTime = Date.now();
       const duration = endTime - startTime;
-      
-      const errorResponse = error.response || {
-        status: 0,
-        data: { error: error.message },
-        headers: {}
-      };
 
-      await recordHistory({
-        requestId: selectedRequestId || undefined,
-        method: requestData.method,
-        url: requestData.url,
-        status: errorResponse.status,
-        duration: duration,
-        responseSize: 0,
-        responseData: JSON.stringify(errorResponse.data),
-        responseHeaders: JSON.stringify(errorResponse.headers),
-        isTruncated: false
-      });
+      // Determine status and response data based on error type
+      let status = 0;
+      let errorData = { error: "An unknown error occurred." };
+      let errorHeaders = { "content-type": "application/json" };
+      let errorMessage = "An error occurred while sending the request.";
 
-      // Check if this is a network error (like invalid URL, no internet, etc.)
-      let errorData;
-      let errorHeaders;
-
-      if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || !error.response) {
-        const errorMessage = `Network error: ${error.message}`;
-
-        // Sonner toast bildirimi göster
-        toast.error("Ağ Hatası", {
-          description: "İstek sunucuya ulaşamadı. URL'yi veya internet bağlantınızı kontrol edin.",
-        });
-
-        errorData = {
-          error: errorMessage,
-          details: "The request could not reach the server. Check the URL and your internet connection."
-        };
-        errorHeaders = { "content-type": "application/json" };
-
-        setError(errorMessage);
+      if (error.response) {
+        // Error from the target server (or the proxy route itself)
+        status = error.response.status;
+        errorData = error.response.data || { error: error.message };
+        errorHeaders = error.response.headers || { "content-type": "application/json" };
+        errorMessage = `HTTP Error ${status}: ${error.message}`;
+        toast.error(`HTTP Error ${status}`, { description: error.message });
+      } else if (error.request) {
+        // Request was made but no response received (network error, timeout)
+        errorMessage = `Network error: ${error.message}. Could not reach the server or proxy.`;
+        errorData = { error: errorMessage, details: "Check the URL, proxy settings, and your internet connection." };
+        toast.error("Network Error", { description: "Could not reach the server. Check URL/connection." });
+        setError(errorMessage); // Set general error for network issues
       } else {
-        // Handle HTTP errors (400, 500, etc.) - Do NOT set the error state for these
-        const status = error.response?.status || 500;
-        const errorMessage = error.message || "An error occurred while sending the request";
-        errorData = error.response?.data || { error: errorMessage };
-        errorHeaders = error.response?.headers || { "content-type": "application/json" };
-
-        // Display an appropriate toast message for HTTP errors
-        toast.error(`HTTP Error ${status}`, {
-          description: errorMessage,
-        });
+        // Setup error or other issues
+        errorMessage = `Request setup error: ${error.message}`;
+        errorData = { error: errorMessage };
+        toast.error("Request Error", { description: error.message });
+        setError(errorMessage); // Set general error for setup issues
       }
 
+      // Record the failed request in history using ORIGINAL details
+      await recordHistory({
+        requestId: selectedRequestId || undefined,
+        userId: currentUserID,
+        method: method, // Now accessible
+        url: url,       // Now accessible
+        status: status,
+        duration: duration,
+        responseSize: 0,
+        responseData: JSON.stringify(errorData),
+        responseHeaders: JSON.stringify(errorHeaders),
+        isTruncated: false,
+        // proxyUsed: settings.proxyEnabled && settings.proxyUrl
+      });
+
+      // Update the response display with error details
       setResponseData({
-        status: error.response?.status || 0,
+        status: status,
         data: errorData,
         headers: errorHeaders,
-        size: "0.2 KB", // Placeholder size
-        timeTaken: "0 ms", // Placeholder time
+        size: "0 KB",
+        timeTaken: `${duration} ms`,
+        isError: true, // Add an error flag
+        viaProxy: settings.proxyEnabled && settings.proxyUrl && status !== 0 // Indicate proxy if it wasn't a network error before proxy
       });
     }
-  }, [selectedRequestId, recordHistory, currentUserID]); // Added currentUserID dependency
+  }, [selectedRequestId, recordHistory, currentUserID, settings]); // Added settings dependency
 
   // Handler for selecting a request from a collection
   const handleRequestSelect = useCallback((requestId) => {
@@ -404,6 +460,7 @@ const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
                 authToken={authToken}
                 onUpdateAuthToken={updateAuthToken}
                 darkMode={darkMode} // Pass dark mode state
+                apiKeys={settings.apiKeys || []} // Pass apiKeys from settings
               />
             </ResizablePanel>
             <ResizableHandle withHandle />

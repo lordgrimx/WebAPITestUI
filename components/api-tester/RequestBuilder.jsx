@@ -233,42 +233,39 @@ function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
   );
 }
 
+
 // Auth Tab Content
-function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode }) { // Add darkMode prop
+function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKeys = [] }) { // Add apiKeys prop with default value
   const authTypes = [
     { value: "none", label: "No Auth" },
+    { value: "managedApiKey", label: "Managed API Key" }, // New type for managed keys
+    { value: "apiKey", label: "Manual API Key" }, // Renamed for clarity
     { value: "basic", label: "Basic Auth" },
     { value: "bearer", label: "Bearer Token" },
-    { value: "apiKey", label: "API Key" },
+    // { value: "apiKey", label: "API Key" }, // Replaced by Manual and Managed
     { value: "oauth2", label: "OAuth 2.0" }
   ];
 
   // Use local state for token input to avoid direct mutation of prop if needed elsewhere
   const [tokenInput, setTokenInput] = useState(auth?.token || authToken || '');
+  const [selectedManagedKeyId, setSelectedManagedKeyId] = useState(auth?.managedKeyId || ''); // State for selected managed key
 
   // Update local state if the prop changes (e.g., loaded from request)
   useEffect(() => {
     setTokenInput(auth?.token || authToken || '');
-  }, [auth?.token, authToken]);
+    setSelectedManagedKeyId(auth?.managedKeyId || ''); // Sync managed key selection
+  }, [auth?.token, authToken, auth?.managedKeyId]);
 
 
   const handleAuthTypeChange = (type) => {
     // Reset specific fields when changing type
     const newAuth = { type };
-    if (type !== 'basic') {
-      newAuth.username = undefined;
-      newAuth.password = undefined;
-    }
-    if (type !== 'bearer') {
-      newAuth.token = undefined;
-      setTokenInput(''); // Clear local token input too
-    }
-    if (type !== 'apiKey') {
-      newAuth.apiKeyName = undefined;
-      newAuth.apiKeyValue = undefined;
-      newAuth.apiKeyLocation = undefined;
-    }
-     if (type !== 'oauth2') {
+    // Clear fields not relevant to the new type
+    if (type !== 'basic') { newAuth.username = undefined; newAuth.password = undefined; }
+    if (type !== 'bearer') { newAuth.token = undefined; setTokenInput(''); }
+    if (type !== 'apiKey') { newAuth.apiKeyName = undefined; newAuth.apiKeyValue = undefined; newAuth.apiKeyLocation = undefined; }
+    if (type !== 'managedApiKey') { newAuth.managedKeyId = undefined; setSelectedManagedKeyId(''); } // Clear managed key selection
+    if (type !== 'oauth2') {
        newAuth.accessTokenUrl = undefined;
        newAuth.clientId = undefined;
        newAuth.clientSecret = undefined;
@@ -290,6 +287,19 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode }) { //
      setAuth(prevAuth => ({ ...prevAuth, [field]: value }));
    };
 
+  // Handler for selecting a managed API key
+  const handleManagedKeySelect = (keyId) => {
+    setSelectedManagedKeyId(keyId); // Update local state for the dropdown
+    setAuth(prevAuth => ({
+      ...prevAuth,
+      managedKeyId: keyId, // Store the selected key ID in the auth state
+      // Clear manual API key fields when a managed key is selected
+      apiKeyName: undefined,
+      apiKeyValue: undefined,
+      apiKeyLocation: undefined,
+    }));
+  };
+
 
   return (
     <div className={`p-4 space-y-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
@@ -303,13 +313,43 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode }) { //
           </SelectTrigger>
           <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
             {authTypes.map((type) => (
-              <SelectItem key={type.value} value={type.value}>
-                {type.label}
+              <SelectItem key={type.value} value={type.value} disabled={type.value === 'managedApiKey' && apiKeys.length === 0}>
+                {type.label} {type.value === 'managedApiKey' && apiKeys.length === 0 ? '(No keys defined)' : ''}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
+
+      {/* Managed API Key Selection */}
+      {auth?.type === "managedApiKey" && (
+        <div className="space-y-2">
+          <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
+            Select Managed Key
+          </label>
+          <Select
+            value={selectedManagedKeyId}
+            onValueChange={handleManagedKeySelect}
+            disabled={apiKeys.length === 0}
+          >
+            <SelectTrigger className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
+              <SelectValue placeholder={apiKeys.length > 0 ? "Select a key from Settings" : "No keys defined in Settings"} />
+            </SelectTrigger>
+            <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
+              {apiKeys.map((key) => (
+                <SelectItem key={key.id} value={key.id.toString()}>
+                  {key.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedManagedKeyId && (
+            <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
+              Key details will be automatically applied from Settings.
+            </p>
+          )}
+        </div>
+      )}
 
       {auth?.type === "basic" && (
         <div className="space-y-4">
@@ -367,11 +407,13 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode }) { //
         </div>
       )}
 
+      {/* Manual API Key Input */}
       {auth?.type === "apiKey" && (
         <div className="space-y-4">
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Enter API key details manually.</p>
           <div>
             <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-              Key Name
+              Key Name (Header or Query Param Name)
             </label>
             <Input
               type="text"
@@ -572,14 +614,15 @@ const createDefaultRow = () => ({ id: Date.now(), key: "", value: "", enabled: t
 export default function RequestBuilder({
   selectedRequestId,
   initialData, // Data from history item
-  onSendRequest, // This is ApiTester's handleSendRequest
+  onSendRequest,
   onRequestDataChange,
   authToken,
   onUpdateAuthToken,
-  darkMode // Receive darkMode prop
+  darkMode, // Receive darkMode prop
+  apiKeys = [] // Receive apiKeys prop
 }) {
   const { settings } = useSettings();
-  
+
   // Initialize state based on initialData if provided, otherwise default
   const [method, setMethod] = useState(initialData?.method || "GET");
   const [url, setUrl] = useState(initialData?.url || ""); // Initialize URL
@@ -605,9 +648,9 @@ export default function RequestBuilder({
     console.log("No default headers found in settings, using empty row");
     return [createDefaultRow()];
   });
-  const [body, setBody] = useState("");
-  const [auth, setAuth] = useState({ type: "none" });
-  const [tests, setTests] = useState({ script: "", results: [] });
+  const [body, setBody] = useState(initialData?.body || "");
+  const [auth, setAuth] = useState(initialData?.auth || { type: "none" }); // Initialize auth from initialData
+  const [tests, setTests] = useState(initialData?.tests || { script: "", results: [] }); // Initialize tests from initialData
   const [error, setError] = useState(null);
   const [isValidatingUrl, setIsValidatingUrl] = useState(false);
   const [urlError, setUrlError] = useState(null);
@@ -726,9 +769,9 @@ export default function RequestBuilder({
       ? JSON.stringify(params.filter(p => p.enabled)) // Store all enabled
       : undefined,
     body: method !== "GET" && method !== "HEAD" ? body : undefined, // Body only for relevant methods
-    auth: auth, // Pass the auth object
+    auth: auth, // Pass the potentially modified auth object
     tests: tests // Pass the tests object
-  }), [method, debouncedUrl, headers, params, body, auth, tests]);
+  }), [method, debouncedUrl, headers, params, body, auth, tests]); // Include auth in dependency array
 
   // Update form based on initialData (from history) or selectedRequestId (from collection)
   useEffect(() => {
@@ -741,9 +784,9 @@ export default function RequestBuilder({
       // Reset other fields as they are not directly from history item in this setup
       setParams([createDefaultRow()]);
       setHeaders([createDefaultRow()]);
-      setBody("");
-      setAuth({ type: "none" });
-      setTests({ script: "", results: [] });
+      setBody(initialData.body || "");
+      setAuth(initialData.auth || { type: "none" }); // Use auth from history if available
+      setTests(initialData.tests || { script: "", results: [] }); // Use tests from history if available
       setError(null);
     }
     // Priority 2: Populate from selectedRequestId (collection item)
@@ -789,21 +832,53 @@ export default function RequestBuilder({
       // Set body
       setBody(requestData.body || "");
 
-      // Handle auth data
-      if (requestData.auth && typeof requestData.auth === 'object') {
-        setAuth(requestData.auth);
-      } else if (requestData.auth && typeof requestData.auth === 'string') {
-        try { setAuth(JSON.parse(requestData.auth)); }
-        catch (e) { console.error("Error parsing auth data:", e); setAuth({ type: "none" }); }
-      } else { setAuth({ type: "none" }); }
+      // Handle auth data (Safely parse if string)
+      let parsedAuth = { type: "none" };
+      if (requestData.auth) {
+        if (typeof requestData.auth === 'object') {
+          parsedAuth = requestData.auth;
+        } else if (typeof requestData.auth === 'string') {
+          try {
+            parsedAuth = JSON.parse(requestData.auth);
+            if (typeof parsedAuth !== 'object' || parsedAuth === null) {
+              console.warn("Parsed auth is not a valid object, using default.");
+              parsedAuth = { type: "none" };
+            }
+          } catch (e) {
+            console.error("Error parsing auth data:", e);
+            parsedAuth = { type: "none" };
+          }
+        }
+      }
+      setAuth(parsedAuth);
 
-      // Handle tests data
+
+      // Handle tests data (Safely parse if string)
+      let parsedTests = { script: "", results: [] };
+      if (requestData.tests) {
+        if (typeof requestData.tests === 'object') {
+          parsedTests = requestData.tests;
+        } else if (typeof requestData.tests === 'string') {
+          try {
+            parsedTests = JSON.parse(requestData.tests);
+            if (typeof parsedTests !== 'object' || parsedTests === null) {
+              console.warn("Parsed tests is not a valid object, using default.");
+              parsedTests = { script: "", results: [] };
+            }
+          } catch (e) {
+            console.error("Error parsing tests data:", e);
+            parsedTests = { script: "", results: [] };
+          }
+        }
+      }
+      setTests(parsedTests);
+      /* // Old parsing logic:
       if (requestData.tests && typeof requestData.tests === 'object') {
         setTests(requestData.tests);
       } else if (requestData.tests && typeof requestData.tests === 'string') {
         try { setTests(JSON.parse(requestData.tests)); }
         catch (e) { console.error("Error parsing tests data:", e); setTests({ script: "", results: [] }); }
-      } else { setTests({ script: "", results: [] }); }
+      } else { setTests({ script: "", results: [] }); } */
 
       setError(null); // Clear previous errors
     }
@@ -874,13 +949,59 @@ export default function RequestBuilder({
     setError(null);
 
     // Prepare the request configuration object using the latest state
+
+    // 1. Prepare Default Headers from settings
+    const defaultHeadersFromSettings = (settings?.defaultHeaders || [])
+      .filter(h => h.name?.trim()) // Ensure header name is not empty
+      .reduce((acc, header) => {
+        acc[header.name] = header.value || ""; // Use name as key
+        return acc;
+      }, {});
+
+    // 2. Prepare Manual Headers (already memoized as enabledHeaders)
+
+    // 3. Merge Headers: Manual headers override default headers
+    const finalHeaders = {
+      ...defaultHeadersFromSettings,
+      ...enabledHeaders, // enabledHeaders is already a key-value object
+    };
+
+    // Debugging logs
+    console.log('[RequestBuilder] Default Headers from Settings:', defaultHeadersFromSettings);
+    console.log('[RequestBuilder] Manual Headers (enabledHeaders):', enabledHeaders);
+    console.log('[RequestBuilder] Final Merged Headers (to be passed):', finalHeaders); // Log the final merged headers
+
+
+    // If using a managed API key, derive the actual key details here
+    let finalAuth = { ...auth }; // Start with current auth state
+
+    if (auth.type === 'managedApiKey' && auth.managedKeyId) {
+      const selectedKey = apiKeys.find(key => key.id.toString() === auth.managedKeyId);
+      if (selectedKey) {
+        // Override relevant auth fields for the request, but keep type as 'apiKey' for ApiTester logic
+        finalAuth = {
+          ...finalAuth, // Keep managedKeyId for state persistence
+          type: 'apiKey', // Tell ApiTester to treat it as a standard API key
+          apiKeyName: selectedKey.name,
+          apiKeyValue: selectedKey.value,
+          apiKeyLocation: 'header' // Assuming managed keys are always headers for now, adjust if needed
+        };
+        console.log("Using managed API key:", selectedKey.name);
+      } else {
+        console.warn("Selected managed API key not found in settings. Sending without API key auth.");
+        // Optionally revert to 'none' or show an error
+        finalAuth.type = 'none';
+      }
+    }
+
+
     const requestConfig = {
       method,
       url, // Use the current, validated URL state
       params: enabledParams, // Use memoized enabled params
-      headers: enabledHeaders, // Use memoized enabled headers
+      headers: finalHeaders, // Use the merged finalHeaders
       body: method !== "GET" && method !== "HEAD" ? body : undefined,
-      auth, // Pass the current auth state
+      auth: finalAuth, // Pass the potentially modified auth state (with resolved managed key)
       tests, // Pass the current tests state
       // Parallel request logic needs to be handled in ApiTester if required
       requestNumber: 1, // Assuming single request for now
@@ -1012,7 +1133,14 @@ export default function RequestBuilder({
           </div>
         </TabsContent>
         <TabsContent value="auth" className="flex-1 overflow-auto">
-          <AuthTab auth={auth} setAuth={setAuth} authToken={authToken} onUpdateAuthToken={onUpdateAuthToken} darkMode={darkMode} />
+          <AuthTab
+            auth={auth}
+            setAuth={setAuth}
+            authToken={authToken}
+            onUpdateAuthToken={onUpdateAuthToken}
+            darkMode={darkMode}
+            apiKeys={apiKeys} // Pass apiKeys down
+          />
         </TabsContent>
         <TabsContent value="tests" className="flex-1 overflow-auto">
           <TestsTab tests={tests} setTests={setTests} darkMode={darkMode} />
