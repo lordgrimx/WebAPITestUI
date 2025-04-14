@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { toast } from "react-toastify";
@@ -17,6 +18,8 @@ export default function LoadTestDialog({
     const [testName, setTestName] = useState("");
     const [vus, setVus] = useState(1);
     const [duration, setDuration] = useState("30s");
+    const [authType, setAuthType] = useState("");
+    const [authToken, setAuthToken] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const [isExecuting, setIsExecuting] = useState(false);
     const router = useRouter();
@@ -27,7 +30,7 @@ export default function LoadTestDialog({
         try {
             setIsGenerating(true);
             
-            // Generate and save the test
+            // Generate and save the test with auth data
             const { testId } = await generateAndSaveK6Script({
                 name: testName,
                 requestId: requestData.id,
@@ -36,7 +39,9 @@ export default function LoadTestDialog({
                     url: requestData.url,
                     headers: requestData.headers,
                     body: requestData.body,
-                    params: requestData.params
+                    params: requestData.params,
+                    authType: authType || undefined,
+                    authToken: authToken || undefined
                 },
                 options: { 
                     vus, 
@@ -79,6 +84,41 @@ export default function LoadTestDialog({
                             placeholder="My Load Test"
                         />
                     </div>
+
+                    {/* Add auth type selection */}
+                    <div className="space-y-2">
+                        <Label>Authentication Type</Label>
+                        <Select value={authType} onValueChange={setAuthType}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select auth type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">None</SelectItem>
+                                <SelectItem value="bearer">Bearer Token</SelectItem>
+                                <SelectItem value="basic">Basic Auth</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Show auth token input if auth type is selected and not none */}
+                    {authType && authType !== 'none' && (
+                        <div className="space-y-2">
+                            <Label htmlFor="authToken">
+                                {authType === 'bearer' ? 'Bearer Token' : 'Basic Auth Token'}
+                            </Label>
+                            <Input
+                                id="authToken"
+                                value={authToken}
+                                onChange={(e) => setAuthToken(e.target.value)}
+                                placeholder={
+                                    authType === 'bearer' 
+                                        ? 'Enter your bearer token'
+                                        : 'Enter base64 encoded credentials'
+                                }
+                                type={authType === 'bearer' ? 'text' : 'password'}
+                            />
+                        </div>
+                    )}
 
                     <div className="space-y-2">
                         <Label htmlFor="vus">Virtual Users</Label>

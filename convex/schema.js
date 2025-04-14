@@ -36,6 +36,8 @@ export default defineSchema({
         method: v.string(),
         url: v.string(),
         headers: v.optional(v.string()),
+        authType: v.optional(v.string()), // "bearer", "basic", etc.
+        authToken: v.optional(v.string()), // The auth token/credentials
         params: v.optional(v.string()),
         body: v.optional(v.string()),
         isFavorite: v.optional(v.boolean()),
@@ -94,6 +96,8 @@ export default defineSchema({
         name: v.string(),
         description: v.optional(v.string()),
         script: v.string(),
+        authType: v.optional(v.string()),
+        authToken: v.optional(v.string()),
         options: v.optional(v.object({
             vus: v.number(),
             duration: v.string()
@@ -125,7 +129,32 @@ export default defineSchema({
             failureRate: v.number(),
             averageResponseTime: v.number(),
             p95ResponseTime: v.number(),
-            timestamp: v.number()
+            timestamp: v.number(),
+            detailedMetrics: v.optional(v.object({
+                checksRate: v.number(),
+                dataReceived: v.string(),
+                dataSent: v.string(),
+                httpReqRate: v.number(),
+                httpReqFailed: v.number(),
+                successRate: v.number(),
+                iterations: v.number(),
+                httpReqDuration: v.object({
+                    avg: v.number(),
+                    min: v.number(),
+                    med: v.number(),
+                    max: v.number(),
+                    p90: v.number(),
+                    p95: v.number()
+                }),
+                iterationDuration: v.object({
+                    avg: v.number(),
+                    min: v.number(),
+                    med: v.number(),
+                    max: v.number(),
+                    p90: v.number(),
+                    p95: v.number()
+                })
+            }))
         })),
         createdAt: v.number(),
         updatedAt: v.number()
