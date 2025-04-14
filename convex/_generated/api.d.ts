@@ -19,6 +19,7 @@ import type * as generateToken from "../generateToken.js";
 import type * as history from "../history.js";
 import type * as k6tests from "../k6tests.js";
 import type * as requests from "../requests.js";
+import type * as storage from "../storage.js";
 import type * as users from "../users.js";
 
 /**
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   history: typeof history;
   k6tests: typeof k6tests;
   requests: typeof requests;
+  storage: typeof storage;
   users: typeof users;
 }>;
 export declare const api: FilterApi<

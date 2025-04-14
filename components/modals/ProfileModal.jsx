@@ -2,42 +2,52 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context"; // Import useAuth
-import { useMutation } from "convex/react"; // Import useMutation
+import { useMutation, useAction } from "convex/react"; // Import useMutation AND useAction
 import { api } from "@/convex/_generated/api"; // Import api
 import { toast } from "sonner"; // Import toast for notifications
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogFooter,
-  DialogClose
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, User, Mail, Phone, MapPin, Globe, Camera, Loader2 } from "lucide-react";
+import imageCompression from 'browser-image-compression'; // Import the library
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Label } from "../ui/label";
+import { Input } from "../ui/input";
+import { Checkbox } from "../ui/checkbox";
+import { Button } from "../ui/button";
+
+// Define constants for validation
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "image/gif"];
 
 function ProfileModal({ open, setOpen, darkMode }) {
   const { user, isLoading: authLoading } = useAuth(); // Get user from auth context
   const updateProfile = useMutation(api.users.updateProfile); // Get updateProfile mutation
+  const changePasswordMutation = useMutation(api.users.changePassword); // Get changePassword mutation
+  const generateUploadUrl = useMutation(api.storage.generateUploadUrl); // Moved hook call to top level
+  const saveProfileImage = useAction(api.storage.saveProfileImage); // Moved hook call to top level
 
-  const [activeTab, setActiveTab] = useState("personal");
-  const [firstName, setFirstName] = useState("");
+  const [activeTab, setActiveTab] = useState("personal");  const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState(""); // For potential future upload preview
   const [isSaving, setIsSaving] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [website, setWebsite] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
 
   const fileInputRef = useRef(null); // Ref for file input
-
   // Update state when user data is loaded or changes
   useEffect(() => {
     if (user) {
       setFirstName(user.name?.split(" ")[0] || "");
       setLastName(user.name?.split(" ").slice(1).join(" ") || "");
       setProfileImageUrl(user.profileImage || ""); // Use existing profile image URL
+      setPhone(user.phone || "");
+      setAddress(user.address || "");
+      setWebsite(user.website || "");
+      setTwoFactorEnabled(user.twoFactorEnabled || false);
     }
   }, [user]);
 
@@ -56,36 +66,121 @@ function ProfileModal({ open, setOpen, darkMode }) {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const file = event.target.files?.[0];
     if (file) {
-      // TODO: Implement file upload logic here
-      // 1. Upload file to Convex storage (requires setup)
-      // 2. Get the URL of the uploaded file
-      // 3. Update the profileImageUrl state for preview
-      // 4. Store the URL to be saved with updateProfile mutation
-      console.log("Selected file:", file);
-      toast.info("Profil resmi yükleme henüz aktif değil.");
-      // Example preview (replace with actual upload URL later)
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImageUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
+      // --- Client-side Validation ---
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error("File is too large", { description: `Maximum file size is ${MAX_FILE_SIZE / 1024 / 1024}MB.` });
+        return; // Stop the upload
+      }
+      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        toast.error("Invalid file type", { description: "Please select a JPEG, PNG, or GIF image." });
+        return; // Stop the upload
+      }
+      // --- End Validation ---
+
+      setIsSaving(true);
+      toast.info("Compressing and uploading image..."); // Updated toast message
+      
+      try {
+        // --- Image Compression ---
+        const options = {
+          maxSizeMB: 1,          // Max size in MB (adjust as needed)
+          maxWidthOrHeight: 1024, // Max width or height (adjust as needed)
+          useWebWorker: true,    // Use web worker for better performance
+        };
+        const compressedFile = await imageCompression(file, options);
+        console.log(`Compressed file size: ${compressedFile.size / 1024 / 1024} MB`);
+        // --- End Compression ---
+
+        // 1. Get an upload URL from Convex
+        const uploadUrl = await generateUploadUrl();
+        
+        // 2. Upload the COMPRESSED file to the Convex storage
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": compressedFile.type, // Use compressed file type
+          },
+          body: compressedFile, // Use compressed file body
+        });
+        
+        if (!result.ok) {
+          throw new Error(`Error uploading file: ${result.statusText}`);
+        }
+        
+        // 3. Get the storageId from the response
+        const { storageId } = await result.json();
+        
+        // 4. Call the action to save the profile image
+        const { imageUrl } = await saveProfileImage({
+          userId: user.userId,
+          storageId,
+        });
+        
+        // 5. Update the UI with the new image URL
+        setProfileImageUrl(imageUrl);
+        
+        toast.success("Profil resmi başarıyla yüklendi!");
+      } catch (error) {
+        console.error("Profil resmi yükleme hatası:", error);
+        toast.error("Profil resmi yüklenirken bir hata oluştu.");
+      } finally {
+        setIsSaving(false);
+      }
     }
   };
 
   const handleSaveChanges = async () => {
     if (!user) return;
     setIsSaving(true);
+    
     try {
       const name = `${firstName.trim()} ${lastName.trim()}`.trim();
+      
+      // Check if password is being changed
+      if (currentPassword && newPassword && confirmPassword) {
+        // Validate that new password and confirm password match
+        if (newPassword !== confirmPassword) {
+          toast.error("Yeni şifre ve onay şifresi eşleşmiyor.");
+          setIsSaving(false);
+          return;
+        }
+        
+        // Change the password (use the function from the hook)
+        try {
+          await changePasswordMutation({
+            userId: user.userId,
+            currentPassword,
+            newPassword
+          });
+          toast.success("Şifre başarıyla güncellendi!");
+          
+          // Clear password fields
+          setCurrentPassword("");
+          setNewPassword("");
+          setConfirmPassword("");
+        } catch (error) {
+          console.error("Şifre değiştirme hatası:", error);
+          toast.error("Şifre değiştirilemedi. Mevcut şifrenizi kontrol edin.");
+          setIsSaving(false);
+          return;
+        }
+      }
+      
+      // Update profile information
       await updateProfile({
-        userId: user.userId, // Make sure userId is passed correctly from useAuth
-        name: name || undefined, // Send name only if it's not empty
-        // profileImage: profileImageUrl || undefined, // Send profile image URL if available (after upload)
-        // TODO: Pass the actual uploaded image URL here once upload is implemented
+        userId: user.userId,
+        name: name || undefined,
+        phone: phone || undefined,
+        address: address || undefined,
+        website: website || undefined,
+        twoFactorEnabled: twoFactorEnabled,
+        // The profile image is handled separately in the handleFileChange function
+        // The URL is already saved to Convex when the image is uploaded
       });
+      
       toast.success("Profil başarıyla güncellendi!");
       setOpen(false); // Close modal on success
     } catch (error) {
@@ -225,41 +320,41 @@ function ProfileModal({ open, setOpen, darkMode }) {
                     />
                     <Mail className="h-4 w-4 absolute left-2 top-3 text-gray-400" />
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone Number (Coming Soon)</Label>
+                </div>                <div>
+                  <Label htmlFor="phone">Phone Number</Label>
                   <div className="relative">
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="Telefon numarası"
-                      disabled // Disable for now
-                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""} pl-8 cursor-not-allowed`}
+                      placeholder="Phone number"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""} pl-8`}
                     />
                     <Phone className="h-4 w-4 absolute left-2 top-3 text-gray-400" />
                   </div>
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="address">Address (Coming Soon)</Label>
+                </div>                <div className="md:col-span-2">
+                  <Label htmlFor="address">Address</Label>
                   <div className="relative">
                     <Input
                       id="address"
-                      placeholder="Adres"
-                      disabled // Disable for now
-                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""} pl-8 cursor-not-allowed`}
+                      placeholder="Address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""} pl-8`}
                     />
                     <MapPin className="h-4 w-4 absolute left-2 top-3 text-gray-400" />
                   </div>
-                </div>
-                <div className="md:col-span-2">
-                  <Label htmlFor="website">Website (Coming Soon)</Label>
+                </div>                <div className="md:col-span-2">
+                  <Label htmlFor="website">Website</Label>
                   <div className="relative">
                     <Input
                       id="website"
                       type="url"
-                      placeholder="Web sitesi"
-                      disabled // Disable for now
-                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""} pl-8 cursor-not-allowed`}
+                      placeholder="Website"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""} pl-8`}
                     />
                     <Globe className="h-4 w-4 absolute left-2 top-3 text-gray-400" />
                   </div>
@@ -268,17 +363,16 @@ function ProfileModal({ open, setOpen, darkMode }) {
             </TabsContent>
             
             <TabsContent value="security" className="space-y-4">
-              {/* Security content remains the same for now */}
-              <div>
-                <h3 className="font-medium text-lg mb-4">Change Password (Coming Soon)</h3>
-                <div className="space-y-4">
-                  <div>
+              {/* Security content remains the same for now */}              <div>
+                <h3 className="font-medium text-lg mb-4">Change Password</h3>
+                <div className="space-y-4">                  <div>
                     <Label htmlFor="current-password">Current Password</Label>
                     <Input 
                       id="current-password" 
                       type="password" 
-                      disabled
-                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""} cursor-not-allowed`}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                     />
                   </div>
                   <div>
@@ -286,8 +380,9 @@ function ProfileModal({ open, setOpen, darkMode }) {
                     <Input 
                       id="new-password" 
                       type="password" 
-                      disabled
-                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""} cursor-not-allowed`}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                     />
                   </div>
                   <div>
@@ -295,18 +390,21 @@ function ProfileModal({ open, setOpen, darkMode }) {
                     <Input 
                       id="confirm-password" 
                       type="password" 
-                      disabled
-                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""} cursor-not-allowed`}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                     />
                   </div>
                 </div>
               </div>
-              
-              <div className="mt-6">
-                <h3 className="font-medium text-lg mb-4">Two-Factor Authentication (Coming Soon)</h3>
-                <div className="flex items-center space-x-2 mb-4">
-                  <Checkbox id="enable-2fa" disabled />
-                  <Label htmlFor="enable-2fa" className="cursor-not-allowed text-gray-500">Enable two-factor authentication</Label>
+                <div className="mt-6">
+                <h3 className="font-medium text-lg mb-4">Two-Factor Authentication</h3>                <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox 
+                    id="enable-2fa" 
+                    checked={twoFactorEnabled}
+                    onCheckedChange={setTwoFactorEnabled}
+                  />
+                  <Label htmlFor="enable-2fa">Enable two-factor authentication</Label>
                 </div>
                 <p className="text-sm text-gray-500">
                   Adding an extra layer of security to your account will help protect your data.

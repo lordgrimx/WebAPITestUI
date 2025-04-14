@@ -1,13 +1,17 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-export default defineSchema({
-    // Users table for authentication and user data
+export default defineSchema({    // Users table for authentication and user data
     users: defineTable({
         name: v.string(),
         email: v.string(),
         passwordHash: v.string(),
-        profileImage: v.optional(v.string()),
+        profileImage: v.optional(v.string()), // URL to the profile image
+        profileImageId: v.optional(v.id("_storage")), // Storage ID for the profile image
+        phone: v.optional(v.string()),
+        address: v.optional(v.string()),
+        website: v.optional(v.string()),
+        twoFactorEnabled: v.optional(v.boolean()),
         role: v.string(), // "user", "admin", etc.
         createdAt: v.number(),
         lastLogin: v.optional(v.number()),
@@ -162,5 +166,5 @@ export default defineSchema({
         createdAt: v.number(),
         updatedAt: v.number()
     }).index("by_requestId", ["requestId"])
-      .index("by_status", ["status"])
+        .index("by_status", ["status"])
 });

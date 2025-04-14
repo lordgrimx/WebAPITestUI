@@ -30,6 +30,7 @@ import GenerateCodeModal from "@/components/GenerateCodeModal";
 import SaveRequestModal from "@/components/SaveRequestModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import { useAuth } from "@/lib/auth-context";
+import { toast } from "sonner"; // Import toast for notifications
 
 // Accept currentRequestData prop from ApiTester
 export default function Header({ darkMode, setDarkMode, currentRequestData, openSignupModal, openLoginModal }) {
@@ -37,7 +38,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
   const { user, isAuthenticated, login, logout, isLoading } = useAuth();
-  
+
   const handleSaveRequest = async (requestData) => {
     try {
       const fullRequestData = {
@@ -55,6 +56,69 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
       console.error('Failed to save request:', error);
     }
   };
+
+  const handleCopyLink = () => {
+    const currentUrl = window.location.href;
+    navigator.clipboard.writeText(currentUrl)
+      .then(() => {
+        toast.success("Link Copied!", { description: "Current URL copied to clipboard." });
+      })
+      .catch(err => {
+        console.error('Failed to copy link: ', err);
+        toast.error("Copy Failed", { description: "Could not copy the link to the clipboard." });
+      });
+  };
+
+  const handleShareToWorkspace = () => {
+    // Placeholder: Implement actual workspace sharing logic here
+    console.log("Sharing to workspace (placeholder)...", currentRequestData);
+    toast.info("Share to Workspace", { description: "This feature is not yet fully implemented." });
+    // Example: You might open a modal to select users/teams,
+    // then send the currentRequestData to a backend endpoint.
+  };
+
+  const handleExportRequest = () => {
+    if (!currentRequestData) {
+      toast.error("Export Failed", { description: "No request data available to export." });
+      return;
+    }
+
+    try {
+      // Prepare data for export, ensuring headers/params are objects if they are strings
+      const exportData = {
+        method: currentRequestData.method || 'GET',
+        url: currentRequestData.url || '',
+        headers: currentRequestData.headers && typeof currentRequestData.headers === 'string'
+          ? JSON.parse(currentRequestData.headers)
+          : (currentRequestData.headers || {}),
+        params: currentRequestData.params && typeof currentRequestData.params === 'string'
+          ? JSON.parse(currentRequestData.params)
+          : (currentRequestData.params || {}),
+        body: currentRequestData.body || '',
+        auth: currentRequestData.auth || { type: 'none' },
+        tests: currentRequestData.tests || { script: '', results: [] },
+        // Add any other relevant fields you want to export
+      };
+
+      const jsonString = JSON.stringify(exportData, null, 2); // Pretty print JSON
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      // Suggest a filename based on the request URL or a default
+      const filename = `request-export-${exportData.url?.split('/').pop() || 'data'}.json`;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success("Request Exported", { description: `Request data saved as ${filename}` });
+    } catch (error) {
+      console.error('Failed to export request:', error);
+      toast.error("Export Failed", { description: "Could not export the request data." });
+    }
+  };
+
 
   // If the authentication process is still loading, show a minimal header
   if (isLoading) {
@@ -282,9 +346,9 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Copy Link</DropdownMenuItem>
-              <DropdownMenuItem>Share to Workspace</DropdownMenuItem>
-              <DropdownMenuItem>Export</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCopyLink}>Copy Link</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareToWorkspace}>Share to Workspace</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportRequest}>Export</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

@@ -86,7 +86,7 @@ export const login = action({
     handler: async (ctx, args) => {
         // Kullanıcı bilgilerini al
         const userData = await ctx.runMutation(internal.users.loginMutation, args);
-        
+
         // Token oluştur
         const tokenData = await ctx.runAction(internal.generateToken.generateToken, {
             userId: userData.userId.toString(),
@@ -131,6 +131,10 @@ export const updateProfile = mutation({
         userId: v.id("users"),
         name: v.optional(v.string()),
         profileImage: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        address: v.optional(v.string()),
+        website: v.optional(v.string()),
+        twoFactorEnabled: v.optional(v.boolean()),
     },
     handler: async (ctx, args) => {
         const user = await ctx.db.get(args.userId);
@@ -141,6 +145,10 @@ export const updateProfile = mutation({
         const updates = {};
         if (args.name !== undefined) updates.name = args.name;
         if (args.profileImage !== undefined) updates.profileImage = args.profileImage;
+        if (args.phone !== undefined) updates.phone = args.phone;
+        if (args.address !== undefined) updates.address = args.address;
+        if (args.website !== undefined) updates.website = args.website;
+        if (args.twoFactorEnabled !== undefined) updates.twoFactorEnabled = args.twoFactorEnabled;
 
         await ctx.db.patch(args.userId, updates);
         return { success: true };
@@ -171,5 +179,31 @@ export const changePassword = mutation({
         });
 
         return { success: true };
+    },
+});
+
+// Set profile image for a user with both the storage ID and the image URL
+export const setProfileImage = mutation({
+    args: {
+        userId: v.id("users"),
+        storageId: v.id("_storage"),
+        imageUrl: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const user = await ctx.db.get(args.userId);
+        if (!user) {
+            throw new Error("User not found");
+        }
+
+        // Update the user with the new profile image info
+        await ctx.db.patch(args.userId, {
+            profileImage: args.imageUrl,
+            profileImageId: args.storageId,
+        });
+
+        return {
+            success: true,
+            imageUrl: args.imageUrl
+        };
     },
 });

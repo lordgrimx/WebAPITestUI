@@ -66,8 +66,17 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
       />
         <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white cursor-pointer">
-            {getInitials()}
+          {/* Display profile image if available, otherwise initials */}
+          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white cursor-pointer overflow-hidden">
+            {user?.profileImage ? (
+              <img 
+                src={user.profileImage} 
+                alt={user.name || 'User Avatar'} 
+                className="w-full h-full object-cover" 
+              />
+            ) : (
+              getInitials()
+            )}
           </div>
         </DropdownMenuTrigger>
         
@@ -76,8 +85,17 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
           align="end"
         >
           <div className={`py-3 px-4 border-b ${darkMode ? "border-gray-700" : "border-gray-200"} flex items-center`}>
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white mr-3">
-              {getInitials()}
+            {/* Display profile image in dropdown header as well */}
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white mr-3 overflow-hidden">
+              {user?.profileImage ? (
+                <img 
+                  src={user.profileImage} 
+                  alt={user.name || 'User Avatar'} 
+                  className="w-full h-full object-cover" 
+                />
+              ) : (
+                getInitials()
+              )}
             </div>
             <div>
               <div className={`font-medium ${darkMode ? "text-white" : "text-gray-900"}`}>{user?.name || "User"}</div>
