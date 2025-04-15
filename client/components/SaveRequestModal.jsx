@@ -96,19 +96,52 @@ export default function SaveRequestModal({
 
       console.log("initialData:", initialData);
 
+      // Headers formatını dönüştür
+      let formattedHeaders = {};
+      if (initialData?.headers) {
+        // Eğer headers bir string ise, parse et
+        const headersArray = typeof initialData.headers === 'string' 
+          ? JSON.parse(initialData.headers) 
+          : initialData.headers;
+        
+        // Eğer bir array ise (büyük ihtimalle öyle), key-value formatına dönüştür
+        if (Array.isArray(headersArray)) {
+          headersArray.forEach(header => {
+            if (header.enabled !== false) { // Sadece enabled olan header'ları ekle
+              formattedHeaders[header.key] = header.value;
+            }
+          });
+        } else if (typeof headersArray === 'object') {
+          formattedHeaders = headersArray; // Zaten uygun formatta ise doğrudan kullan
+        }
+      }
+
+      // Tests formatını dönüştür
+      let formattedTests = '';
+      if (initialData?.tests) {
+        if (typeof initialData.tests === 'object' && initialData.tests.script) {
+          formattedTests = initialData.tests.script;
+        } else if (typeof initialData.tests === 'string') {
+          formattedTests = initialData.tests;
+        }
+      }
+
+      // CollectionId'yi integer'a dönüştür
+      const parsedCollectionId = collectionIdToSave ? parseInt(collectionIdToSave, 10) : null;
+
       const requestPayload = {
-        collectionId: collectionIdToSave,
+        collectionId: parsedCollectionId,
         name: requestName,
         description: description,
         method: initialData?.method || 'GET',
         url: initialData?.url || '',
-        headers: initialData?.headers || {},
+        headers: formattedHeaders,
         params: initialData?.params || {},
         body: initialData?.body || '',
         isFavorite: addToFavorites,
         authType: initialData?.authType || 'none',
         authConfig: initialData?.authConfig || '',
-        tests: initialData?.tests || ''
+        tests: formattedTests
       };
 
       console.log("Request payload being sent:", requestPayload);
