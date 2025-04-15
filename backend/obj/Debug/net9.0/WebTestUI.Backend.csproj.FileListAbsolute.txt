@@ -1,0 +1,8 @@
+D:\Projects\testAPIWebUI\webtestui\backend\obj\Debug\net9.0\WebTestUI.Backend.csproj.AssemblyReference.cache
+D:\Projects\testAPIWebUI\webtestui\backend\obj\Debug\net9.0\WebTestUI.Backend.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\testAPIWebUI\webtestui\backend\obj\Debug\net9.0\WebTestUI.Backend.AssemblyInfoInputs.cache
+D:\Projects\testAPIWebUI\webtestui\backend\obj\Debug\net9.0\WebTestUI.Backend.AssemblyInfo.cs
+D:\Projects\testAPIWebUI\webtestui\backend\obj\Debug\net9.0\WebTestUI.Backend.csproj.CoreCompileInputs.cache
+D:\Projects\testAPIWebUI\webtestui\backend\obj\Debug\net9.0\WebTestUI.Backend.MvcApplicationPartsAssemblyInfo.cs
+D:\Projects\testAPIWebUI\webtestui\backend\obj\Debug\net9.0\WebTestUI.Backend.MvcApplicationPartsAssemblyInfo.cache
+D:\Projects\testAPIWebUI\webtestui\backend\obj\Debug\net9.0\WebTestUI.Backend.sourcelink.json

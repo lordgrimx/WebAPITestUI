@@ -40,6 +40,7 @@ function ProfileModal({ open, setOpen, darkMode }) {
   const fileInputRef = useRef(null); // Ref for file input
   // Update state when user data is loaded or changes
   useEffect(() => {
+    console.log("User object in ProfileModal useEffect:", user); // Debug log
     if (user) {
       setFirstName(user.name?.split(" ")[0] || "");
       setLastName(user.name?.split(" ").slice(1).join(" ") || "");
@@ -47,7 +48,8 @@ function ProfileModal({ open, setOpen, darkMode }) {
       setPhone(user.phone || "");
       setAddress(user.address || "");
       setWebsite(user.website || "");
-      setTwoFactorEnabled(user.twoFactorEnabled || false);
+      // Ensure twoFactorEnabled is explicitly checked and set
+      setTwoFactorEnabled(user.twoFactorEnabled === true); 
     }
   }, [user]);
 

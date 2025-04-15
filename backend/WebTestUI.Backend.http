@@ -1,0 +1,6 @@
+@WebTestUI.Backend_HostAddress = http://localhost:5296
+
+GET {{WebTestUI.Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
