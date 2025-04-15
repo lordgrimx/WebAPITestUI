@@ -5,7 +5,7 @@ export async function POST(request) {
     try {
         const body = await request.json();
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7136'}/api/Auth/login`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7136'}/api/Auth/verify-2fa`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -17,12 +17,12 @@ export async function POST(request) {
 
         if (!response.ok) {
             return NextResponse.json(
-                { success: false, message: data.message || 'Login failed', errors: data.errors },
+                { success: false, message: data.message || '2FA verification failed', errors: data.errors },
                 { status: response.status }
             );
         }
 
-        // If the backend returns a token, set it as a cookie
+        // If 2FA verification returns a token, set it as a cookie
         if (data.token) {
             cookies().set('token', data.token, {
                 secure: process.env.NODE_ENV === 'production',
@@ -35,9 +35,9 @@ export async function POST(request) {
 
         return NextResponse.json(data);
     } catch (error) {
-        console.error('Login API error:', error);
+        console.error('2FA verification API error:', error);
         return NextResponse.json(
-            { success: false, message: 'An error occurred during login.' },
+            { success: false, message: 'An error occurred during 2FA verification.' },
             { status: 500 }
         );
     }

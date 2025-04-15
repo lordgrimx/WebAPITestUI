@@ -1,8 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import React, { useState, useEffect } from 'react'; // useEffect ekledim
 import { format } from "date-fns";
 import {
   Card,
@@ -48,22 +46,37 @@ function MetricItem({ label, value }) {
   );
 }
 
+// TODO: API servislerini buraya ekle
+const fetchK6Tests = async () => { /* ... */ };
+const runK6Test = async (testId, script, options) => { /* ... */ };
+const updateTestResults = async (testId, status, results) => { /* ... */ };
+const removeK6Test = async (testId) => { /* ... */ };
+
+
 export default function LoadTestsPage() {
-  const k6Tests = useQuery(api.k6tests.getK6Tests);
-  const executeK6Test = useMutation(api.k6tests.executeK6Test);
-  const updateK6TestResults = useMutation(api.k6tests.updateK6TestResults);
-  const deleteK6Test = useMutation(api.k6tests.deleteK6Test);
+  const [k6Tests, setK6Tests] = useState([]); // State'e çevirdim
   const [selectedTest, setSelectedTest] = useState(null);
   const [isRunning, setIsRunning] = useState({});
+
+  // TODO: Testleri backend'den çek
+  useEffect(() => {
+    // fetchK6Tests().then(setK6Tests);
+    console.log("TODO: Fetch k6 tests from backend");
+  }, []);
 
   const handleRunTest = async (testId) => {
     try {
       setIsRunning(prev => ({ ...prev, [testId]: true }));
       toast.info("Executing test...", { description: "This may take a moment" });
-      
-      // Get script from Convex
-      const testInfo = await executeK6Test({ testId });
-      
+
+      // TODO: Backend'den test bilgilerini al
+      const testInfo = k6Tests.find(t => t._id === testId); // Geçici olarak state'den alıyorum
+      if (!testInfo) {
+        toast.error("Test not found");
+        setIsRunning(prev => ({ ...prev, [testId]: false }));
+        return;
+      }
+
       // Execute k6 test via local API
       const response = await fetch('/api/k6/run', {
         method: 'POST',
@@ -83,42 +96,75 @@ export default function LoadTestsPage() {
 
       const results = await response.json();
 
-      // Update test results using mutation
-      await updateK6TestResults({
-        id: testId,
-        status: "completed",
-        results: {
-          vus: results.vus || 10,
-          duration: results.duration || "30s",
-          requestsPerSecond: results.requestsPerSecond || 0,
-          failureRate: results.failureRate || 0,
-          averageResponseTime: results.averageResponseTime || 0,
-          p95ResponseTime: results.p95ResponseTime || 0,
-          timestamp: Date.now(),
-          detailedMetrics: results.detailedMetrics // Add detailed metrics
+      // TODO: Backend'e sonuçları güncelle
+      // await updateTestResults(testId, "completed", {
+      //   vus: results.vus || 10,
+      //   duration: results.duration || "30s",
+      //   requestsPerSecond: results.requestsPerSecond || 0,
+      //   failureRate: results.failureRate || 0,
+      //   averageResponseTime: results.averageResponseTime || 0,
+      //   p95ResponseTime: results.p95ResponseTime || 0,
+      //   timestamp: Date.now(),
+      //   detailedMetrics: results.detailedMetrics
+      // });
+      console.log("TODO: Update test results in backend", testId, results);
+      // Geçici olarak state'i güncelle
+      setK6Tests(prevTests => prevTests.map(t => {
+        if (t._id === testId) {
+          return {
+            ...t,
+            status: "completed",
+            results: {
+              vus: results.vus || 10,
+              duration: results.duration || "30s",
+              requestsPerSecond: results.requestsPerSecond || 0,
+              failureRate: results.failureRate || 0,
+              averageResponseTime: results.averageResponseTime || 0,
+              p95ResponseTime: results.p95ResponseTime || 0,
+              timestamp: Date.now(),
+              detailedMetrics: results.detailedMetrics // Add detailed metrics
+            }
+          };
         }
-      });
+        return t;
+      }));
 
       toast.success("Test execution completed", {
         description: `RPS: ${results.requestsPerSecond.toFixed(2)}, Failure Rate: ${results.failureRate.toFixed(2)}%`
       });
     } catch (error) {
       console.error("Error running test:", error);
-      
-      // Update test status to failed with error info
-      await updateK6TestResults({
-        id: testId,
-        status: "failed",
-        results: {
-          vus: 0,
-          duration: "0s",
-          requestsPerSecond: 0,
-          failureRate: 100,
-          averageResponseTime: 0,
-          p95ResponseTime: 0,
-          timestamp: Date.now()
-        }
-      });
+
+      // TODO: Backend'e hata durumunu güncelle
+      // await updateTestResults(testId, "failed", {
+      //   vus: 0,
+      //   duration: "0s",
+      //   requestsPerSecond: 0,
+      //   failureRate: 100,
+      //   averageResponseTime: 0,
+      //   p95ResponseTime: 0,
+      //   timestamp: Date.now()
+      // });
+      console.log("TODO: Update test status to failed in backend", testId);
+       // Geçici olarak state'i güncelle
+       setK6Tests(prevTests => prevTests.map(t => {
+         if (t._id === testId) {
+           return {
+             ...t,
+             status: "failed",
+             results: {
+               vus: 0,
+               duration: "0s",
+               requestsPerSecond: 0,
+               failureRate: 100,
+               averageResponseTime: 0,
+               p95ResponseTime: 0,
+               timestamp: Date.now()
+             }
+           };
+         }
+         return t;
+       }));
 
       toast.error("Failed to run test", { description: error.message });
     } finally {
@@ -128,8 +174,12 @@ export default function LoadTestsPage() {
 
   const handleDeleteTest = async (testId) => {
     try {
-      await deleteK6Test({ id: testId });
-      toast.success("Test deleted successfully");
+      // TODO: Backend'den testi sil
+      // await removeK6Test(testId);
+      console.log("TODO: Delete test from backend", testId);
+      // Geçici olarak state'i güncelle
+      setK6Tests(prevTests => prevTests.filter(t => t._id !== testId));
+      toast.success("Test deleted successfully (locally)");
     } catch (error) {
       toast.error("Failed to delete test");
     }

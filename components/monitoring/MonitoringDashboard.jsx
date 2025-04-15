@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import * as echarts from 'echarts';
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+// import { useQuery } from "convex/react"; // Kaldırıldı
+// import { api } from "@/convex/_generated/api"; // Kaldırıldı
 import { format } from "date-fns";
 import { Button } from '../ui/button'; // Replace with actual UI library
-import { toast } from 'react-toastify';
+import { toast } from 'sonner'; // sonner kullanılıyor, react-toastify değil
+import { authAxios } from "@/lib/auth-context"; // Auth context'ten axios instance'ı import et
 
 // Add this helper function at the top of the file
 const getPathFromUrl = (urlString) => {
@@ -91,50 +92,83 @@ const MonitoringDashboard = () => {
     return () => setMounted(false);
   }, []);
 
-  const collections = useQuery(api.collections.getCollections);
-  const history = useQuery(api.history.getRecentHistory, { limit: 50 }); // Update to get history
+  // State for collections and history
+  const [collections, setCollections] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // TODO: Backend'den koleksiyonları ve geçmişi çek
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoadingData(true);
+      try {
+        // const collectionsResponse = await authAxios.get('/Collections'); // Örnek endpoint
+        // setCollections(collectionsResponse.data || []);
+        console.log("TODO: Fetch collections from backend");
+        setCollections([{ _id: 'dummy_coll_1', name: 'Dummy Collection 1' }]); // Geçici data
+
+        // const historyResponse = await authAxios.get('/History?limit=50'); // Örnek endpoint
+        // setHistory(historyResponse.data || []);
+        console.log("TODO: Fetch history from backend");
+        // Geçici dummy history data
+        setHistory([
+          { _id: 'hist1', timestamp: Date.now() - 10000, method: 'GET', url: '/api/users', status: 200, duration: 150, responseData: '{"users":[]}', responseHeaders: '{}' },
+          { _id: 'hist2', timestamp: Date.now() - 5000, method: 'POST', url: '/api/login', status: 401, duration: 80, responseData: '{"error":"Unauthorized"}', responseHeaders: '{}' }
+        ]);
+
+      } catch (error) {
+        console.error("Error fetching monitoring data:", error);
+        toast.error("Failed to load monitoring data");
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+    fetchData();
+    // TODO: Refresh interval ekle (refreshRate state'ine göre)
+  }, [refreshRate]); // refreshRate değiştiğinde tekrar çek
 
   // Transform history data for requests table
-  const requests = useMemo(() => 
+  const requests = useMemo(() =>
     history?.map(hist => ({
-      id: hist._id,
-      timestamp: format(new Date(hist.timestamp), 'yyyy-MM-dd HH:mm:ss'),
+      id: hist._id, // Backend'den gelen ID'yi kullan
+      timestamp: hist.timestamp, // Backend'den gelen timestamp'i kullan (formatlama sonra yapılacak)
       method: hist.method,
-      endpoint: getPathFromUrl(hist.url),
-      statusCode: hist.status || 200,
-      responseTime: hist.duration || 0,
-      responseData: hist.responseData, // Add response data
-      responseHeaders: hist.responseHeaders // Add response headers
+      endpoint: getPathFromUrl(hist.url), // URL'den path'i al
+      statusCode: hist.status || 0, // Backend'den gelen status kodunu kullan
+      responseTime: hist.duration || 0, // Backend'den gelen süreyi kullan
+      responseData: hist.responseData,
+      responseHeaders: hist.responseHeaders
     })) || [],
-    [history]
+    [history] // history state'ine bağımlı
   );
 
   // Transform requests data for the sidebar
   const endpoints = useMemo(() => 
-    requests?.map(request => ({
+    // requests state'ini kullan
+    requests.map(request => ({
       id: request.id,
       name: request.endpoint,
-      service: selectedProject?.name || "Default Service",
-      status: 'active', // You might want to add status to your schema
+      service: selectedProject?.name || "Default Service", // selectedProject state'ini kullan
+      status: 'active', // TODO: Backend'den endpoint durumu alınabilir
       method: request.method,
       url: request.endpoint,
       errorRate: 0 // This could be calculated from history data
     })) || [],
-    [requests, selectedProject]
+    [requests, selectedProject] // requests ve selectedProject state'lerine bağımlı
   );
 
   // Update project selection to use real collections
   const handleProjectSelect = (collectionId) => {
-    const selected = collections?.find(c => c._id === collectionId);
-    setSelectedProject(selected || null);
-    setSelectedEndpoint(null); // Reset selected endpoint when changing collection
+    const selected = collections.find(c => c._id === collectionId); // collections state'ini kullan
+    setSelectedProject(selected || null); // selectedProject state'ini güncelle
+    setSelectedEndpoint(null); // selectedEndpoint state'ini sıfırla
   };
 
   // Filter requests based on selected endpoint
   const filteredRequests = useMemo(() => {
-    if (!selectedEndpoint || !requests) return requests;
-    return requests.filter(req => req.endpoint === selectedEndpoint);
-  }, [selectedEndpoint, requests]);
+    if (!selectedEndpoint) return requests; // Tüm requestleri döndür
+    return requests.filter(req => req.endpoint === selectedEndpoint); // requests state'ini filtrele
+  }, [selectedEndpoint, requests]); // selectedEndpoint ve requests state'lerine bağımlı
 
   // Update chart initialization to use filtered requests
   useEffect(() => {
@@ -156,9 +190,17 @@ const MonitoringDashboard = () => {
 
     // Group requests by time for time series charts
     const timeGroups = filteredRequests.reduce((acc, req) => {
-      const time = formatTimestamp(req.timestamp);
-      if (!acc[time]) acc[time] = { total: 0, errors: 0, responseTimes: [] };
-      acc[time].total += 1;
+      const time = formatTimestamp(req.timestamp); // timestamp'i formatla
+      if (time) { // Geçerli zaman damgası varsa işle
+          if (!acc[time]) acc[time] = { total: 0, errors: 0, responseTimes: [] };
+          acc[time].total += 1;
+          if (req.statusCode >= 400) acc[time].errors += 1;
+          acc[time].responseTimes.push(req.responseTime);
+      } else {
+          console.warn("Skipping request with invalid timestamp:", req);
+      }
+      return acc;
+    }, {});
       if (req.statusCode >= 400) acc[time].errors += 1;
       acc[time].responseTimes.push(req.responseTime);
       return acc;
@@ -390,10 +432,30 @@ const MonitoringDashboard = () => {
                 onChange={(e) => handleProjectSelect(e.target.value)}
               >
                 <option value="">Select Collection</option>
-                {collections?.map(collection => (
-                  <option key={collection._id} value={collection._id}>
-                    {collection.name}
-                  </option>
+                {isLoadingData ? (
+                  <option disabled>Loading...</option>
+                ) : (
+                  collections.map(collection => ( // collections state'ini kullan
+                    <option key={collection._id} value={collection._id}>
+                      {collection.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div className="flex items-center bg-green-500 px-2 py-1 rounded-full text-xs">
+              {isLoadingData ? (
+                 <>
+                   <i className="fas fa-spinner fa-spin text-xs mr-1"></i>
+                   <span>Loading...</span>
+                 </>
+              ) : (
+                 <>
+                   <i className="fas fa-circle text-xs mr-1"></i>
+                   <span>Connected</span>
+                 </>
+              )}
                 ))}
               </select>
             </div>
@@ -551,12 +613,21 @@ const MonitoringDashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
-                {requests.map(request => (
-                  <tr key={request.id} className="hover:bg-gray-750">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{request.timestamp}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        request.method === 'GET' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                {isLoadingData ? (
+                  <tr><td colSpan="6" className="text-center py-4">Loading request history...</td></tr>
+                ) : filteredRequests.length === 0 ? (
+                  <tr><td colSpan="6" className="text-center py-4">No requests found for this selection.</td></tr>
+                ) : (
+                  filteredRequests.map(request => ( // filteredRequests kullan
+                    <tr key={request.id} className="hover:bg-gray-750">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">{format(new Date(request.timestamp), 'yyyy-MM-dd HH:mm:ss')}</td> {/* Formatlama burada */}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          request.method === 'GET' ? 'bg-green-100 text-green-800' :
+                          request.method === 'POST' ? 'bg-blue-100 text-blue-800' :
+                          request.method === 'PUT' ? 'bg-yellow-100 text-yellow-800' :
+                          request.method === 'DELETE' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800' // Diğer metodlar için
                       }`}>
                         {request.method}
                       </span>
@@ -632,4 +703,3 @@ const MonitoringDashboard = () => {
 };
 
 export default MonitoringDashboard;
-
