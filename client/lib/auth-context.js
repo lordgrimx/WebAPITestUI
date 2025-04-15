@@ -95,9 +95,18 @@ export function AuthProvider({ children }) {
             const token = Cookies.get('authToken');
             if (token) {
                 try {
-                    const response = await api.get('/auth/me');
-                    setCurrentUser(response.data);
+                    const response = await api.get('/auth/me', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    if (response.data?.user) {
+                        setCurrentUser(response.data.user);
+                    } else {
+                        throw new Error('Invalid user data received');
+                    }
                 } catch (error) {
+                    console.error('Auth check failed:', error);
                     Cookies.remove('authToken');
                     setCurrentUser(null);
                 }
