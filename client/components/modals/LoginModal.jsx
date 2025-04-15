@@ -7,58 +7,51 @@ import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Mail, Lock } from 'lucide-react';
-// Assuming you have an auth context like this
 import { useAuth } from '../../lib/auth-context'; 
 import { toast } from 'sonner';
 import TwoFactorModal from './TwoFactorModal';
 
 const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
-  const { login, verify2FA } = useAuth(); // Use the login and 2FA verification functions from auth context
+  const { login, verify2FA } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // Local loading state for the button
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [show2FAModal, setShow2FAModal] = useState(false);
   const [pendingUserId, setPendingUserId] = useState(null);
   
-  // Handle the initial login attempt
   const handleLogin2 = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
-      // Use the login function from auth context
-      console.log('Attempting login with:', email, password, rememberMe);
       const result = await login(email, password);
       
-      // Check the login result
-      if (!result || !result.success) {
-        // Handle login failure
-        setError('Login failed. Please check your credentials.');
-        toast.error("Incorrect email or password.");
-      } else if (result.requires2FA) {
-        // Handle 2FA requirement
+      if (!result.success) {
+        setError(result.error || 'Login failed');
+        toast.error(result.error || "Login failed");
+        return;
+      }
+
+      if (result.requires2FA) {
         setPendingUserId(result.userId);
         setShow2FAModal(true);
-        toast.info("2FA verification required. Check your email for the verification code.");
+        toast.info("2FA verification required");
       } else {
-        // Handle successful login without 2FA
         toast.success("Login successful!");
-        onClose(); // Close the modal on successful login
-        localStorage.setItem("showLoading", "true"); // Show loading page before reload
-        window.location.reload(); // Reload the page to reflect the login state
+        onClose();
+        window.location.reload();
       }
     } catch (err) {
-      console.error("Login failed:", err);
-      setError(err.message || 'Invalid email or password. Please try again.');
+      setError(err.message);
+      toast.error(err.message);
     } finally {
       setIsLoading(false);
     }
   };
   
-  // Handle 2FA verification
   const handle2FAVerification = async (code) => {
     try {
       const result = await verify2FA(pendingUserId, code);
@@ -66,9 +59,9 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
       if (result.success) {
         toast.success("2FA verification successful!");
         setShow2FAModal(false);
-        onClose(); // Close the login modal
-        localStorage.setItem("showLoading", "true"); // Show loading page before reload
-        window.location.reload(); // Reload the page to reflect the login state
+        onClose();
+        localStorage.setItem("showLoading", "true");
+        window.location.reload();
         return true;
       } else {
         throw new Error(result.error || "Invalid verification code");
@@ -79,18 +72,16 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
     }
   };
   
-  // Handle cancellation of 2FA verification
   const handle2FACancel = () => {
     setShow2FAModal(false);
     setPendingUserId(null);
   };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0">
-          {/* Removed DialogHeader to match mock structure more closely */}
           <div className="relative overflow-hidden rounded-lg">
-            {/* 3D Background Elements - Adapted for modal */}
             <div className="absolute -top-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-xl rotate-12 animate-float opacity-50"></div>
             <div className="absolute top-20 -right-10 w-24 h-24 bg-cyan-500/10 rounded-xl -rotate-12 animate-float-delayed opacity-50"></div>
             <div className="absolute -bottom-10 -left-5 w-20 h-20 bg-indigo-500/10 rounded-xl rotate-45 animate-float-slow opacity-50"></div>
@@ -104,7 +95,6 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
               </div>
 
               <form onSubmit={handleLogin2} className="space-y-5">
-                {/* Email Field */}
                 <div>
                   <Label htmlFor="email-login" className="text-sm font-medium text-gray-700">
                     Email
@@ -123,7 +113,6 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                   </div>
                 </div>
 
-                {/* Password Field */}
                 <div>
                   <Label htmlFor="password-login" className="text-sm font-medium text-gray-700">
                     Password
@@ -142,7 +131,6 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                   </div>
                 </div>
 
-                {/* Remember Me & Forgot Password */} 
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center">
                     <Checkbox 
@@ -160,12 +148,10 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                   </a>
                 </div>
 
-                {/* Error Message */} 
                 {error && (
                   <p className="text-sm text-red-600 text-center">{error}</p>
                 )}
 
-                {/* Submit Button */}
                 <Button
                   type="submit"
                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
@@ -185,7 +171,6 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                 </Button>
               </form>
 
-              {/* Sign Up Link */} 
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
                   Don't have an account?{' '}
@@ -199,11 +184,9 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
               </div>
             </div>
 
-            {/* Bottom Section with Icons - Adapted from mock */}
             <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-6 text-center relative z-10 rounded-b-lg">
               <div className="flex items-center justify-center space-x-4">
                 <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-500/20 text-blue-700">
-                  {/* Using Lucide icons instead of FontAwesome */}
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                   </svg>
@@ -225,7 +208,6 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
         </DialogContent>
       </Dialog>
 
-      {/* 2FA Modal */}
       {show2FAModal && (
         <TwoFactorModal 
           onVerify={handle2FAVerification} 
@@ -239,7 +221,6 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
 
 export default LoginModal;
 
-// Add animations to global styles if not already present from SignupModal
 const styles = `
   @keyframes float {
     0% { transform: translateY(0px) rotate(12deg); }
@@ -267,10 +248,9 @@ const styles = `
   }
 `;
 
-// Inject styles (ensure this runs only once, maybe move to a layout component)
 if (typeof document !== 'undefined' && !document.getElementById('modal-animations')) {
   const styleSheet = document.createElement('style');
-  styleSheet.id = 'modal-animations'; // Add an ID to prevent duplicates
+  styleSheet.id = 'modal-animations';
   styleSheet.type = 'text/css';
   styleSheet.innerText = styles;
   document.head.appendChild(styleSheet);

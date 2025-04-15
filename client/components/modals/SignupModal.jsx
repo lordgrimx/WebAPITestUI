@@ -1,17 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../lib/auth-context';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { CheckCircle, Circle, Lock, Mail, User } from 'lucide-react';
-import { toast } from "sonner"; // Import toast directly from sonner
-import axios from "axios"; // Axios için import
+import { toast } from "sonner";
 
 const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
-  // Convex bağımlılığı kaldırıldı
+  const { register } = useAuth();
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -94,41 +94,21 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
       setIsLoading(true);
       
       try {
-        // Backend API ile kullanıcı kaydı
-        const response = await axios.post('/api/auth/register', { 
-          name: fullName, 
-          email: email, 
-          password: password 
-        });
+        const result = await register(fullName, email, password);
         
-        // Show success toast using sonner
-        toast.success('Account created!', {
-          description: 'Your account has been created successfully. You can now sign in.',
-          duration: 5000,
-        });
-        
-        // Reset form
-        setFullName('');
-        setEmail('');
-        setPassword('');
-        setConfirmPassword('');
-        setAcceptTerms(false);
-        
-        // Close modal after a short delay
-        setTimeout(() => {
-          onClose();
-          // Optionally switch to login modal
-          if (onSwitchToLogin) {
-            setTimeout(() => onSwitchToLogin(), 100);
-          }
-        }, 1000);
-        
+        if (result.success) {
+          toast.success('Account created successfully!');
+          setTimeout(() => {
+            onClose();
+            if (onSwitchToLogin) {
+              setTimeout(() => onSwitchToLogin(), 100);
+            }
+          }, 1000);
+        } else {
+          toast.error(result.error || 'Registration failed');
+        }
       } catch (error) {
-        // Show error toast using sonner
-        toast.error('Registration failed', {
-          description: error.message || "An error occurred during registration. Please try again.",
-          duration: 5000,
-        });
+        toast.error(error.message);
       } finally {
         setIsLoading(false);
       }

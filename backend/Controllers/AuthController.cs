@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 using WebTestUI.Backend.DTOs;
 using WebTestUI.Backend.Services.Interfaces;
 
@@ -100,6 +101,33 @@ namespace WebTestUI.Backend.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "İki faktörlü doğrulama kodu yeniden gönderilirken hata oluştu");
+                return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
+            }
+        }
+
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var result = new AuthResultDto();
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    result = await _authService.GetCurrentUserAsync(userId);
+                }
+
+                if (!result.Success)
+                {
+                    return BadRequest(result);
+                }
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Kullanıcı bilgileri alınırken hata oluştu");
                 return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
             }
         }

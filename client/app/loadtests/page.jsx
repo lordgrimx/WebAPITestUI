@@ -54,7 +54,7 @@ const removeK6Test = async (testId) => { /* ... */ };
 
 
 export default function LoadTestsPage() {
-  const [k6Tests, setK6Tests] = useState([]); // State'e çevirdim
+ 
   const [selectedTest, setSelectedTest] = useState(null);
   const [isRunning, setIsRunning] = useState({});
 
@@ -68,15 +68,10 @@ export default function LoadTestsPage() {
     try {
       setIsRunning(prev => ({ ...prev, [testId]: true }));
       toast.info("Executing test...", { description: "This may take a moment" });
-
-      // TODO: Backend'den test bilgilerini al
-      const testInfo = k6Tests.find(t => t._id === testId); // Geçici olarak state'den alıyorum
-      if (!testInfo) {
-        toast.error("Test not found");
-        setIsRunning(prev => ({ ...prev, [testId]: false }));
-        return;
-      }
-
+      
+      
+      const testInfo = await executeK6Test({ testId });
+      
       // Execute k6 test via local API
       const response = await fetch('/api/k6/run', {
         method: 'POST',

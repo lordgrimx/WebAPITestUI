@@ -8,5 +8,6 @@ namespace WebTestUI.Backend.Services.Interfaces
         Task<AuthResultDto> LoginAsync(LoginDto model);
         Task<AuthResultDto> VerifyTwoFactorAsync(TwoFactorVerifyDto model);
         Task<bool> GenerateTwoFactorCodeAsync(string userId);
+        Task<AuthResultDto> GetCurrentUserAsync(string userId);
     }
 }
