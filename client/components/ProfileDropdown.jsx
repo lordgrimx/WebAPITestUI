@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import dynamic from "next/dynamic"; // Re-add dynamic import
+import { authAxios } from "@/lib/auth-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
