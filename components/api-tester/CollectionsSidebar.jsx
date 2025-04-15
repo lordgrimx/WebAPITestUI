@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { useDebounce } from "@/hooks/useDebounce";
-// verifyToken import removed as verification is now done server-side
+import axios from "axios";
+// Convex ve API bağımlılıkları kaldırıldı
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,114 +88,162 @@ const getPathFromUrl = (urlString) => {
 };
 
 // Add onHistorySelect and darkMode props
-export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode }) {
+export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError }) {
   const [currentUserID, setCurrentUserID] = useState(null); // For user ID from JWT token
   const [newCollectionName, setNewCollectionName] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300); // Add debouncing
 
-  const historyItems = useQuery(api?.history?.getHistoryByUserId, 
-    currentUserID ? { userId: currentUserID, limit: 10 } : "skip"
-  );
-
-  const addCollection = useMutation(api?.collections?.addCollection);
-  const deleteCollection = useMutation(api?.collections?.deleteCollection);
-  const deleteRequest = useMutation(api?.requests?.deleteRequest);
-  const deleteHistoryEntry = useMutation(api?.history?.deleteHistoryEntry);
-
-  // Fetch user session info from the server-side API endpoint
+  // State for storing collections and history items
+  const [collections, setCollections] = useState([]);
+  const [historyItems, setHistoryItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);  // Fetch user session info from the server-side API endpoint
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const response = await fetch('/api/auth/session'); // Use the session API route
+        // Oturum API'sine istek yap
+        const response = await fetch('/api/auth/session'); 
+        
+        // Status 401 ise sessizce ele al ve kullanıcı bilgilerini sıfırla
+        if (response.status === 401) {
+          console.log("CollectionsSidebar: User not logged in or session expired");
+          setCurrentUserID(null);
+          return; // Sessizce devam et
+        }
+        
+        // Diğer hata durumlarını kontrol et
+        if (!response.ok) {
+          console.error("CollectionsSidebar: Session API error:", response.status);
+          setCurrentUserID(null);
+          return;
+        }
+        
+        // Başarılı yanıtı işle
         const data = await response.json();
-
-        if (response.ok && data.success && data.userId) {
+        if (data.success && data.userId) {
           console.log("CollectionsSidebar: Session verified, setting user ID:", data.userId);
           setCurrentUserID(data.userId);
         } else {
           console.error("CollectionsSidebar: Session verification failed:", data.error || 'No user ID returned');
-          setCurrentUserID(null); // Ensure user ID is null if session is invalid
+          setCurrentUserID(null);
         }
       } catch (error) {
         console.error("CollectionsSidebar: Error fetching session:", error);
-        setCurrentUserID(null); // Ensure user ID is null on fetch error
+        setCurrentUserID(null);
       }
     };
 
     fetchSession();
   }, []); // Runs once on component mount
-
-  const collections = useQuery(
-    api.collections.getCollectionsByUserId,
-    currentUserID ? { userId: currentUserID } : "skip"
-  );
-
+  
+  // Fetch collections when userId changes
+  useEffect(() => {
+    const fetchCollections = async () => {
+      if (!currentUserID) return;
+      
+      setIsLoading(true);
+      try {
+        const response = await axios.get('/api/collections/user');
+        if (response.data) {
+          setCollections(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching collections:", error);
+        if (onError) onError("Failed to fetch collections.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchCollections();
+  }, [currentUserID, onError]);
+  
+  // Fetch history when userId changes
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!currentUserID) return;
+      
+      try {
+        const response = await axios.get('/api/history/recent', { params: { limit: 10 } });
+        if (response.data) {
+          setHistoryItems(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching history:", error);
+      }
+    };
+    
+    fetchHistory();
+  }, [currentUserID]);
   const handleAddCollection = async () => {
     if (newCollectionName.trim()) {
       try {
         console.log("Trying to add collection:", newCollectionName);
-        const result = await addCollection({
-          userId: currentUserID,
+        const response = await axios.post('/api/collections/create', {
           name: newCollectionName.trim(),
           description: ""
         });
-        console.log("Collection added successfully:", result);
+        
+        if (response.data) {
+          console.log("Collection added successfully:", response.data);
+          // Koleksiyonları güncellemek için yeniden çağır
+          const updatedCollections = await axios.get('/api/collections/user');
+          setCollections(updatedCollections.data);
+        }
         setNewCollectionName("");
         setIsAddDialogOpen(false);
       } catch (err) {
         console.error("Failed to add collection:", err);
-        alert("Failed to add collection: " + (err.message || "Unknown error"));
+        toast.error("Failed to add collection: " + (err.response?.data?.message || err.message || "Unknown error"));
       }
     } else {
-      alert("Please enter a collection name");
+      toast.warning("Please enter a collection name");
     }
   };
 
-  const handleDeleteCollection = (e, collectionId) => {
+  const handleDeleteCollection = async (e, collectionId) => {
     e.stopPropagation();
     if (window.confirm("Bu koleksiyonu silmek istediğinizden emin misiniz? İçindeki tüm istekler de silinebilir.")) {
       try {
-        if (deleteCollection) {
-          deleteCollection({ id: collectionId });
-        } else {
-          console.warn("deleteCollection function is not available");
-        }
+        await axios.delete(`/api/collections/${collectionId}`);
+        // Koleksiyonları güncellemek için yeniden çağır
+        const updatedCollections = await axios.get('/api/collections/user');
+        setCollections(updatedCollections.data);
       } catch (err) {
         console.error("Failed to delete collection:", err);
+        toast.error("Failed to delete collection: " + (err.response?.data?.message || err.message || "Unknown error"));
       }
     }
   };
 
-  const handleDeleteRequest = (e, requestId) => {
+  const handleDeleteRequest = async (e, requestId) => {
     e.stopPropagation();
     if (window.confirm("Bu isteği silmek istediğinizden emin misiniz?")) {
       try {
-        if (deleteRequest) {
-          deleteRequest({ id: requestId });
-        } else {
-          console.warn("deleteRequest function is not available");
-        }
+        await axios.delete(`/api/requests/${requestId}`);
+        // Koleksiyonları güncellemek için yeniden çağır (içinde istekler de olacak)
+        const updatedCollections = await axios.get('/api/collections/user');
+        setCollections(updatedCollections.data);
       } catch (err) {
         console.error("Failed to delete request:", err);
+        toast.error("Failed to delete request: " + (err.response?.data?.message || err.message || "Unknown error"));
       }
     }
   };
   
-  const handleDeleteHistoryEntry = (e, historyId) => {
+  const handleDeleteHistoryEntry = async (e, historyId) => {
     e.stopPropagation();
     try {
-      if (deleteHistoryEntry) {
-        deleteHistoryEntry({ id: historyId });
-      } else {
-        console.warn("deleteHistoryEntry function is not available");
-      }
+      await axios.delete(`/api/history/${historyId}`);
+      // Geçmişi güncellemek için yeniden çağır
+      const updatedHistory = await axios.get('/api/history/recent', { params: { limit: 10 } });
+      setHistoryItems(updatedHistory.data);
     } catch (err) {
       console.error("Failed to delete history entry:", err);
+      toast.error("Failed to delete history entry: " + (err.response?.data?.message || err.message || "Unknown error"));
     }
   };
-
   // Update filteredCollections to use debouncedSearchTerm
   const filteredCollections = useMemo(() => 
     (collections || []).filter(collection =>
@@ -274,20 +321,21 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-
-      <div className="flex-1 overflow-auto">
+      </div>      <div className="flex-1 overflow-auto">
         <ScrollArea className="h-full">
           <div className="p-2">
             <h3 className={`px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Collections</h3>
             <Accordion type="multiple" className="w-full">
-              {filteredCollections.length === 0 && searchTerm && (
+              {isLoading && (
+                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading collections...</p>
+              )}
+              {!isLoading && filteredCollections.length === 0 && searchTerm && (
                 <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No collections found matching "{searchTerm}".</p>
               )}
-              {filteredCollections.length === 0 && !searchTerm && (
+              {!isLoading && filteredCollections.length === 0 && !searchTerm && (
                 <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No collections yet. Click "+ New Collection" to add one.</p>
               )}
-              {filteredCollections.map((collection) => (
+              {!isLoading && filteredCollections.map((collection) => (
                 <CollectionItem
                   key={collection._id}
                   collection={collection}
@@ -301,7 +349,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
 
             <h3 className={`mt-4 px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>History</h3>
             <Accordion type="multiple" className="w-full">
-              {!historyItems && (
+              {historyItems === null && (
                 <p className={`px-2 py-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-500'}`}>Error loading history.</p>
               )}
               {historyItems && historyItems.length === 0 && (
@@ -332,9 +380,29 @@ const CollectionItem = React.memo(function CollectionItem({
   onDeleteRequest,
   darkMode // Receive darkMode
 }) {
-  const requests = useQuery(api?.requests?.getRequestsByCollection,
-    collection?._id ? { collectionId: collection._id } : null
-  );
+  const [requests, setRequests] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch requests for this collection
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (!collection?._id) return;
+      
+      setIsLoading(true);
+      try {
+        const response = await axios.get(`/api/requests/collection/${collection._id}`);
+        if (response.data) {
+          setRequests(response.data);
+        }
+      } catch (error) {
+        console.error(`Error fetching requests for collection ${collection._id}:`, error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchRequests();
+  }, [collection?._id]);
 
   return (
     <AccordionItem value={collection._id} className="border-b-0 mb-1">
@@ -358,11 +426,11 @@ const CollectionItem = React.memo(function CollectionItem({
         </div>
       </div>
       <AccordionContent className="pl-6 pr-2 pt-1 pb-1">
-        {!requests && <p className={`text-xs ${darkMode ? 'text-red-400' : 'text-red-500'} py-1 px-2`}>Error loading requests</p>}
-        {requests && requests.length === 0 && (
+        {isLoading && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>Loading requests...</p>}
+        {!isLoading && (!requests || requests.length === 0) && (
           <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>No requests in this collection.</p>
         )}
-        {requests && requests.map((request) => {
+        {!isLoading && requests && requests.map((request) => {
           const style = getMethodStyle(request.method);
           // Adjust badge styles for dark mode
           const badgeClassName = darkMode

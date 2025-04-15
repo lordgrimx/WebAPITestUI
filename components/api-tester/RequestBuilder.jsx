@@ -25,8 +25,8 @@ import {
   Save, // Added Save icon for consistency if needed later
   Activity
 } from "lucide-react";
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import axios from "axios";
+// Convex bağımlılıkları kaldırıldı
 import {
   Dialog,
   DialogContent,
@@ -710,19 +710,32 @@ export default function RequestBuilder({
   const [parallelRequestCount, setParallelRequestCount] = useState(1);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [showLoadTestDialog, setShowLoadTestDialog] = useState(false);
+  // State for request data when selectedRequestId is provided
+  const [requestDataFromBackend, setRequestDataFromBackend] = useState(null);
+  const [isLoadingRequest, setIsLoadingRequest] = useState(false);
 
-  // Memoize request data query
-  const requestData = useQuery(
-    api?.requests?.getRequestById,
-    selectedRequestId ? { id: selectedRequestId } : "skip"
-  );
-  
-  // Log when request data is loaded
+  // Fetch request data when selectedRequestId changes
   useEffect(() => {
-    if (selectedRequestId && requestData) {
-      console.log("Loaded request data:", requestData);
-    }
-  }, [selectedRequestId, requestData]);
+    const fetchRequestData = async () => {
+      if (!selectedRequestId) return;
+      
+      setIsLoadingRequest(true);
+      try {
+        const response = await axios.get(`/api/requests/${selectedRequestId}`);
+        if (response.data) {
+          console.log("Loaded request data:", response.data);
+          setRequestDataFromBackend(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching request data:", error);
+        setError("Failed to load request data");
+      } finally {
+        setIsLoadingRequest(false);
+      }
+    };
+    
+    fetchRequestData();
+  }, [selectedRequestId]);
 
   // URL validation
   const validateUrl = useCallback(async (urlToValidate) => {
@@ -745,29 +758,44 @@ export default function RequestBuilder({
       setIsValidatingUrl(false);
     }
   }, []);
-
   // Fetch user session info from the server-side API endpoint
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const response = await fetch('/api/auth/session'); // Use the session API route
+        // Oturum API'sine istek yap
+        const response = await fetch('/api/auth/session');
+        
+        // Status 401 ise sessizce ele al ve kullanıcı bilgilerini sıfırla
+        if (response.status === 401) {
+          console.log("RequestBuilder: User not logged in or session expired");
+          setCurrentUserID(null);
+          return; // Sessizce devam et
+        }
+        
+        // Diğer hata durumlarını kontrol et
+        if (!response.ok) {
+          console.error("RequestBuilder: Session API error:", response.status);
+          setCurrentUserID(null);
+          return;
+        }
+        
+        // Başarılı yanıtı işle
         const data = await response.json();
-
-        if (response.ok && data.success && data.userId) {
-          console.log("Session verified, setting user ID:", data.userId);
+        if (data.success && data.userId) {
+          console.log("RequestBuilder: Session verified, setting user ID:", data.userId);
           setCurrentUserID(data.userId);
         } else {
-          console.error("Session verification failed:", data.error || 'No user ID returned');
-          setCurrentUserID(null); // Ensure user ID is null if session is invalid
+          console.error("RequestBuilder: Session verification failed:", data.error || 'No user ID returned');
+          setCurrentUserID(null);
         }
       } catch (error) {
-        console.error("Error fetching session:", error);
-        setCurrentUserID(null); // Ensure user ID is null on fetch error
+        console.error("RequestBuilder: Error fetching session:", error);
+        setCurrentUserID(null);
       }
     };
 
     fetchSession();
-  }, []); // Runs once on component mount
+  }, []);// Runs once on component mount
 
 
   // Debounce URL updates and validation
@@ -822,7 +850,6 @@ export default function RequestBuilder({
     auth: auth, // Pass the potentially modified auth object
     tests: tests // Pass the tests object
   }), [method, debouncedUrl, headers, params, body, auth, tests]); // Include auth in dependency array
-
   // Update form based on initialData (from history) or selectedRequestId (from collection)
   useEffect(() => {
     // Priority 1: Populate from initialData (history item)
@@ -840,16 +867,16 @@ export default function RequestBuilder({
       setError(null);
     }
     // Priority 2: Populate from selectedRequestId (collection item)
-    else if (selectedRequestId && requestData) {
-      console.log("Populating form for selected request:", selectedRequestId, requestData);
-      setMethod(requestData.method || "GET");
-      setUrl(requestData.url || "");
+    else if (selectedRequestId && requestDataFromBackend) {
+      console.log("Populating form for selected request:", selectedRequestId, requestDataFromBackend);
+      setMethod(requestDataFromBackend.method || "GET");
+      setUrl(requestDataFromBackend.url || "");
 
       // Safely parse and set Params
       let parsedParams = [createDefaultRow()];
-      if (requestData.params && typeof requestData.params === 'string') {
+      if (requestDataFromBackend.params && typeof requestDataFromBackend.params === 'string') {
         try {
-          const tempParsed = JSON.parse(requestData.params);
+          const tempParsed = JSON.parse(requestDataFromBackend.params);
           if (Array.isArray(tempParsed) && tempParsed.length > 0) {
             parsedParams = tempParsed.map(p => ({
               id: p.id || Date.now() + Math.random(),
@@ -864,9 +891,9 @@ export default function RequestBuilder({
 
       // Safely parse and set Headers
       let parsedHeaders = [createDefaultRow()];
-      if (requestData.headers && typeof requestData.headers === 'string') {
+      if (requestDataFromBackend.headers && typeof requestDataFromBackend.headers === 'string') {
         try {
-          const tempParsed = JSON.parse(requestData.headers);
+          const tempParsed = JSON.parse(requestDataFromBackend.headers);
           if (Array.isArray(tempParsed) && tempParsed.length > 0) {
             parsedHeaders = tempParsed.map(h => ({
               id: h.id || Date.now() + Math.random(),
@@ -880,16 +907,16 @@ export default function RequestBuilder({
       setHeaders(parsedHeaders);
 
       // Set body
-      setBody(requestData.body || "");
+      setBody(requestDataFromBackend.body || "");
 
       // Handle auth data (Safely parse if string)
       let parsedAuth = { type: "none" };
-      if (requestData.auth) {
-        if (typeof requestData.auth === 'object') {
-          parsedAuth = requestData.auth;
-        } else if (typeof requestData.auth === 'string') {
+      if (requestDataFromBackend.auth) {
+        if (typeof requestDataFromBackend.auth === 'object') {
+          parsedAuth = requestDataFromBackend.auth;
+        } else if (typeof requestDataFromBackend.auth === 'string') {
           try {
-            parsedAuth = JSON.parse(requestData.auth);
+            parsedAuth = JSON.parse(requestDataFromBackend.auth);
             if (typeof parsedAuth !== 'object' || parsedAuth === null) {
               console.warn("Parsed auth is not a valid object, using default.");
               parsedAuth = { type: "none" };
@@ -905,12 +932,12 @@ export default function RequestBuilder({
 
       // Handle tests data (Safely parse if string)
       let parsedTests = { script: "", results: [] };
-      if (requestData.tests) {
-        if (typeof requestData.tests === 'object') {
-          parsedTests = requestData.tests;
-        } else if (typeof requestData.tests === 'string') {
+      if (requestDataFromBackend.tests) {
+        if (typeof requestDataFromBackend.tests === 'object') {
+          parsedTests = requestDataFromBackend.tests;
+        } else if (typeof requestDataFromBackend.tests === 'string') {
           try {
-            parsedTests = JSON.parse(requestData.tests);
+            parsedTests = JSON.parse(requestDataFromBackend.tests);
             if (typeof parsedTests !== 'object' || parsedTests === null) {
               console.warn("Parsed tests is not a valid object, using default.");
               parsedTests = { script: "", results: [] };
@@ -922,13 +949,6 @@ export default function RequestBuilder({
         }
       }
       setTests(parsedTests);
-      /* // Old parsing logic:
-      if (requestData.tests && typeof requestData.tests === 'object') {
-        setTests(requestData.tests);
-      } else if (requestData.tests && typeof requestData.tests === 'string') {
-        try { setTests(JSON.parse(requestData.tests)); }
-        catch (e) { console.error("Error parsing tests data:", e); setTests({ script: "", results: [] }); }
-      } else { setTests({ script: "", results: [] }); } */
 
       setError(null); // Clear previous errors
     }
@@ -945,7 +965,7 @@ export default function RequestBuilder({
       setError(null);
     }
     // If selectedRequestId is set but requestData is still loading, wait.
-  }, [initialData, selectedRequestId, requestData]); // Depend on all three
+  }, [initialData, selectedRequestId, requestDataFromBackend]);// Depend on all three
 
 
   // Update parent component (ApiTester) with current request data from RequestBuilder

@@ -22,8 +22,8 @@ namespace WebTestUI.Backend.Controllers
             _logger = logger;
         }
 
-        [HttpGet("profile")]
-        public async Task<IActionResult> GetProfile()
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
         {
             try
             {
@@ -43,7 +43,7 @@ namespace WebTestUI.Backend.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Kullanıcı profili alınırken bir hata oluştu");
+                _logger.LogError(ex, "Mevcut kullanıcı bilgileri alınırken bir hata oluştu");
                 return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
             }
         }

@@ -8,11 +8,10 @@ import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { CheckCircle, Circle, Lock, Mail, User } from 'lucide-react';
 import { toast } from "sonner"; // Import toast directly from sonner
-import { useMutation } from "convex/react"; // Import useMutation hook from convex
-import { api } from "@/convex/_generated/api"; // Import API
+import axios from "axios"; // Axios için import
 
 const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
-  const register = useMutation(api.users.register); // Get register mutation
+  // Convex bağımlılığı kaldırıldı
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -91,13 +90,12 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (validateForm()) {
+      if (validateForm()) {
       setIsLoading(true);
       
       try {
-        // Call Convex register mutation
-        const result = await register({ 
+        // Backend API ile kullanıcı kaydı
+        const response = await axios.post('/api/auth/register', { 
           name: fullName, 
           email: email, 
           password: password 

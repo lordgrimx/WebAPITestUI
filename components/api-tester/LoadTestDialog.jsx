@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import axios from "axios";
 import { toast } from "react-toastify";
 import { useRouter } from 'next/navigation';
 
@@ -19,19 +18,17 @@ export default function LoadTestDialog({
     const [vus, setVus] = useState(1);
     const [duration, setDuration] = useState("30s");
     const [authType, setAuthType] = useState("");
-    const [authToken, setAuthToken] = useState("");
-    const [isGenerating, setIsGenerating] = useState(false);
+    const [authToken, setAuthToken] = useState("");    const [isGenerating, setIsGenerating] = useState(false);
     const [isExecuting, setIsExecuting] = useState(false);
     const router = useRouter();
 
-    const generateAndSaveK6Script = useMutation(api.k6tests.generateAndSaveK6Script);
-
+    // Backend API'yi kullanarak k6 test scripti oluşturma
     const handleCreateTest = async () => {
         try {
             setIsGenerating(true);
             
-            // Generate and save the test with auth data
-            const { testId } = await generateAndSaveK6Script({
+            // Backend API kullanarak test oluşturma ve kaydetme
+            const response = await axios.post('/api/k6/generate', {
                 name: testName,
                 requestId: requestData.id,
                 requestData: {
@@ -49,6 +46,8 @@ export default function LoadTestDialog({
                 }
             });
 
+            const testId = response.data.testId;
+            
             onTestCreated?.(testId);
             onOpenChange(false);
             toast.success("Load test created successfully");
@@ -57,7 +56,7 @@ export default function LoadTestDialog({
         } catch (error) {
             console.error("Error creating load test:", error);
             toast.error("Failed to create load test", {
-                description: error.message
+                description: error.response?.data?.message || error.message
             });
         } finally {
             setIsGenerating(false);

@@ -6,8 +6,6 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import axios from "axios";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings-context"; // Import the settings hook
@@ -138,15 +136,30 @@ export default function ApiTester() {
       setAuthToken(storedToken);
     }
   }, []);
-
   // Fetch user session info from the server-side API endpoint
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const response = await fetch('/api/auth/session'); // Use the session API route
+        // Oturum API'sine istek yap
+        const response = await fetch('/api/auth/session');
+        
+        // Status 401 ise sessizce ele al ve kullanıcı bilgilerini sıfırla
+        if (response.status === 401) {
+          console.log("ApiTester: User not logged in or session expired");
+          setCurrentUserID(null);
+          return; // Sessizce devam et
+        }
+        
+        // Diğer hata durumlarını kontrol et
+        if (!response.ok) {
+          console.error("ApiTester: Session API error:", response.status);
+          setCurrentUserID(null);
+          return;
+        }
+        
+        // Başarılı yanıtı işle
         const data = await response.json();
-
-        if (response.ok && data.success && data.userId) {
+        if (data.success && data.userId) {
           console.log("ApiTester: Session verified, setting user ID:", data.userId);
           setCurrentUserID(data.userId);
         } else {
@@ -159,10 +172,18 @@ export default function ApiTester() {
       }
     };
 
-    fetchSession();
-  }, []); // Runs once on component mount
+    fetchSession();  }, []); // Runs once on component mount
 
-  const recordHistory = useMutation(api.history.recordHistory);
+  // Function to record history using the backend API instead of Convex
+  const recordHistory = async (historyData) => {
+    try {
+      const response = await axios.post('/api/history/recordHistory', historyData);
+      return response.data;
+    } catch (error) {
+      console.error("Error recording history:", error);
+      // Don't throw error to prevent blocking the main request flow
+    }
+  };
 
   // Update token persistence with safety check
   const updateAuthToken = useCallback((token) => {
@@ -458,12 +479,9 @@ export default function ApiTester() {
       // Store the size of what we're actually storing
       const storedResponseSize = isTruncated
         ? new Blob([dataToStore]).size
-        : responseSize;
-
-      // Use the ORIGINAL method and URL for history recording
+        : responseSize;      // Use the ORIGINAL method and URL for history recording
       await recordHistory({
         requestId: selectedRequestId || undefined,
-        userId: currentUserID, // Always include user ID - no fallback to undefined
         method: method, // Original method
         url: url, // Original URL
         status: axiosResponse.status,
@@ -472,8 +490,7 @@ export default function ApiTester() {
         responseData: dataToStore, // Store the truncated version when applicable
         responseHeaders: JSON.stringify(axiosResponse.headers),
         isTruncated: isTruncated,
-        // Optionally record if proxy was used
-        // proxyUsed: settings.proxyEnabled && settings.proxyUrl
+        // Backend will get userId from session, so we don't need to send it explicitly
       });
 
       toast.success("Request Sent", {
@@ -514,12 +531,9 @@ export default function ApiTester() {
         errorData = { error: errorMessage };
         toast.error("Request Error", { description: error.message });
         setError(errorMessage); // Set general error for setup issues
-      }
-
-      // Record the failed request in history using ORIGINAL details
+      }      // Record the failed request in history using ORIGINAL details
       await recordHistory({
         requestId: selectedRequestId || undefined,
-        userId: currentUserID,
         method: method, // Now accessible
         url: url,       // Now accessible
         status: status,
@@ -528,7 +542,7 @@ export default function ApiTester() {
         responseData: JSON.stringify(errorData),
         responseHeaders: JSON.stringify(errorHeaders),
         isTruncated: false,
-        // proxyUsed: settings.proxyEnabled && settings.proxyUrl
+        // Backend will get userId from session
       });
 
       // Update the response display with error details
@@ -537,12 +551,11 @@ export default function ApiTester() {
         data: errorData,
         headers: errorHeaders,
         size: "0 KB",
-        timeTaken: `${duration} ms`,
-        isError: true, // Add an error flag
+        timeTaken: `${duration} ms`,        isError: true, // Add an error flag
         viaProxy: settings.proxyEnabled && settings.proxyUrl && status !== 0 // Indicate proxy if it wasn't a network error before proxy
       });
     }
-  }, [selectedRequestId, recordHistory, currentUserID, settings]); // Added settings dependency
+  }, [selectedRequestId, currentUserID, settings]); // Updated dependencies, removed recordHistory
 
   // Handler for selecting a request from a collection
   const handleRequestSelect = useCallback((requestId) => {

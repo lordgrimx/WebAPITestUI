@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context"; // Import useAuth
-import { useMutation, useAction } from "convex/react"; // Import useMutation AND useAction
-import { api } from "@/convex/_generated/api"; // Import api
+import axios from "axios"; // Backend API istekleri için axios
 import { toast } from "sonner"; // Import toast for notifications
 import { X, User, Mail, Phone, MapPin, Globe, Camera, Loader2 } from "lucide-react";
 import imageCompression from 'browser-image-compression'; // Import the library
@@ -20,12 +19,8 @@ const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "image/gif"];
 
 function ProfileModal({ open, setOpen, darkMode }) {
   const { user, isLoading: authLoading } = useAuth(); // Get user from auth context
-  const updateProfile = useMutation(api.users.updateProfile); // Get updateProfile mutation
-  const changePasswordMutation = useMutation(api.users.changePassword); // Get changePassword mutation
-  const generateUploadUrl = useMutation(api.storage.generateUploadUrl); // Moved hook call to top level
-  const saveProfileImage = useAction(api.storage.saveProfileImage); // Moved hook call to top level
-
-  const [activeTab, setActiveTab] = useState("personal");  const [firstName, setFirstName] = useState("");
+  
+  const [activeTab, setActiveTab] = useState("personal");const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [profileImageUrl, setProfileImageUrl] = useState(""); // For potential future upload preview
   const [isSaving, setIsSaving] = useState(false);
@@ -96,32 +91,25 @@ function ProfileModal({ open, setOpen, darkMode }) {
         console.log(`Compressed file size: ${compressedFile.size / 1024 / 1024} MB`);
         // --- End Compression ---
 
-        // 1. Get an upload URL from Convex
-        const uploadUrl = await generateUploadUrl();
-        
-        // 2. Upload the COMPRESSED file to the Convex storage
-        const result = await fetch(uploadUrl, {
-          method: "POST",
+        // FormData oluştur
+        const formData = new FormData();
+        formData.append('file', compressedFile);
+
+        // Backend API'ye profil resmi yükle
+        const response = await axios.post('/api/user/upload-profile-image', formData, {
           headers: {
-            "Content-Type": compressedFile.type, // Use compressed file type
-          },
-          body: compressedFile, // Use compressed file body
+            'Content-Type': 'multipart/form-data',
+          }
         });
-        
-        if (!result.ok) {
-          throw new Error(`Error uploading file: ${result.statusText}`);
+
+        if (!response.data || !response.data.imageUrl) {
+          throw new Error('Failed to upload profile image');
         }
         
-        // 3. Get the storageId from the response
-        const { storageId } = await result.json();
+        // API'den dönen resim URL'ini kullan
+        const imageUrl = response.data.imageUrl;
         
-        // 4. Call the action to save the profile image
-        const { imageUrl } = await saveProfileImage({
-          userId: user.userId,
-          storageId,
-        });
-        
-        // 5. Update the UI with the new image URL
+        // UI'ı yeni resim URL'i ile güncelle
         setProfileImageUrl(imageUrl);
         
         toast.success("Profil resmi başarıyla yüklendi!");
@@ -149,11 +137,9 @@ function ProfileModal({ open, setOpen, darkMode }) {
           setIsSaving(false);
           return;
         }
-        
-        // Change the password (use the function from the hook)
+          // Change the password (use the function from the hook)
         try {
-          await changePasswordMutation({
-            userId: user.userId,
+          await axios.post('/api/user/change-password', {
             currentPassword,
             newPassword
           });
@@ -170,17 +156,14 @@ function ProfileModal({ open, setOpen, darkMode }) {
           return;
         }
       }
-      
-      // Update profile information
-      await updateProfile({
-        userId: user.userId,
+        // Update profile information
+      await axios.post('/api/user/update-profile', {
         name: name || undefined,
         phone: phone || undefined,
         address: address || undefined,
         website: website || undefined,
         twoFactorEnabled: twoFactorEnabled,
         // The profile image is handled separately in the handleFileChange function
-        // The URL is already saved to Convex when the image is uploaded
       });
       
       toast.success("Profil başarıyla güncellendi!");
