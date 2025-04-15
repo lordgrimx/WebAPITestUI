@@ -18,7 +18,8 @@ import Header from "../Header";
 export default function ApiTester() {
   const { settings } = useSettings(); // Get settings from context (updateSetting kaldırıldı, kullanılmıyor)
   
-  const [selectedRequestId, setSelectedRequestId] = useState(null);  const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
+  const [selectedRequestId, setSelectedRequestId] = useState(null);  
+  const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
   const [error, setError] = useState(null); // General request error state
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
@@ -26,6 +27,7 @@ export default function ApiTester() {
   const [initialDataFromHistory, setInitialDataFromHistory] = useState(null); // State to hold data from selected history item
   const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
   const [authToken, setAuthToken] = useState(''); // Initialize empty
+  const [historyUpdated, setHistoryUpdated] = useState(0); // Add this new state
 
   // Test execution helper function
   const runTests = (testScript, environment) => {
@@ -126,73 +128,54 @@ export default function ApiTester() {
 
     return results;
   };
-  // Move localStorage access to useEffect
-  useEffect(() => {
-    // Instead of accessing localStorage, we'll use our secure endpoint
-    const fetchAuthInfo = async () => {
-      try {
-        const response = await fetch('/api/auth/getCookies');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.isAuthenticated) {
-            console.log("User is authenticated, userId:", data.userId);
-            setCurrentUserID(data.userId);
-            // We don't set authToken here anymore since we're not exposing it to the client
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching auth info:", error);
-      }
-    };
-    
-    fetchAuthInfo();
-  }, []);
-  // Fetch user session info from the server-side API endpoint
-  useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        // Oturum API'sine istek yap
-        const response = await fetch('/api/auth/session');
-        
-        // Status 401 ise sessizce ele al ve kullanıcı bilgilerini sıfırla
-        if (response.status === 401) {
-          console.log("ApiTester: User not logged in or session expired");
-          setCurrentUserID(null);
-          return; // Sessizce devam et
-        }
-        
-        // Diğer hata durumlarını kontrol et
-        if (!response.ok) {
-          console.error("ApiTester: Session API error:", response.status);
-          setCurrentUserID(null);
-          return;
-        }
-        
-        // Başarılı yanıtı işle
-        const data = await response.json();
-        if (data.success && data.userId) {
-          console.log("ApiTester: Session verified, setting user ID:", data.userId);
-          setCurrentUserID(data.userId);
-        } else {
-          console.error("ApiTester: Session verification failed:", data.error || 'No user ID returned');
-          setCurrentUserID(null); // Ensure user ID is null if session is invalid
-        }
-      } catch (error) {
-        console.error("ApiTester: Error fetching session:", error);
-        setCurrentUserID(null); // Ensure user ID is null on fetch error
-      }
-    };
 
-    fetchSession();  }, []); // Runs once on component mount
-
-  // Function to record history using the backend API instead of Convex
+  // Function to record history using the backend API with proper token handling
   const recordHistory = async (historyData) => {
     try {
-      const response = await axios.post('/api/history/recordHistory', historyData);
-      return response.data;
+      const token = localStorage.getItem('token');
+      // Transform the data to match RecordHistoryDto structure exactly
+      const payload = {
+        method: historyData.method,
+        url: historyData.url,
+        statusCode: historyData.status,
+        duration: historyData.duration,
+        size: historyData.responseSize,
+        requestHeaders: {},  // Initialize empty object
+        responseHeaders: {}, // Initialize empty object
+        requestBody: "",     // Initialize empty string
+        responseBody: historyData.responseData,
+        requestId: historyData.requestId || null
+      };
+
+      // Parse headers if they exist
+      if (historyData.responseHeaders) {
+        try {
+          payload.responseHeaders = typeof historyData.responseHeaders === 'string' 
+            ? JSON.parse(historyData.responseHeaders)
+            : historyData.responseHeaders;
+        } catch (e) {
+          console.warn('Failed to parse response headers:', e);
+        }
+      }
+
+      console.log("Sending history payload:", payload); // Debug log
+
+      const response = await axios.post('/api/history', payload, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.data) {
+        toast.success("Request recorded in history");
+        setHistoryUpdated(prev => prev + 1); // Trigger history refresh
+        return response.data;
+      }
     } catch (error) {
       console.error("Error recording history:", error);
-      // Don't throw error to prevent blocking the main request flow
+      console.error("Failed payload:", payload); // Debug log
+      toast.error("Failed to record history: " + (error.response?.data?.message || error.message));
     }
   };
 
@@ -492,14 +475,14 @@ export default function ApiTester() {
         ? new Blob([dataToStore]).size
         : responseSize;      // Use the ORIGINAL method and URL for history recording
       await recordHistory({
-        requestId: selectedRequestId || undefined,
+        requestId: selectedRequestId || null,
         method: method, // Original method
         url: url, // Original URL
         status: axiosResponse.status,
         duration: duration,
         responseSize: storedResponseSize, // Store the actual size of the saved data
         responseData: dataToStore, // Store the truncated version when applicable
-        responseHeaders: JSON.stringify(axiosResponse.headers),
+        responseHeaders: axiosResponse.headers,
         isTruncated: isTruncated,
         // Backend will get userId from session, so we don't need to send it explicitly
       });
@@ -544,7 +527,7 @@ export default function ApiTester() {
         setError(errorMessage); // Set general error for setup issues
       }      // Record the failed request in history using ORIGINAL details
       await recordHistory({
-        requestId: selectedRequestId || undefined,
+        requestId: selectedRequestId || null,
         method: method, // Now accessible
         url: url,       // Now accessible
         status: status,
@@ -623,6 +606,7 @@ export default function ApiTester() {
                 hasError={!!sidebarError}
                 onError={setSidebarError}
                 darkMode={darkMode} // Pass dark mode state
+                historyUpdated={historyUpdated} // Add this prop
               />
             </ResizablePanel>
             <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={30}>

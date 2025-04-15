@@ -3,8 +3,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import axios from "axios";
-// Convex ve API bağımlılıkları kaldırıldı
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Folder, Trash2, History } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
-import Cookies from "js-cookie";
+import { toast } from "sonner"; // Add toast import
 
 // HTTP Method renkleri ve Badge variantları
 const methodStyles = {
@@ -70,8 +68,6 @@ const formatTimeAgo = (timestamp) => {
   return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-
-
 // Helper to get path part from URL
 const getPathFromUrl = (urlString) => {
   try {
@@ -87,9 +83,8 @@ const getPathFromUrl = (urlString) => {
   }
 };
 
-// Add onHistorySelect and darkMode props
-export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError }) {
-  const [currentUserID, setCurrentUserID] = useState(null); // For user ID from JWT token
+// Update the component to accept historyUpdated prop
+export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError, historyUpdated }) {
   const [newCollectionName, setNewCollectionName] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -97,85 +92,16 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   const [collections, setCollections] = useState([]);
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Fetch user session info from the server-side API endpoint
-  useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        // Önce güvenli endpoint'ten kimlik doğrulama bilgilerini al
-        const authInfoResponse = await fetch('/api/auth/getCookies');
-        console.log("Auth info response:", authInfoResponse.token);
-        let isAuthenticated = false;
-        
-        if (authInfoResponse.ok) {
-          const authData = await authInfoResponse.json();
-          isAuthenticated = authData.success && authData.isAuthenticated;
-          
-          if (isAuthenticated) {
-            console.log("Auth info verified from secure endpoint");
-          }
-        }
-        
-        // Oturum API'sine istek yap
-    const token = Cookies.get('token');
-    const response = await fetch('/api/auth/session', {
-      credentials: 'include', // Ensure cookies are sent with the request
-      headers: token ? {
-                'Authorization': `Bearer ${token}` // Include Bearer token in header
-              } : {}
-            }); 
-        
-        // Status 401 ise sessizce ele al ve kullanıcı bilgilerini sıfırla
-        if (response.status === 401) {
-          console.log("CollectionsSidebar: User not logged in or session expired");
-          setCurrentUserID(null);
-          return; // Sessizce devam et
-        }
-        
-        // Diğer hata durumlarını kontrol et
-        if (!response.ok) {
-          console.error("CollectionsSidebar: Session API error:", response.status);
-          setCurrentUserID(null);
-          return;
-        }
-        
-        // Başarılı yanıtı işle
-        const data = await response.json();
-        if (data.success && data.userId) {
-          console.log("CollectionsSidebar: Session verified, setting user ID:", data.userId);
-          setCurrentUserID(data.userId);
-        } else {
-          // Burada spesifik hata mesajını gösteriyoruz
-          const errorMsg = data.message || data.error || 'No user ID returned';
-          console.error("CollectionsSidebar: Session verification failed:", errorMsg);
-          setCurrentUserID(null);
-          
-          // Client-side cookie'leri kontrol et (debug için)
-          const clientToken = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('token='));
-          
-          if (clientToken) {
-            console.log("CollectionsSidebar: Client-side token exists but server couldn't verify it");
-          }
-        }
-      } catch (error) {
-        console.error("CollectionsSidebar: Error fetching session:", error);
-        setCurrentUserID(null);
-      }
-    };
 
-    fetchSession();
-  }, []); // Runs once on component mount
-  
-  // Fetch collections when userId changes
+  // Fetch collections
   useEffect(() => {
     const fetchCollections = async () => {
-      if (!currentUserID) return;
-      
       setIsLoading(true);
       try {
-        const response = await axios.get('/api/collections/user');
+        // Update to use /api prefix which will be handled by the route.js
+        const response = await axios.get('/api/collections', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        });
         if (response.data) {
           setCollections(response.data);
         }
@@ -188,45 +114,57 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     };
     
     fetchCollections();
-  }, [currentUserID, onError]);
+  }, [onError]);
   
-  // Fetch history when userId changes
-  useEffect(() => {
-    const fetchHistory = async () => {
-      if (!currentUserID) return;
-      
-      try {
-        const response = await axios.get('/api/history/recent', { params: { limit: 10 } });
-        if (response.data) {
-          setHistoryItems(response.data);
+  // Memoize the fetch history function
+  const fetchHistory = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('/api/history', {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      } catch (error) {
-        console.error("Error fetching history:", error);
+      });
+      if (response.data) {
+        setHistoryItems(response.data);
       }
-    };
-    
+    } catch (error) {
+      console.error("Error fetching history:", error);
+    }
+  }, []); // Empty dependency array since it doesn't depend on any props or state
+
+  // Update useEffect to use memoized fetchHistory function
+  useEffect(() => {
     fetchHistory();
-  }, [currentUserID]);
+  }, [fetchHistory, historyUpdated]); // Now includes both memoized function and historyUpdated
+
   const handleAddCollection = async () => {
     if (newCollectionName.trim()) {
       try {
-        console.log("Trying to add collection:", newCollectionName);
-        const response = await axios.post('/api/collections/create', {
+        const token = localStorage.getItem('token');
+        const response = await axios.post('/api/collections', {
           name: newCollectionName.trim(),
           description: ""
+        }, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
         
         if (response.data) {
-          console.log("Collection added successfully:", response.data);
-          // Koleksiyonları güncellemek için yeniden çağır
-          const updatedCollections = await axios.get('/api/collections/user');
+          const updatedCollections = await axios.get('/api/collections', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
           setCollections(updatedCollections.data);
+          toast.success("Collection added successfully");
         }
         setNewCollectionName("");
         setIsAddDialogOpen(false);
       } catch (err) {
         console.error("Failed to add collection:", err);
-        toast.error("Failed to add collection: " + (err.response?.data?.message || err.message || "Unknown error"));
+        toast.error("Failed to add collection: " + (err.response?.data?.message || err.message));
       }
     } else {
       toast.warning("Please enter a collection name");
@@ -266,15 +204,26 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   const handleDeleteHistoryEntry = async (e, historyId) => {
     e.stopPropagation();
     try {
-      await axios.delete(`/api/history/${historyId}`);
-      // Geçmişi güncellemek için yeniden çağır
-      const updatedHistory = await axios.get('/api/history/recent', { params: { limit: 10 } });
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/history/${historyId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      // Refresh history with auth token
+      const updatedHistory = await axios.get('/api/history/recent', {
+        params: { limit: 10 },
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       setHistoryItems(updatedHistory.data);
     } catch (err) {
       console.error("Failed to delete history entry:", err);
       toast.error("Failed to delete history entry: " + (err.response?.data?.message || err.message || "Unknown error"));
     }
   };
+
   // Update filteredCollections to use debouncedSearchTerm
   const filteredCollections = useMemo(() => 
     (collections || []).filter(collection =>
@@ -345,10 +294,10 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
               className={`${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
             />
             <DialogFooter>
-              <DialogClose asChild>
+              <DialogClose asChild key="cancel-btn">
                 <Button variant="outline" className={darkMode ? 'border-gray-600 hover:bg-gray-700' : ''}>Cancel</Button>
               </DialogClose>
-              <Button onClick={handleAddCollection} className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>Add</Button>
+              <Button onClick={handleAddCollection} key="add-btn" className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>Add</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

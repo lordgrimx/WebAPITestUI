@@ -90,20 +90,21 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-      if (validateForm()) {
+    if (validateForm()) {
       setIsLoading(true);
       
       try {
         const result = await register(fullName, email, password);
         
         if (result.success) {
+          if (result.token) {
+            localStorage.setItem('token', result.token);
+          }
           toast.success('Account created successfully!');
-          setTimeout(() => {
-            onClose();
-            if (onSwitchToLogin) {
-              setTimeout(() => onSwitchToLogin(), 100);
-            }
-          }, 1000);
+          onClose();
+          if (onSwitchToLogin) {
+            setTimeout(() => onSwitchToLogin(), 100);
+          }
         } else {
           toast.error(result.error || 'Registration failed');
         }

@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 
 export async function GET(request, { params }) {
     try {
-        const token = cookies().get('token')?.value;
+        const headersList = headers();
+        const token = headersList.get('authorization')?.split(' ')[1];
         const id = params.id;
 
         if (!token) {
@@ -42,7 +43,8 @@ export async function GET(request, { params }) {
 
 export async function PUT(request, { params }) {
     try {
-        const token = cookies().get('token')?.value;
+        const headersList = headers();
+        const token = headersList.get('authorization')?.split(' ')[1];
         const id = params.id;
         const body = await request.json();
 
@@ -83,7 +85,8 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
     try {
-        const token = cookies().get('token')?.value;
+        const headersList = headers();
+        const token = headersList.get('authorization')?.split(' ')[1];
         const id = params.id;
 
         if (!token) {

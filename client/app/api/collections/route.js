@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 
 export async function GET(request) {
     try {
-        const token = cookies().get('token')?.value;
+        const headersList = headers();
+        const token = headersList.get('authorization')?.split(' ')[1];
 
         if (!token) {
             return NextResponse.json(
@@ -12,7 +13,7 @@ export async function GET(request) {
             );
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7136'}/api/Collections`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5296'}/api/Collections`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -41,7 +42,8 @@ export async function GET(request) {
 
 export async function POST(request) {
     try {
-        const token = cookies().get('token')?.value;
+        const headersList = headers();
+        const token = headersList.get('authorization')?.split(' ')[1];
         const body = await request.json();
 
         if (!token) {
@@ -51,7 +53,7 @@ export async function POST(request) {
             );
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7136'}/api/Collections`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5296'}/api/Collections`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,

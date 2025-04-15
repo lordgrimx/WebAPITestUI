@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
+import { headers } from 'next/headers';
 
 export async function GET(request) {
     try {
-        const token = cookies().get('token')?.value;
+        const headersList = headers();
+        const token = headersList.get('authorization')?.split(' ')[1];
 
         if (!token) {
             return NextResponse.json(
@@ -12,11 +13,7 @@ export async function GET(request) {
             );
         }
 
-        // Get the limit parameter from the URL, default to 50 if not provided
-        const { searchParams } = new URL(request.url);
-        const limit = searchParams.get('limit') || 50;
-
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7136'}/api/History?limit=${limit}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5296'}/api/History`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -45,17 +42,19 @@ export async function GET(request) {
 
 export async function POST(request) {
     try {
-        const token = cookies().get('token')?.value;
-        const body = await request.json();
+        const headersList = headers();
+        const token = headersList.get('authorization')?.split(' ')[1];
 
         if (!token) {
             return NextResponse.json(
-                { success: false, message: 'Unauthorized: No authentication token found' },
+                { success: false, message: 'Unauthorized: No token provided' },
                 { status: 401 }
             );
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7136'}/api/History`, {
+        const body = await request.json();
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5296'}/api/History`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -64,20 +63,20 @@ export async function POST(request) {
             body: JSON.stringify(body),
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
+            const errorData = await response.json();
             return NextResponse.json(
-                { success: false, message: data.message || 'Failed to record history', errors: data.errors },
+                { success: false, message: errorData.message || 'Failed to record history' },
                 { status: response.status }
             );
         }
 
+        const data = await response.json();
         return NextResponse.json(data);
     } catch (error) {
         console.error('Record history API error:', error);
         return NextResponse.json(
-            { success: false, message: 'An error occurred while recording history.' },
+            { success: false, message: 'An error occurred while recording history' },
             { status: 500 }
         );
     }

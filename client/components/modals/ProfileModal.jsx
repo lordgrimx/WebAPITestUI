@@ -127,6 +127,9 @@ function ProfileModal({ open, setOpen, darkMode }) {
     setIsSaving(true);
     
     try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      
       const name = `${firstName.trim()} ${lastName.trim()}`.trim();
       
       // Check if password is being changed
@@ -164,7 +167,7 @@ function ProfileModal({ open, setOpen, darkMode }) {
         website: website || undefined,
         twoFactorEnabled: twoFactorEnabled,
         // The profile image is handled separately in the handleFileChange function
-      });
+      }, { headers });
       
       toast.success("Profil başarıyla güncellendi!");
       setOpen(false); // Close modal on success

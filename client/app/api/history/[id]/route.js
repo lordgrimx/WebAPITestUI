@@ -3,7 +3,8 @@ import { cookies } from 'next/headers';
 
 export async function GET(request, { params }) {
     try {
-        const token = cookies().get('token')?.value;
+        const headersList = headers();
+        const token = headersList.get('authorization')?.split(' ')[1];
         const id = params.id;
 
         if (!token) {
@@ -13,7 +14,7 @@ export async function GET(request, { params }) {
             );
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7136'}/api/History/${id}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:5296'}/api/History`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,

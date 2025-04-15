@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react"; // useEffect eklendi
-// import { useQuery, useMutation } from "convex/react"; // Kaldırıldı
-// import { api } from "@/convex/_generated/api"; // Kaldırıldı
-import { authAxios } from "@/lib/auth-context"; // Auth context'ten axios instance'ı import et (veya ayrı bir API service oluştur)
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
 import {
   Dialog,
   DialogContent,
@@ -34,38 +33,41 @@ export default function SaveRequestModal({
   selectedCollection,
   initialData
 }) {
-  const [requestName, setRequestName] = useState(initialData?.name || ""); // Initial data ile doldur
-  const [description, setDescription] = useState(initialData?.description || ""); // Initial data ile doldur
+  const [requestName, setRequestName] = useState(initialData?.name || "");
+  const [description, setDescription] = useState(initialData?.description || "");
   const [newCollectionName, setNewCollectionName] = useState("");
   const [showNewCollectionInput, setShowNewCollectionInput] = useState(false);
-  const [addToFavorites, setAddToFavorites] = useState(initialData?.isFavorite || false); // Initial data ile doldur
-  const [selectedCollectionState, setSelectedCollectionState] = useState(selectedCollection || initialData?.collectionId || ""); // Initial data ile doldur
-  const [collections, setCollections] = useState([]); // State'e çevrildi
+  const [addToFavorites, setAddToFavorites] = useState(initialData?.isFavorite || false);
+  const [selectedCollectionState, setSelectedCollectionState] = useState(selectedCollection || initialData?.collectionId || "");
+  const [collections, setCollections] = useState([]);
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
 
-  // TODO: Backend'den koleksiyonları çek
   useEffect(() => {
     const fetchCollections = async () => {
       setIsLoadingCollections(true);
       try {
-        // const response = await authAxios.get('/Collections'); // Örnek endpoint
-        // setCollections(response.data || []);
-        console.log("TODO: Fetch collections from backend");
-        // Geçici dummy data
-        setCollections([{ id: 'dummy1', name: 'Dummy Collection 1' }, { id: 'dummy2', name: 'Dummy Collection 2' }]);
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/api/collections', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.data) {
+          setCollections(response.data);
+        }
       } catch (error) {
         console.error("Error fetching collections:", error);
-        // toast.error("Failed to load collections");
+        toast.error("Failed to load collections: " + (error.response?.data?.message || error.message));
       } finally {
         setIsLoadingCollections(false);
       }
     };
-    if (open) { // Modal açıldığında koleksiyonları çek
-       fetchCollections();
+
+    if (open) {
+      fetchCollections();
     }
   }, [open]);
-
-  // const createRequest = useMutation(api.requests.createRequest); // Kaldırıldı
 
   const handleCollectionChange = (value) => {
     if (value === "new") {
@@ -75,61 +77,67 @@ export default function SaveRequestModal({
       setSelectedCollectionState(value);
     }
   };
-    const handleSaveRequest = async () => {
-    // TODO: Yeni koleksiyon oluşturma işlemini backend'e taşı
+
+  const handleSaveRequest = async () => {
     try {
+      const token = localStorage.getItem('token');
       let collectionIdToSave = selectedCollectionState;
 
       if (showNewCollectionInput && newCollectionName.trim()) {
-        // TODO: Backend'e yeni koleksiyon oluşturma isteği gönder ('/Collections')
-        // const newCollectionResponse = await authAxios.post('/Collections', { name: newCollectionName });
-        // collectionIdToSave = newCollectionResponse.data.id; // Backend'den dönen ID'yi al
-        collectionIdToSave = `new_${newCollectionName}`; // Geçici ID
-        console.log("TODO: Create new collection in backend", newCollectionName);
-        // Yeni koleksiyonu listeye ekle (geçici)
-        setCollections(prev => [...prev, { id: collectionIdToSave, name: newCollectionName }]);
+        const newCollectionResponse = await axios.post('/api/collections', 
+          { 
+            name: newCollectionName.trim(),
+            description: "" 
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (newCollectionResponse.data) {
+          collectionIdToSave = newCollectionResponse.data.id;
+          setCollections(prev => [...prev, newCollectionResponse.data]);
+        }
       } else if (showNewCollectionInput && !newCollectionName.trim()) {
-          alert("Please enter a name for the new collection."); // Veya daha iyi bir validation
-          return;
+        toast.error("Please enter a collection name");
+        return;
       }
 
-
-      // TODO: Backend'e request kaydetme isteği gönder ('/Requests')
       const requestPayload = {
-        collectionId: collectionIdToSave, // Kullanılacak koleksiyon ID'si
+        collectionId: collectionIdToSave,
         name: requestName,
-        description: description, // Açıklamayı ekle
+        description: description,
         method: initialData?.method || 'GET',
         url: initialData?.url || '',
-        // Headers, Params, Body objelerini string'e çevirerek gönder (backend DTO'suna göre ayarla)
-        headers: initialData?.headers ? JSON.stringify(initialData.headers) : null,
-        queryParams: initialData?.params ? JSON.stringify(initialData.params) : null, // Backend DTO'suna göre 'params' -> 'queryParams' olabilir
-        body: initialData?.body ? JSON.stringify(initialData.body) : null,
-        isFavorite: addToFavorites,
+        headers: initialData?.headers || [],
+        queryParams: initialData?.params || [],
+        body: initialData?.body || '',
+        isFavorite: addToFavorites
       };
 
-      console.log("Saving request data to backend:", requestPayload);
+      const response = await axios.post('/api/requests', requestPayload, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      // const response = await authAxios.post('/Requests', requestPayload); // Örnek endpoint
-      console.log("TODO: Send save request to backend");
-
-      // onSaveRequest callback'ini çağır (gerekirse backend'den dönen veriyle)
-      if (onSaveRequest) {
-        // onSaveRequest(response.data); // Backend'den dönen request objesi
-        onSaveRequest({ ...requestPayload, id: `saved_${Date.now()}` }); // Geçici ID ile callback
+      if (response.data) {
+        toast.success("Request saved successfully");
+        if (onSaveRequest) {
+          onSaveRequest(response.data);
+        }
+        setOpen(false);
+        resetForm();
       }
-
-      setOpen(false);
-      resetForm();
-
-      // return response.data; // Backend'den dönen sonucu döndür
-      return { success: true }; // Geçici dönüş
     } catch (error) {
       console.error("Failed to save request:", error);
-      throw error;
+      toast.error("Failed to save request: " + (error.response?.data?.message || error.message));
     }
   };
-  
+
   const resetForm = () => {
     setRequestName("");
     setDescription("");
@@ -215,7 +223,7 @@ export default function SaveRequestModal({
                   ) : (
                     <>
                       {collections.map((collection) => (
-                        <SelectItem key={collection.id} value={collection.id}> {/* id kullanıldı */}
+                        <SelectItem key={collection.id} value={collection.id}>
                           {collection.name}
                         </SelectItem>
                       ))}

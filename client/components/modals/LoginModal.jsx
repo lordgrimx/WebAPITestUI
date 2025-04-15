@@ -35,15 +35,14 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
         return;
       }
 
-      if (result.requires2FA) {
-        setPendingUserId(result.userId);
-        setShow2FAModal(true);
-        toast.info("2FA verification required");
-      } else {
-        toast.success("Login successful!");
-        onClose();
-        window.location.reload();
+      toast.success("Login successful!");
+      onClose();
+      // Change this to use local storage or context instead of window reload
+      if (result.token) {
+        localStorage.setItem('token', result.token);
       }
+      window.location.reload();
+
     } catch (err) {
       setError(err.message);
       toast.error(err.message);

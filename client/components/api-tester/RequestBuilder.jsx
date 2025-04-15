@@ -758,45 +758,6 @@ export default function RequestBuilder({
       setIsValidatingUrl(false);
     }
   }, []);
-  // Fetch user session info from the server-side API endpoint
-  useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        // Oturum API'sine istek yap
-        const response = await fetch('/api/auth/session');
-        
-        // Status 401 ise sessizce ele al ve kullanıcı bilgilerini sıfırla
-        if (response.status === 401) {
-          console.log("RequestBuilder: User not logged in or session expired");
-          setCurrentUserID(null);
-          return; // Sessizce devam et
-        }
-        
-        // Diğer hata durumlarını kontrol et
-        if (!response.ok) {
-          console.error("RequestBuilder: Session API error:", response.status);
-          setCurrentUserID(null);
-          return;
-        }
-        
-        // Başarılı yanıtı işle
-        const data = await response.json();
-        if (data.success && data.userId) {
-          console.log("RequestBuilder: Session verified, setting user ID:", data.userId);
-          setCurrentUserID(data.userId);
-        } else {
-          console.error("RequestBuilder: Session verification failed:", data.error || 'No user ID returned');
-          setCurrentUserID(null);
-        }
-      } catch (error) {
-        console.error("RequestBuilder: Error fetching session:", error);
-        setCurrentUserID(null);
-      }
-    };
-
-    fetchSession();
-  }, []);// Runs once on component mount
-
 
   // Debounce URL updates and validation
   useEffect(() => {

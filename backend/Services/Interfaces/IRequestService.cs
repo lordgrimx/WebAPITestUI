@@ -10,5 +10,6 @@ namespace WebTestUI.Backend.Services.Interfaces
         Task<RequestDto> UpdateRequestAsync(int id, UpdateRequestDto model, string userId);
         Task<bool> DeleteRequestAsync(int id, string userId);
         Task<ExecuteRequestResultDto> ExecuteRequestAsync(ExecuteRequestDto model, string userId);
+        Task<IEnumerable<RequestDto>> GetCollectionRequestsAsync(int collectionId, string userId);
     }
 }
