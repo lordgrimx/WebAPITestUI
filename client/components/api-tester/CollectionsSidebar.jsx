@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
-import axios from "axios";
+import { authAxios } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -98,10 +98,8 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     const fetchCollections = async () => {
       setIsLoading(true);
       try {
-        // Update to use /api prefix which will be handled by the route.js
-        const response = await axios.get('/api/collections', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
+        // Using authAxios which automatically adds the token
+        const response = await authAxios.get('/collections');
         if (response.data) {
           setCollections(response.data);
         }
@@ -119,13 +117,9 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   // Memoize the fetch history function
   const fetchHistory = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('/api/history', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await authAxios.get('/history');
       if (response.data) {
+        console.log('History items received:', response.data);
         setHistoryItems(response.data);
       }
     } catch (error) {
@@ -141,22 +135,13 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   const handleAddCollection = async () => {
     if (newCollectionName.trim()) {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.post('/api/collections', {
+        const response = await authAxios.post('/collections', {
           name: newCollectionName.trim(),
           description: ""
-        }, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
         });
         
         if (response.data) {
-          const updatedCollections = await axios.get('/api/collections', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          const updatedCollections = await authAxios.get('/collections');
           setCollections(updatedCollections.data);
           toast.success("Collection added successfully");
         }
@@ -175,9 +160,9 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     e.stopPropagation();
     if (window.confirm("Bu koleksiyonu silmek istediğinizden emin misiniz? İçindeki tüm istekler de silinebilir.")) {
       try {
-        await axios.delete(`/api/collections/${collectionId}`);
+        await authAxios.delete(`/collections/${collectionId}`);
         // Koleksiyonları güncellemek için yeniden çağır
-        const updatedCollections = await axios.get('/api/collections/user');
+        const updatedCollections = await authAxios.get('/collections');
         setCollections(updatedCollections.data);
       } catch (err) {
         console.error("Failed to delete collection:", err);
@@ -190,9 +175,9 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     e.stopPropagation();
     if (window.confirm("Bu isteği silmek istediğinizden emin misiniz?")) {
       try {
-        await axios.delete(`/api/requests/${requestId}`);
+        await authAxios.delete(`/requests/${requestId}`);
         // Koleksiyonları güncellemek için yeniden çağır (içinde istekler de olacak)
-        const updatedCollections = await axios.get('/api/collections/user');
+        const updatedCollections = await authAxios.get('/collections');
         setCollections(updatedCollections.data);
       } catch (err) {
         console.error("Failed to delete request:", err);
@@ -203,24 +188,34 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   
   const handleDeleteHistoryEntry = async (e, historyId) => {
     e.stopPropagation();
+    
+    // Check if historyId is defined
+    if (!historyId) {
+      console.error("Cannot delete history entry: ID is undefined");
+      toast.error("Failed to delete history entry: ID is missing");
+      return;
+    }
+    
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`/api/history/${historyId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      // Refresh history with auth token
-      const updatedHistory = await axios.get('/api/history/recent', {
-        params: { limit: 10 },
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      console.log(`Attempting to delete history with ID: ${historyId}`);
+      
+      // Make the API call to the correct endpoint format
+      await authAxios.delete(`/history/${historyId}`);
+      
+      // Refresh history - authAxios automatically adds the token
+      const updatedHistory = await authAxios.get('/history');
       setHistoryItems(updatedHistory.data);
+      toast.success("History entry deleted successfully");
     } catch (err) {
       console.error("Failed to delete history entry:", err);
-      toast.error("Failed to delete history entry: " + (err.response?.data?.message || err.message || "Unknown error"));
+      console.error("Error details:", err.response?.data);
+      
+      // If we get a 405 error, it might be a routing issue with Next.js
+      if (err.response?.status === 405) {
+        toast.error("Server doesn't allow deletion through this route. Please check API configuration.");
+      } else {
+        toast.error("Failed to delete history entry: " + (err.response?.data?.message || err.message || "Unknown error"));
+      }
     }
   };
 
@@ -315,9 +310,9 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
               {!isLoading && filteredCollections.length === 0 && !searchTerm && (
                 <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No collections yet. Click "+ New Collection" to add one.</p>
               )}
-              {!isLoading && filteredCollections.map((collection) => (
+              {!isLoading && filteredCollections.map((collection,index) => (
                 <CollectionItem
-                  key={collection._id}
+                  key={index}
                   collection={collection}
                   setSelectedRequestId={setSelectedRequestId}
                   onDeleteCollection={handleDeleteCollection}
@@ -337,7 +332,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
               )}
               {historyItems && historyItems.map((item) => (
                 <HistoryItem
-                  key={item._id}
+                  key={item.id}
                   item={item}
                   // Pass onHistorySelect down to HistoryItem
                   onHistorySelect={onHistorySelect}
@@ -366,26 +361,26 @@ const CollectionItem = React.memo(function CollectionItem({
   // Fetch requests for this collection
   useEffect(() => {
     const fetchRequests = async () => {
-      if (!collection?._id) return;
+      if (!collection?.id) return;
       
       setIsLoading(true);
       try {
-        const response = await axios.get(`/api/requests/collection/${collection._id}`);
+        const response = await authAxios.get(`/requests/collection/${collection.id}`);
         if (response.data) {
           setRequests(response.data);
         }
       } catch (error) {
-        console.error(`Error fetching requests for collection ${collection._id}:`, error);
+        console.error(`Error fetching requests for collection ${collection.id}:`, error);
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchRequests();
-  }, [collection?._id]);
+  }, [collection?.id]);
 
   return (
-    <AccordionItem value={collection._id} className="border-b-0 mb-1">
+    <AccordionItem value={collection.id} className="border-b-0 mb-1">
       <div className="flex items-center">
         <AccordionTrigger
           className={`flex-1 flex justify-between items-center w-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} px-2 py-1.5 rounded text-sm font-medium text-left [&[data-state=open]>span>svg:last-child]:rotate-90`}
@@ -399,7 +394,7 @@ const CollectionItem = React.memo(function CollectionItem({
           className={`px-2 py-1.5 cursor-pointer ${darkMode ? 'hover:text-red-400' : 'hover:text-red-500'}`}
           onClick={(e) => {
             e.stopPropagation();
-            onDeleteCollection(e, collection._id);
+            onDeleteCollection(e, collection.id);
           }}
         >
           <Trash2 className="h-4 w-4" />
@@ -418,12 +413,12 @@ const CollectionItem = React.memo(function CollectionItem({
             : style.className;
           return (
             <div
-              key={request._id}
+              key={request.id}
               className={`flex items-center justify-between group ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} px-2 py-1.5 rounded cursor-pointer text-sm`}
             >
               <div
                 className="flex items-center truncate flex-1 mr-2"
-                onClick={() => setSelectedRequestId(request._id)}
+                onClick={() => setSelectedRequestId(request.id)}
               >
                 <Badge variant={style.variant} className={`mr-2 w-14 justify-center flex-shrink-0 ${badgeClassName}`}>
                   {request.method.toUpperCase()}
@@ -434,7 +429,7 @@ const CollectionItem = React.memo(function CollectionItem({
                 className={`h-6 w-6 opacity-0 group-hover:opacity-100 ${darkMode ? 'hover:text-red-400' : 'hover:text-red-500'} flex items-center justify-center cursor-pointer`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDeleteRequest(e, request._id);
+                  onDeleteRequest(e, request.id);
                 }}
               >
                 <Trash2 className="h-3 w-3" />
@@ -446,30 +441,39 @@ const CollectionItem = React.memo(function CollectionItem({
     </AccordionItem>
   );
 }, (prevProps, nextProps) => {
-  return prevProps.collection._id === nextProps.collection._id;
+  return prevProps.collection.id === nextProps.collection.id;
 });
 
 // Accept onHistorySelect and darkMode props in HistoryItem
 const HistoryItem = React.memo(function HistoryItem({
   item,
-  onHistorySelect, // Use onHistorySelect instead of setSelectedRequestId for click action
+  onHistorySelect,
   onDeleteHistoryEntry,
-  darkMode // Receive darkMode
+  darkMode
 }) {
   const style = getMethodStyle(item.method);
   const timeAgo = formatTimeAgo(item.timestamp);
   const displayPath = getPathFromUrl(item.url);
+  
+  // Extract ID from item, checking for different property names
+  const itemId = item._id || item.id || item.historyId;
+  
+  // Log the item structure to help debug
+  if (!itemId) {
+    console.warn("History item missing ID:", item);
+  }
+  
   // Adjust badge styles for dark mode
   const badgeClassName = darkMode
     ? style.className.replace('bg-', 'dark:bg-').replace('text-', 'dark:text-').replace('hover:bg-', 'dark:hover:bg-').replace('border-', 'dark:border-')
     : style.className;
 
   return (
-    <AccordionItem value={item._id} className="border-b-0 mb-1">
+    <AccordionItem value={itemId || 'no-id'} className="border-b-0 mb-1">
       {/* Call onHistorySelect with the full item when clicked */}
       <div
         className={`flex items-center justify-between group ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} px-2 py-1.5 rounded cursor-pointer text-sm`}
-        onClick={() => onHistorySelect(item)} // Changed onClick handler
+        onClick={() => onHistorySelect(item)}
       >
         <div className="flex items-center truncate flex-1 mr-2">
           <Badge variant={style.variant} className={`mr-2 w-14 justify-center flex-shrink-0 ${badgeClassName}`}>
@@ -485,7 +489,13 @@ const HistoryItem = React.memo(function HistoryItem({
             className={`h-6 w-6 opacity-0 group-hover:opacity-100 ${darkMode ? 'hover:text-red-400' : 'hover:text-red-500'}`}
             onClick={(e) => {
               e.stopPropagation();
-              onDeleteHistoryEntry(e, item._id);
+              // Only call delete if we have an ID
+              if (itemId) {
+                onDeleteHistoryEntry(e, itemId);
+              } else {
+                console.error("Cannot delete history item - no ID found");
+                toast.error("Cannot delete history item - ID is missing");
+              }
             }}
           >
             <Trash2 className="h-3 w-3" />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { authAxios } from "@/lib/auth-context";
 import { toast } from "react-toastify";
 import {
   Dialog,
@@ -46,12 +46,7 @@ export default function SaveRequestModal({
     const fetchCollections = async () => {
       setIsLoadingCollections(true);
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('/api/collections', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await authAxios.get('/collections');
         
         if (response.data) {
           setCollections(response.data);
@@ -80,19 +75,13 @@ export default function SaveRequestModal({
 
   const handleSaveRequest = async () => {
     try {
-      const token = localStorage.getItem('token');
       let collectionIdToSave = selectedCollectionState;
 
       if (showNewCollectionInput && newCollectionName.trim()) {
-        const newCollectionResponse = await axios.post('/api/collections', 
+        const newCollectionResponse = await authAxios.post('/collections', 
           { 
             name: newCollectionName.trim(),
             description: "" 
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
           }
         );
         
@@ -105,24 +94,27 @@ export default function SaveRequestModal({
         return;
       }
 
+      console.log("initialData:", initialData);
+
       const requestPayload = {
         collectionId: collectionIdToSave,
         name: requestName,
         description: description,
         method: initialData?.method || 'GET',
         url: initialData?.url || '',
-        headers: initialData?.headers || [],
-        queryParams: initialData?.params || [],
+        headers: initialData?.headers || {},
+        params: initialData?.params || {},
         body: initialData?.body || '',
-        isFavorite: addToFavorites
+        isFavorite: addToFavorites,
+        authType: initialData?.authType || 'none',
+        authConfig: initialData?.authConfig || '',
+        tests: initialData?.tests || ''
       };
 
-      const response = await axios.post('/api/requests', requestPayload, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      console.log("Request payload being sent:", requestPayload);
+
+      const response = await authAxios.post('/Requests', requestPayload);
+      console.log("Response from save request:", response);
 
       if (response.data) {
         toast.success("Request saved successfully");

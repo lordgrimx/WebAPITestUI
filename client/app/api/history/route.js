@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
+import { authAxios } from '@/lib/auth-context';
 
 export async function GET(request) {
     try {
@@ -13,12 +14,8 @@ export async function GET(request) {
             );
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5296'}/api/History`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
+        // Using authAxios instead of fetch
+        const response = await authAxios.get('/History', {
         });
 
         const data = await response.json();
@@ -54,25 +51,17 @@ export async function POST(request) {
 
         const body = await request.json();
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5296'}/api/History`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body),
-        });
+        // Using authAxios instead of fetch
+        const response = await authAxios.post('/History', body);
 
-        if (!response.ok) {
-            const errorData = await response.json();
+        if (!response.data) {
             return NextResponse.json(
-                { success: false, message: errorData.message || 'Failed to record history' },
+                { success: false, message: 'Failed to record history' },
                 { status: response.status }
             );
         }
 
-        const data = await response.json();
-        return NextResponse.json(data);
+        return NextResponse.json(response.data);
     } catch (error) {
         console.error('Record history API error:', error);
         return NextResponse.json(
