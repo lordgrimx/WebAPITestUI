@@ -76,7 +76,8 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                var historyEntry = await _historyService.GetHistoryEntryByIdAsync(id, userId);
+                // Arayüzdeki metot adıyla eşleştir: GetHistoryByIdAsync
+                var historyEntry = await _historyService.GetHistoryByIdAsync(id, userId);
                 if (historyEntry == null)
                 {
                     return NotFound(new { message = "Geçmiş kaydı bulunamadı." });
@@ -123,7 +124,8 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                var result = await _historyService.DeleteHistoryEntryAsync(id, userId);
+                // Arayüzdeki metot adıyla eşleştir: DeleteHistoryAsync
+                var result = await _historyService.DeleteHistoryAsync(id, userId);
                 if (!result)
                 {
                     return NotFound(new { message = "Geçmiş kaydı bulunamadı veya bu işlem için yetkiniz yok." });

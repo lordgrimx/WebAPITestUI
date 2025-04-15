@@ -1,35 +1,49 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Identity; // Add Identity namespace
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using WebTestUI.Backend.Data.Entities;
 using WebTestUI.Backend.Services.Interfaces;
+using System.Threading.Tasks; // Add Task namespace
 
 namespace WebTestUI.Backend.Services
 {
     public class JwtService : IJwtService
     {
         private readonly IConfiguration _configuration;
+        private readonly UserManager<ApplicationUser> _userManager; // Add UserManager field
 
-        public JwtService(IConfiguration configuration)
+        public JwtService(IConfiguration configuration, UserManager<ApplicationUser> userManager) // Inject UserManager
         {
             _configuration = configuration;
+            _userManager = userManager; // Assign UserManager
         }
 
-        public string GenerateToken(ApplicationUser user)
+        // Make async and rename to match interface
+        public async Task<string> GenerateTokenAsync(ApplicationUser user)
         {
             var key = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_configuration["JWT:Key"] ?? throw new InvalidOperationException("JWT:Key is not configured")));
             var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+            // Get roles using UserManager
+            var roles = await _userManager.GetRolesAsync(user);
+
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.Name ?? string.Empty),
+                new Claim(ClaimTypes.Name, user.UserName ?? string.Empty), // Use UserName from IdentityUser
                 new Claim(ClaimTypes.Email, user.Email ?? string.Empty),
-                new Claim(ClaimTypes.Role, user.Roles?.FirstOrDefault() ?? "User")
+                // Removed incorrect role claim
             };
+
+            // Add role claims correctly
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {

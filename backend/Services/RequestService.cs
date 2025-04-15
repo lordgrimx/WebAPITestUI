@@ -381,10 +381,10 @@ namespace WebTestUI.Backend.Services
                     RequestId = null, // Optional: Can be set to a RequestId if needed
                     Method = request.Method,
                     Url = request.Url,
-                    Status = (int)response.StatusCode,
+                    StatusCode = (int)response.StatusCode, // Changed Status to StatusCode
                     Duration = duration,
-                    ResponseSize = responseSize,
-                    Response = responseContent
+                    Size = responseSize, // Changed ResponseSize to Size
+                    ResponseBody = responseContent // Changed Response to ResponseBody
                 };
 
                 await _historyService.RecordHistoryAsync(historyDto, userId);

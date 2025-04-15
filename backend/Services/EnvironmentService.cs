@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json; // Added for JSON handling
 using WebTestUI.Backend.Data;
 using WebTestUI.Backend.Data.Entities;
 using WebTestUI.Backend.DTOs;
@@ -23,21 +24,13 @@ namespace WebTestUI.Backend.Services
         {
             try
             {
-                var environments = await _dbContext.EnvironmentVariables
+                var environments = await _dbContext.Environments // Corrected DbSet name
                     .Where(e => e.UserId == userId)
                     .OrderBy(e => e.Name)
-                    .Select(e => new EnvironmentDto
-                    {
-                        Id = e.Id,
-                        Name = e.Name,
-                        IsActive = e.IsActive,
-                        Variables = e.Variables,
-                        CreatedAt = e.CreatedAt,
-                        UpdatedAt = e.UpdatedAt
-                    })
-                    .ToListAsync();
+                    .ToListAsync(); // Fetch entities first
 
-                return environments;
+                // Map entities to DTOs using the helper method
+                return environments.Select(MapToDto).ToList();
             }
             catch (Exception ex)
             {
@@ -50,20 +43,12 @@ namespace WebTestUI.Backend.Services
         {
             try
             {
-                var environment = await _dbContext.EnvironmentVariables
+                var environment = await _dbContext.Environments // Corrected DbSet name
                     .Where(e => e.UserId == userId && e.IsActive)
-                    .Select(e => new EnvironmentDto
-                    {
-                        Id = e.Id,
-                        Name = e.Name,
-                        IsActive = e.IsActive,
-                        Variables = e.Variables,
-                        CreatedAt = e.CreatedAt,
-                        UpdatedAt = e.UpdatedAt
-                    })
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync(); // Fetch entity first
 
-                return environment;
+                // Map entity to DTO using the helper method, handle null case
+                return environment == null ? null : MapToDto(environment);
             }
             catch (Exception ex)
             {
@@ -76,20 +61,12 @@ namespace WebTestUI.Backend.Services
         {
             try
             {
-                var environment = await _dbContext.EnvironmentVariables
+                var environment = await _dbContext.Environments // Corrected DbSet name
                     .Where(e => e.Id == id && e.UserId == userId)
-                    .Select(e => new EnvironmentDto
-                    {
-                        Id = e.Id,
-                        Name = e.Name,
-                        IsActive = e.IsActive,
-                        Variables = e.Variables,
-                        CreatedAt = e.CreatedAt,
-                        UpdatedAt = e.UpdatedAt
-                    })
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync(); // Fetch entity first
 
-                return environment;
+                // Map entity to DTO using the helper method, handle null case
+                return environment == null ? null : MapToDto(environment);
             }
             catch (Exception ex)
             {
@@ -102,10 +79,13 @@ namespace WebTestUI.Backend.Services
         {
             try
             {
+                // Serialize the dictionary to JSON string for storage
+                var variablesJson = JsonSerializer.Serialize(model.Variables ?? new Dictionary<string, string>());
+
                 var environment = new EnvironmentVariable
                 {
                     Name = model.Name,
-                    Variables = model.Variables ?? new Dictionary<string, string>(),
+                    Variables = variablesJson, // Store as JSON string
                     IsActive = model.IsActive,
                     UserId = userId,
                     CreatedAt = DateTime.UtcNow,
@@ -118,18 +98,11 @@ namespace WebTestUI.Backend.Services
                     await DeactivateAllEnvironmentsAsync(userId);
                 }
 
-                _dbContext.EnvironmentVariables.Add(environment);
+                _dbContext.Environments.Add(environment); // Corrected DbSet name
                 await _dbContext.SaveChangesAsync();
 
-                return new EnvironmentDto
-                {
-                    Id = environment.Id,
-                    Name = environment.Name,
-                    IsActive = environment.IsActive,
-                    Variables = environment.Variables,
-                    CreatedAt = environment.CreatedAt,
-                    UpdatedAt = environment.UpdatedAt
-                };
+                // Map the created entity back to DTO using helper
+                return MapToDto(environment);
             }
             catch (Exception ex)
             {
@@ -142,7 +115,7 @@ namespace WebTestUI.Backend.Services
         {
             try
             {
-                var environment = await _dbContext.EnvironmentVariables
+                var environment = await _dbContext.Environments // Corrected DbSet name
                     .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
                 if (environment == null)
@@ -157,7 +130,8 @@ namespace WebTestUI.Backend.Services
 
                 if (model.Variables != null)
                 {
-                    environment.Variables = model.Variables;
+                    // Serialize the dictionary to JSON string for storage
+                    environment.Variables = JsonSerializer.Serialize(model.Variables);
                 }
 
                 if (model.IsActive.HasValue && model.IsActive.Value && !environment.IsActive)
@@ -175,15 +149,8 @@ namespace WebTestUI.Backend.Services
 
                 await _dbContext.SaveChangesAsync();
 
-                return new EnvironmentDto
-                {
-                    Id = environment.Id,
-                    Name = environment.Name,
-                    IsActive = environment.IsActive,
-                    Variables = environment.Variables,
-                    CreatedAt = environment.CreatedAt,
-                    UpdatedAt = environment.UpdatedAt
-                };
+                // Map the updated entity back to DTO using helper
+                return MapToDto(environment);
             }
             catch (Exception ex)
             {
@@ -196,7 +163,7 @@ namespace WebTestUI.Backend.Services
         {
             try
             {
-                var environment = await _dbContext.EnvironmentVariables
+                var environment = await _dbContext.Environments // Corrected DbSet name
                     .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
                 if (environment == null)
@@ -204,7 +171,7 @@ namespace WebTestUI.Backend.Services
                     return false;
                 }
 
-                _dbContext.EnvironmentVariables.Remove(environment);
+                _dbContext.Environments.Remove(environment); // Corrected DbSet name
                 await _dbContext.SaveChangesAsync();
 
                 return true;
@@ -220,7 +187,7 @@ namespace WebTestUI.Backend.Services
         {
             try
             {
-                var environment = await _dbContext.EnvironmentVariables
+                var environment = await _dbContext.Environments // Corrected DbSet name
                     .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
                 if (environment == null)
@@ -248,7 +215,7 @@ namespace WebTestUI.Backend.Services
 
         private async Task DeactivateAllEnvironmentsAsync(string userId)
         {
-            var environments = await _dbContext.EnvironmentVariables
+            var environments = await _dbContext.Environments // Corrected DbSet name
                 .Where(e => e.UserId == userId && e.IsActive)
                 .ToListAsync();
 
@@ -257,6 +224,38 @@ namespace WebTestUI.Backend.Services
                 env.IsActive = false;
                 env.UpdatedAt = DateTime.UtcNow;
             }
+        }
+
+        // Helper method to map EnvironmentVariable entity to EnvironmentDto
+        private EnvironmentDto MapToDto(EnvironmentVariable environment)
+        {
+            // Deserialize JSON string to Dictionary for the DTO
+            var variablesDict = new Dictionary<string, string>();
+            if (!string.IsNullOrEmpty(environment.Variables))
+            {
+                try
+                {
+                    // Ensure null is handled gracefully, returning an empty dictionary
+                    variablesDict = JsonSerializer.Deserialize<Dictionary<string, string>>(environment.Variables)
+                                    ?? new Dictionary<string, string>();
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogError(ex, "Failed to deserialize Environment Variables for ID {EnvironmentId}. Variables string: {Variables}", environment.Id, environment.Variables);
+                    // Return empty dictionary or handle error as appropriate for your application
+                    variablesDict = new Dictionary<string, string>();
+                }
+            }
+
+            return new EnvironmentDto
+            {
+                Id = environment.Id,
+                Name = environment.Name,
+                IsActive = environment.IsActive,
+                Variables = variablesDict, // Use deserialized dictionary
+                CreatedAt = environment.CreatedAt,
+                UpdatedAt = environment.UpdatedAt
+            };
         }
     }
 }

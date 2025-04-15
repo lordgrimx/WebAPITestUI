@@ -42,3 +42,5 @@ next-env.d.ts
 
 /app/mock
 /mock
+/backend/obj
+/backend/bin

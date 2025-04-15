@@ -41,7 +41,7 @@ namespace WebTestUI.Backend.Data
                 .WithMany(c => c.Requests)
                 .HasForeignKey(r => r.CollectionId)
                 .IsRequired(false)  // Optional relationship - a request can exist without a collection
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.ClientSetNull); // Changed from SetNull to ClientSetNull
 
             // History
             modelBuilder.Entity<History>()

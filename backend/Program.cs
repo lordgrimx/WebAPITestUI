@@ -2,11 +2,15 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Models; // Already present
 using System.Text;
 using WebTestUI.Backend.Data;
+using WebTestUI.Backend.Data.Entities; // Add this for ApplicationUser
 using WebTestUI.Backend.Services;
 using WebTestUI.Backend.Services.Interfaces;
+// Add Swashbuckle using directives if they are missing implicitly
+// using Swashbuckle.AspNetCore.SwaggerGen;
+// using Swashbuckle.AspNetCore.SwaggerUI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -134,5 +138,47 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Seed roles
+using (var scope = app.Services.CreateScope())
+{
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(); // Optional: If you need UserManager too
+    string[] roleNames = { "ADMIN", "USER" };
+    IdentityResult roleResult;
+
+    foreach (var roleName in roleNames)
+    {
+        var roleExist = await roleManager.RoleExistsAsync(roleName);
+        if (!roleExist)
+        {
+            // Create the roles and seed them to the database
+            roleResult = await roleManager.CreateAsync(new IdentityRole(roleName));
+            // Log errors if needed: if (!roleResult.Succeeded) { ... }
+        }
+    }
+
+    // Optional: Create a default admin user if it doesn't exist
+    var adminEmail = builder.Configuration["DefaultAdmin:Email"] ?? "admin@example.com";
+    var adminPassword = builder.Configuration["DefaultAdmin:Password"] ?? "Admin@123"; // Use a strong password from config!
+    var adminUser = await userManager.FindByEmailAsync(adminEmail);
+    if (adminUser == null)
+    {
+        adminUser = new ApplicationUser
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            Name = "Admin User",
+            EmailConfirmed = true // Assuming admin email is confirmed
+        };
+        var createAdminResult = await userManager.CreateAsync(adminUser, adminPassword);
+        if (createAdminResult.Succeeded)
+        {
+            await userManager.AddToRoleAsync(adminUser, "ADMIN");
+        }
+        // Log errors if needed: else { ... }
+    }
+}
+
 
 app.Run();

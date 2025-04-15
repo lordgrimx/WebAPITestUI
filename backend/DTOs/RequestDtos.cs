@@ -5,6 +5,7 @@ namespace WebTestUI.Backend.DTOs
     public class RequestDto
     {
         public int Id { get; set; }
+        public string UserId { get; set; } // Added UserId
         public int? CollectionId { get; set; }
         public string CollectionName { get; set; }
         public string Name { get; set; }
@@ -109,4 +110,27 @@ namespace WebTestUI.Backend.DTOs
         public int Duration { get; set; }
         public int Size { get; set; }
     }
+
+    // --- Added Auth DTOs ---
+    public class BasicAuthDto
+    {
+        public string Username { get; set; }
+        public string Password { get; set; }
+    }
+
+    public class BearerAuthDto
+    {
+        public string Token { get; set; }
+    }
+
+    public class ApiKeyAuthDto
+    {
+        [Required]
+        public string Key { get; set; }
+        [Required]
+        public string Value { get; set; }
+        [Required]
+        public string AddTo { get; set; } // "header" or "query"
+    }
+    // --- End Added Auth DTOs ---
 }

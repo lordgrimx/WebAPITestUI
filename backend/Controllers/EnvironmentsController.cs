@@ -44,6 +44,7 @@ namespace WebTestUI.Backend.Controllers
             }
         }
 
+        /*
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveEnvironment()
         {
@@ -55,7 +56,9 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                var environment = await _environmentService.GetActiveEnvironmentAsync(userId);
+                // HATA: IEnvironmentService'de GetActiveEnvironmentAsync metodu yok.
+                // var environment = await _environmentService.GetActiveEnvironmentAsync(userId);
+                var environment = (EnvironmentDto)null; // Geçici olarak null döndür
                 if (environment == null)
                 {
                     return NotFound(new { message = "Aktif ortam bulunamadı." });
@@ -69,6 +72,7 @@ namespace WebTestUI.Backend.Controllers
                 return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
             }
         }
+        */
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetEnvironmentById(int id)
@@ -169,6 +173,7 @@ namespace WebTestUI.Backend.Controllers
             }
         }
 
+        /*
         [HttpPost("{id}/activate")]
         public async Task<IActionResult> ActivateEnvironment(int id)
         {
@@ -180,7 +185,9 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                var result = await _environmentService.ActivateEnvironmentAsync(id, userId);
+                // HATA: IEnvironmentService'de ActivateEnvironmentAsync metodu yok.
+                // var result = await _environmentService.ActivateEnvironmentAsync(id, userId);
+                var result = false; // Geçici olarak false döndür
                 if (!result)
                 {
                     return NotFound(new { message = "Ortam bulunamadı veya bu işlem için yetkiniz yok." });
@@ -194,5 +201,6 @@ namespace WebTestUI.Backend.Controllers
                 return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
             }
         }
+        */
     }
 }

@@ -1,11 +1,13 @@
 using System.Security.Claims;
+using System.Security.Claims;
+using System.Threading.Tasks; // Add Task namespace
 using WebTestUI.Backend.Data.Entities;
 
 namespace WebTestUI.Backend.Services.Interfaces
 {
     public interface IJwtService
     {
-        string GenerateToken(ApplicationUser user);
+        Task<string> GenerateTokenAsync(ApplicationUser user); // Make async
         bool ValidateToken(string token, out ClaimsPrincipal claimsPrincipal);
     }
 }

@@ -14,6 +14,7 @@ namespace WebTestUI.Backend.DTOs
         public DateTime Timestamp { get; set; }
         public int? RequestId { get; set; }
         public string RequestName { get; set; }
+        public string ResponseBody { get; set; } // Added ResponseBody
     }
 
     public class RecordHistoryDto

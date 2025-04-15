@@ -70,8 +70,8 @@ namespace WebTestUI.Backend.Services
                 Success = true,
                 Message = "Kullanıcı başarıyla oluşturuldu.",
                 UserId = newUser.Id,
-                Token = _jwtService.GenerateToken(newUser),
-                User = MapToUserDto(newUser)
+                Token = await _jwtService.GenerateTokenAsync(newUser), // Use await and async method
+                User = await MapToUserDtoAsync(newUser) // Use await and async helper
             };
         }
 
@@ -123,9 +123,9 @@ namespace WebTestUI.Backend.Services
             {
                 Success = true,
                 Message = "Giriş başarılı.",
-                Token = _jwtService.GenerateToken(user),
+                Token = await _jwtService.GenerateTokenAsync(user), // Use await and async method
                 UserId = user.Id,
-                User = MapToUserDto(user)
+                User = await MapToUserDtoAsync(user) // Use await and async helper
             };
         }
 
@@ -169,9 +169,9 @@ namespace WebTestUI.Backend.Services
             {
                 Success = true,
                 Message = "Giriş başarılı.",
-                Token = _jwtService.GenerateToken(user),
+                Token = await _jwtService.GenerateTokenAsync(user), // Use await and async method
                 UserId = user.Id,
-                User = MapToUserDto(user)
+                User = await MapToUserDtoAsync(user) // Use await and async helper
             };
         }
 
@@ -199,15 +199,16 @@ namespace WebTestUI.Backend.Services
             return true;
         }
 
-        // Helper metot: ApplicationUser'ı UserDto'ya dönüştürür
-        private UserDto MapToUserDto(ApplicationUser user)
+        // Helper metot: ApplicationUser'ı UserDto'ya dönüştürür (Asenkron)
+        private async Task<UserDto> MapToUserDtoAsync(ApplicationUser user)
         {
+            var roles = await _userManager.GetRolesAsync(user);
             return new UserDto
             {
                 Id = user.Id,
                 Name = user.Name,
                 Email = user.Email,
-                Role = _userManager.GetRolesAsync(user).Result.FirstOrDefault() ?? "User",
+                Role = roles.FirstOrDefault() ?? "User", // Use await and remove .Result
                 ProfileImage = user.ProfileImage,
                 Phone = user.Phone,
                 Address = user.Address,

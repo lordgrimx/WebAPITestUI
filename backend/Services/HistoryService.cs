@@ -60,7 +60,8 @@ namespace WebTestUI.Backend.Services
         }
 
         // Implement the missing interface methods
-        public async Task<HistoryDto> GetHistoryByIdAsync(int id, string userId)
+        // Return nullable DTO for better handling of not found cases
+        public async Task<HistoryDto?> GetHistoryByIdAsync(int id, string userId)
         {
             try
             {
@@ -68,25 +69,39 @@ namespace WebTestUI.Backend.Services
                     .Include(h => h.Request)
                     .FirstOrDefaultAsync(h => h.Id == id && h.UserId == userId);
 
-                if (historyEntry == null)
-                {
-                    return null;
-                }
-
-                return MapToHistoryDto(historyEntry);
+                return historyEntry == null ? null : MapToHistoryDto(historyEntry);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Geçmiş kaydı getirilirken bir hata oluştu: {HistoryId}, {UserId}", id, userId);
-                throw;
+                _logger.LogError(ex, "Geçmiş kaydı ID {HistoryId} getirilirken bir hata oluştu (Kullanıcı: {UserId})", id, userId);
+                throw; // Re-throw the exception to allow higher layers to handle it
             }
         }
 
-        // Rename to match the interface
+        // Combined DeleteHistoryAsync and DeleteHistoryEntryAsync
         public async Task<bool> DeleteHistoryAsync(int id, string userId)
         {
-            // Reuse existing implementation
-            return await DeleteHistoryEntryAsync(id, userId);
+             try
+            {
+                var historyEntry = await _dbContext.HistoryEntries
+                    .FirstOrDefaultAsync(h => h.Id == id && h.UserId == userId);
+
+                if (historyEntry == null)
+                {
+                    _logger.LogWarning("Silinecek geçmiş kaydı bulunamadı: ID {HistoryId}, Kullanıcı: {UserId}", id, userId);
+                    return false; // Indicate that the entry was not found
+                }
+
+                _dbContext.HistoryEntries.Remove(historyEntry);
+                await _dbContext.SaveChangesAsync();
+                _logger.LogInformation("Geçmiş kaydı başarıyla silindi: ID {HistoryId}, Kullanıcı: {UserId}", id, userId);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Geçmiş kaydı ID {HistoryId} silinirken bir hata oluştu (Kullanıcı: {UserId})", id, userId);
+                throw; // Re-throw the exception
+            }
         }
 
         public async Task<bool> ClearHistoryAsync(string userId)
@@ -118,72 +133,59 @@ namespace WebTestUI.Backend.Services
         {
             try
             {
-                // İsteği kontrol et
+                // Check if the associated request exists and belongs to the user
                 if (model.RequestId.HasValue)
                 {
-                    var request = await _dbContext.Requests
-                        .FirstOrDefaultAsync(r => r.Id == model.RequestId.Value && r.UserId == userId);
+                    var requestExists = await _dbContext.Requests
+                        .AnyAsync(r => r.Id == model.RequestId.Value && r.UserId == userId);
 
-                    if (request == null)
+                    if (!requestExists)
                     {
-                        throw new InvalidOperationException("Belirtilen istek bulunamadı veya erişim izniniz yok.");
+                        _logger.LogWarning("Geçmiş kaydı oluşturulurken ilişkili istek bulunamadı veya kullanıcıya ait değil: RequestId {RequestId}, Kullanıcı: {UserId}", model.RequestId.Value, userId);
+                        // Depending on requirements, you might throw an exception or handle this differently
+                        // For now, let's proceed but log a warning. Consider if RequestId should be nullable in History if this is allowed.
+                        // throw new InvalidOperationException($"Request with ID {model.RequestId.Value} not found or access denied for user {userId}.");
                     }
                 }
 
                 var historyEntry = new History
                 {
                     UserId = userId,
-                    RequestId = model.RequestId,
+                    RequestId = model.RequestId, // Keep RequestId even if validation fails, or set to null based on requirements
                     Method = model.Method,
                     Url = model.Url,
-                    Status = model.Status,
+                    Status = model.StatusCode, // Fix: Use StatusCode from DTO
                     Duration = model.Duration,
-                    ResponseSize = model.ResponseSize,
-                    Response = model.Response,
+                    ResponseSize = model.Size, // Fix: Use Size from DTO
+                    Response = model.ResponseBody, // Fix: Use ResponseBody from DTO
                     Timestamp = DateTime.UtcNow
                 };
 
                 _dbContext.HistoryEntries.Add(historyEntry);
                 await _dbContext.SaveChangesAsync();
 
-                // İlişkili isteği yükle
+                // Load the related request if it exists to include its name in the DTO
                 if (historyEntry.RequestId.HasValue)
                 {
+                    // Use explicit loading to avoid potential N+1 issues if called in a loop elsewhere
                     await _dbContext.Entry(historyEntry).Reference(h => h.Request).LoadAsync();
                 }
-
+                 _logger.LogInformation("Geçmiş kaydı başarıyla oluşturuldu: ID {HistoryId}, Kullanıcı: {UserId}", historyEntry.Id, userId);
                 return MapToHistoryDto(historyEntry);
             }
-            catch (Exception ex)
+            catch (DbUpdateException dbEx) // More specific exception handling
             {
-                _logger.LogError(ex, "Geçmiş kaydı oluşturulurken bir hata oluştu: {UserId}", userId);
+                 _logger.LogError(dbEx, "Veritabanı güncelleme hatası oluştu geçmiş kaydı oluşturulurken (Kullanıcı: {UserId})", userId);
+                 throw; // Re-throw or handle appropriately
+            }
+            catch (Exception ex) // Catch broader exceptions
+            {
+                _logger.LogError(ex, "Geçmiş kaydı oluşturulurken beklenmedik bir hata oluştu (Kullanıcı: {UserId})", userId);
                 throw;
             }
         }
 
-        public async Task<bool> DeleteHistoryEntryAsync(int id, string userId)
-        {
-            try
-            {
-                var historyEntry = await _dbContext.HistoryEntries
-                    .FirstOrDefaultAsync(h => h.Id == id && h.UserId == userId);
-
-                if (historyEntry == null)
-                {
-                    return false;
-                }
-
-                _dbContext.HistoryEntries.Remove(historyEntry);
-                await _dbContext.SaveChangesAsync();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Geçmiş kaydı silinirken bir hata oluştu: {HistoryId}, {UserId}", id, userId);
-                throw;
-            }
-        }
+        // Removed duplicate DeleteHistoryEntryAsync method
 
         public async Task<int> ClearOldHistoryAsync(string userId, DateTime olderThan)
         {
@@ -220,11 +222,11 @@ namespace WebTestUI.Backend.Services
                 RequestName = history.Request?.Name,
                 Method = history.Method,
                 Url = history.Url,
-                Status = history.Status,
-                Duration = history.Duration,
-                ResponseSize = history.ResponseSize,
+                StatusCode = history.Status ?? 0, // Handle potential null with default value
+                Duration = history.Duration ?? 0, // Handle potential null with default value
+                Size = history.ResponseSize ?? 0, // Handle potential null with default value
                 Timestamp = history.Timestamp,
-                Response = history.Response
+                ResponseBody = history.Response // Changed Response to ResponseBody
             };
         }
     }
