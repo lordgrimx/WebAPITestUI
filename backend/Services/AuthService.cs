@@ -199,6 +199,26 @@ namespace WebTestUI.Backend.Services
             return true;
         }
 
+        public async Task<AuthResultDto> GetCurrentUserAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return new AuthResultDto
+                {
+                    Success = false,
+                    Message = "Kullanıcı bulunamadı."
+                };
+            }
+
+            return new AuthResultDto
+            {
+                Success = true,
+                UserId = user.Id,
+                User = await MapToUserDtoAsync(user)
+            };
+        }
+
         // Helper metot: ApplicationUser'ı UserDto'ya dönüştürür (Asenkron)
         private async Task<UserDto> MapToUserDtoAsync(ApplicationUser user)
         {
@@ -207,12 +227,12 @@ namespace WebTestUI.Backend.Services
             {
                 Id = user.Id,
                 Name = user.Name,
-                Email = user.Email,
+                Email = user.Email = string.Empty,
                 Role = roles.FirstOrDefault() ?? "User", // Use await and remove .Result
-                ProfileImage = user.ProfileImage,
-                Phone = user.Phone,
-                Address = user.Address,
-                Website = user.Website,
+                ProfileImage = user.ProfileImage = string.Empty,
+                Phone = user.Phone = string.Empty,
+                Address = user.Address = string.Empty,
+                Website = user.Website = string.Empty,
                 TwoFactorEnabled = user.TwoFactorEnabled
             };
         }
