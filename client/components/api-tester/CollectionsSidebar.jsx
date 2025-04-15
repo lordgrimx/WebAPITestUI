@@ -93,17 +93,37 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   const [newCollectionName, setNewCollectionName] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Add debouncing
-
-  // State for storing collections and history items
+  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Add debouncing  // State for storing collections and history items
   const [collections, setCollections] = useState([]);
   const [historyItems, setHistoryItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);  // Fetch user session info from the server-side API endpoint
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Fetch user session info from the server-side API endpoint
   useEffect(() => {
     const fetchSession = async () => {
       try {
+        // Önce güvenli endpoint'ten kimlik doğrulama bilgilerini al
+        const authInfoResponse = await fetch('/api/auth/getCookies');
+        console.log("Auth info response:", authInfoResponse.token);
+        let isAuthenticated = false;
+        
+        if (authInfoResponse.ok) {
+          const authData = await authInfoResponse.json();
+          isAuthenticated = authData.success && authData.isAuthenticated;
+          
+          if (isAuthenticated) {
+            console.log("Auth info verified from secure endpoint");
+          }
+        }
+        
         // Oturum API'sine istek yap
-        const response = await fetch('/api/auth/session'); 
+    const token = Cookies.get('token');
+    const response = await fetch('/api/auth/session', {
+      credentials: 'include', // Ensure cookies are sent with the request
+      headers: token ? {
+                'Authorization': `Bearer ${token}` // Include Bearer token in header
+              } : {}
+            }); 
         
         // Status 401 ise sessizce ele al ve kullanıcı bilgilerini sıfırla
         if (response.status === 401) {
@@ -125,8 +145,19 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
           console.log("CollectionsSidebar: Session verified, setting user ID:", data.userId);
           setCurrentUserID(data.userId);
         } else {
-          console.error("CollectionsSidebar: Session verification failed:", data.error || 'No user ID returned');
+          // Burada spesifik hata mesajını gösteriyoruz
+          const errorMsg = data.message || data.error || 'No user ID returned';
+          console.error("CollectionsSidebar: Session verification failed:", errorMsg);
           setCurrentUserID(null);
+          
+          // Client-side cookie'leri kontrol et (debug için)
+          const clientToken = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('token='));
+          
+          if (clientToken) {
+            console.log("CollectionsSidebar: Client-side token exists but server couldn't verify it");
+          }
         }
       } catch (error) {
         console.error("CollectionsSidebar: Error fetching session:", error);

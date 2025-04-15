@@ -18,8 +18,7 @@ import Header from "../Header";
 export default function ApiTester() {
   const { settings } = useSettings(); // Get settings from context (updateSetting kaldırıldı, kullanılmıyor)
   
-  const [selectedRequestId, setSelectedRequestId] = useState(null);
-  const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
+  const [selectedRequestId, setSelectedRequestId] = useState(null);  const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
   const [error, setError] = useState(null); // General request error state
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
@@ -127,14 +126,26 @@ export default function ApiTester() {
 
     return results;
   };
-
   // Move localStorage access to useEffect
   useEffect(() => {
-    // Only access localStorage after component mounts (client-side)
-    const storedToken = localStorage.getItem('authToken');
-    if (storedToken) {
-      setAuthToken(storedToken);
-    }
+    // Instead of accessing localStorage, we'll use our secure endpoint
+    const fetchAuthInfo = async () => {
+      try {
+        const response = await fetch('/api/auth/getCookies');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.isAuthenticated) {
+            console.log("User is authenticated, userId:", data.userId);
+            setCurrentUserID(data.userId);
+            // We don't set authToken here anymore since we're not exposing it to the client
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching auth info:", error);
+      }
+    };
+    
+    fetchAuthInfo();
   }, []);
   // Fetch user session info from the server-side API endpoint
   useEffect(() => {
