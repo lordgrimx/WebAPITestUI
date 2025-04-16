@@ -16,10 +16,123 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { X, Shield, Bell, Globe, Palette, Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
+import { useSettings } from "@/lib/settings-context"; // Import useSettings
+import { useAuth } from "@/lib/auth-context"; // Import useAuth
+import { authAxios } from "@/lib/auth-context"; // Import authAxios for API calls
+import { toast } from "sonner"; // Import toast for notifications
+import { useEffect } from "react"; // Import useEffect
 function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
   const [activeTab, setActiveTab] = useState("general");
-  
+  const { settings: globalSettings, updateSetting: updateGlobalSetting } = useSettings(); // Rename for clarity
+  const { user, isLoading: isAuthLoading } = useAuth(); // Get user and loading state
+  const [localSettings, setLocalSettings] = useState({}); // State for local edits
+
+  // Initialize local settings when modal opens or user data changes
+  useEffect(() => {
+    if (open && user && !isAuthLoading) {
+      // Initialize with user data from AuthContext, falling back to global settings or defaults
+      setLocalSettings({
+        language: user.language || globalSettings.language || 'en',
+        timezone: user.timezone || 'utc',
+        dateFormat: user.dateFormat || 'mdy',
+        autoLogoutEnabled: user.autoLogoutEnabled ?? false, // Use ?? for boolean defaults
+        sessionTimeoutMinutes: user.sessionTimeoutMinutes || 30,
+        theme: user.theme || (globalSettings.darkMode ? 'dark' : 'light'), // Map darkMode to theme string
+        compactViewEnabled: user.compactViewEnabled ?? false,
+        showSidebarEnabled: user.showSidebarEnabled ?? true,
+        usageAnalyticsEnabled: user.usageAnalyticsEnabled ?? true,
+        crashReportsEnabled: user.crashReportsEnabled ?? true,
+        marketingEmailsEnabled: user.marketingEmailsEnabled ?? false,
+        // Include other relevant fields from user DTO if needed, but keep it focused on settings
+        name: user.name,
+        phone: user.phone,
+        address: user.address,
+        website: user.website,
+        twoFactorEnabled: user.twoFactorEnabled,
+      });
+    }
+  }, [open, user, isAuthLoading, globalSettings]);
+
+
+  // Generic handler to update local settings state
+  const handleSettingChange = (key, value) => {
+    setLocalSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Handler for theme change (updates local state and potentially visual theme instantly)
+  const handleThemeChange = (newTheme) => {
+    handleSettingChange('theme', newTheme);
+    // Optionally update the visual theme immediately via setDarkMode prop
+    if (newTheme === 'dark') setDarkMode(true);
+    if (newTheme === 'light') setDarkMode(false);
+    // 'system' theme handling might require more logic based on OS preference
+  };
+
+
+  // Handle Save Changes button click
+  const handleSaveChanges = async () => {
+     if (!user) {
+       toast.error("User data not available. Cannot save settings.");
+       return;
+     }
+    
+     // Prepare payload from localSettings
+     const payload = { ...localSettings }; 
+     // Ensure only fields present in UpdateProfileDto are sent
+     // (Backend should ignore extra fields, but cleaner to send only relevant ones)
+     // Example: delete payload.id; delete payload.email; etc. if they exist in localSettings
+
+     try {
+       const response = await authAxios.put('/user/profile', payload);
+       toast.success("Settings updated successfully");
+
+       // TODO: Optionally update AuthContext user state here if needed immediately
+       // updateUser(response.data); // Assuming an updateUser function exists in AuthContext
+       setOpen(false); // Close modal on success
+     } catch (error) {
+       console.error("Failed to save settings:", error);
+       toast.error("Failed to update settings");
+     }
+  };
+
+  // Handle Cancel button click
+  const handleCancel = () => {
+     // Reset local settings to reflect the actual user settings before closing
+     if (user) {
+       setLocalSettings({
+         language: user.language || globalSettings.language || 'en',
+         timezone: user.timezone || 'utc',
+         dateFormat: user.dateFormat || 'mdy',
+         autoLogoutEnabled: user.autoLogoutEnabled ?? false,
+         sessionTimeoutMinutes: user.sessionTimeoutMinutes || 30,
+         theme: user.theme || (globalSettings.darkMode ? 'dark' : 'light'),
+         compactViewEnabled: user.compactViewEnabled ?? false,
+         showSidebarEnabled: user.showSidebarEnabled ?? true,
+         usageAnalyticsEnabled: user.usageAnalyticsEnabled ?? true,
+         crashReportsEnabled: user.crashReportsEnabled ?? true,
+         marketingEmailsEnabled: user.marketingEmailsEnabled ?? false,
+         name: user.name,
+         phone: user.phone,
+         address: user.address,
+         website: user.website,
+         twoFactorEnabled: user.twoFactorEnabled,
+       });
+       // Also reset the visual theme if it was changed instantly
+       const currentTheme = user.theme || (globalSettings.darkMode ? 'dark' : 'light');
+       if (currentTheme === 'dark') setDarkMode(true);
+       if (currentTheme === 'light') setDarkMode(false);
+     }
+    setOpen(false); // Just close the modal, discard local changes
+  };
+
+
+  // Render loading state or empty if user data isn't ready
+  if (isAuthLoading || !user) {
+     // Optionally return a loading spinner or null
+     return null; 
+  }
+
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent 
@@ -28,7 +141,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
         }`}
       >
         <DialogHeader className="px-6 py-4 border-b border-gray-200">
-          <DialogTitle className="text-xl font-semibold">Account Settings</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Account Settings</DialogTitle> 
           <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700">
             <X className="h-4 w-4" />
           </DialogClose>
@@ -66,7 +179,11 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="language">Language</Label>
-                    <Select defaultValue="en">
+                    {/* Bind value to localSettings and use generic handler */}
+                    <Select 
+                      value={localSettings.language || 'en'} // Provide default if undefined
+                      onValueChange={(value) => handleSettingChange('language', value)}
+                    >
                       <SelectTrigger 
                         id="language" 
                         className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
@@ -75,17 +192,20 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="en">English (US)</SelectItem>
-                        <SelectItem value="es">Español</SelectItem>
-                        <SelectItem value="fr">Français</SelectItem>
-                        <SelectItem value="de">Deutsch</SelectItem>
-                        <SelectItem value="tr">Türkçe</SelectItem>
+                        <SelectItem value="es">Spanish</SelectItem>
+                        <SelectItem value="fr">French</SelectItem>
+                        <SelectItem value="de">German</SelectItem>
+                        <SelectItem value="tr">Turkish</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   
                   <div>
                     <Label htmlFor="timezone">Timezone</Label>
-                    <Select defaultValue="utc">
+                    <Select 
+                      value={localSettings.timezone || 'utc'} 
+                      onValueChange={(value) => handleSettingChange('timezone', value)}
+                    >
                       <SelectTrigger 
                         id="timezone" 
                         className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
@@ -103,7 +223,10 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                   
                   <div>
                     <Label htmlFor="date-format">Date Format</Label>
-                    <Select defaultValue="mdy">
+                     <Select 
+                      value={localSettings.dateFormat || 'mdy'} 
+                      onValueChange={(value) => handleSettingChange('dateFormat', value)}
+                    >
                       <SelectTrigger 
                         id="date-format" 
                         className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
@@ -133,18 +256,23 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                         Automatically log out after period of inactivity
                       </p>
                     </div>
-                    <Switch id="auto-logout" />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="session-timeout">Session Timeout (minutes)</Label>
-                    <Input 
-                      id="session-timeout" 
-                      type="number" 
-                      defaultValue="30" 
-                      min="5" 
-                      max="120" 
-                      className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
+                   <Switch 
+                    id="auto-logout" 
+                    checked={localSettings.autoLogoutEnabled || false} 
+                    onCheckedChange={(checked) => handleSettingChange('autoLogoutEnabled', checked)} 
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="session-timeout">Session Timeout</Label>
+                  <Input 
+                    id="session-timeout" 
+                    type="number" 
+                    value={localSettings.sessionTimeoutMinutes || 30} 
+                    onChange={(e) => handleSettingChange('sessionTimeoutMinutes', parseInt(e.target.value, 10) || 0)}
+                    min="5" 
+                    max="120" 
+                    className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                     />
                   </div>
                 </div>
@@ -159,26 +287,32 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                 </h3>
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
+                     {/* Light Theme */}
                     <div 
-                      className={`border rounded-md p-4 flex flex-col items-center ${
-                        !darkMode ? "border-blue-500 bg-blue-50" : "border-gray-600"
-                      } cursor-pointer`}
-                      onClick={() => setDarkMode(false)}
+                      className={`border rounded-md p-4 flex flex-col items-center cursor-pointer ${
+                        localSettings.theme === 'light' ? "border-blue-500 bg-blue-50" : "border-gray-600"
+                      }`}
+                      onClick={() => handleThemeChange('light')}
                     >
                       <div className="w-full h-24 bg-white border border-gray-200 rounded-md mb-2"></div>
                       <span className="text-sm font-medium">Light</span>
                     </div>
+                     {/* Dark Theme */}
                     <div 
-                      className={`border rounded-md p-4 flex flex-col items-center ${
-                        darkMode ? "border-blue-500 bg-blue-900/20" : "border-gray-200"
-                      } cursor-pointer`}
-                      onClick={() => setDarkMode(true)}
+                      className={`border rounded-md p-4 flex flex-col items-center cursor-pointer ${
+                        localSettings.theme === 'dark' ? "border-blue-500 bg-blue-900/20" : "border-gray-200"
+                      }`}
+                      onClick={() => handleThemeChange('dark')}
                     >
                       <div className="w-full h-24 bg-gray-800 border border-gray-700 rounded-md mb-2"></div>
                       <span className="text-sm font-medium">Dark</span>
                     </div>
+                     {/* System Theme (visual selection only, actual implementation might vary) */}
                     <div 
-                      className="border border-gray-200 dark:border-gray-600 rounded-md p-4 flex flex-col items-center cursor-pointer"
+                      className={`border rounded-md p-4 flex flex-col items-center cursor-pointer ${
+                        localSettings.theme === 'system' ? "border-blue-500 bg-gray-50 dark:bg-gray-900/20" : "border-gray-200 dark:border-gray-600"
+                      }`}
+                       onClick={() => handleThemeChange('system')} // Allow selecting 'system'
                     >
                       <div className="w-full h-24 bg-gradient-to-r from-white to-gray-800 border border-gray-200 dark:border-gray-700 rounded-md mb-2"></div>
                       <span className="text-sm font-medium">System</span>
@@ -197,9 +331,13 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                         Reduce spacing and padding throughout the interface
                       </p>
                     </div>
-                    <Switch id="compact-view" />
-                  </div>
-                  
+                   <Switch 
+                    id="compact-view" 
+                    checked={localSettings.compactViewEnabled || false} 
+                    onCheckedChange={(checked) => handleSettingChange('compactViewEnabled', checked)} 
+                  />
+                </div>
+                
                   <div className="flex items-center justify-between">
                     <div>
                       <Label htmlFor="show-sidebar">Show Sidebar</Label>
@@ -207,7 +345,11 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                         Show collection sidebar by default
                       </p>
                     </div>
-                    <Switch id="show-sidebar" defaultChecked />
+                   <Switch 
+                    id="show-sidebar" 
+                    checked={localSettings.showSidebarEnabled || false} 
+                    onCheckedChange={(checked) => handleSettingChange('showSidebarEnabled', checked)} 
+                  />
                   </div>
                 </div>
               </div>
@@ -227,9 +369,13 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                         Allow collection of anonymous usage data to improve the service
                       </p>
                     </div>
-                    <Switch id="analytics" defaultChecked />
-                  </div>
-                  
+                   <Switch 
+                    id="analytics" 
+                    checked={localSettings.usageAnalyticsEnabled || false} 
+                    onCheckedChange={(checked) => handleSettingChange('usageAnalyticsEnabled', checked)} 
+                  />
+                </div>
+                
                   <div className="flex items-center justify-between">
                     <div>
                       <Label htmlFor="crash-reports">Crash Reports</Label>
@@ -237,9 +383,13 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                         Send anonymous crash reports to help us fix issues
                       </p>
                     </div>
-                    <Switch id="crash-reports" defaultChecked />
-                  </div>
-                  
+                   <Switch 
+                    id="crash-reports" 
+                    checked={localSettings.crashReportsEnabled || false} 
+                    onCheckedChange={(checked) => handleSettingChange('crashReportsEnabled', checked)} 
+                  />
+                </div>
+                
                   <div className="flex items-center justify-between">
                     <div>
                       <Label htmlFor="marketing">Marketing Emails</Label>
@@ -247,7 +397,11 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                         Receive emails about new features, tips, and promotions
                       </p>
                     </div>
-                    <Switch id="marketing" />
+                   <Switch 
+                    id="marketing" 
+                    checked={localSettings.marketingEmailsEnabled || false} 
+                    onCheckedChange={(checked) => handleSettingChange('marketingEmailsEnabled', checked)} 
+                  />
                   </div>
                 </div>
               </div>
@@ -269,8 +423,8 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
         </div>
 
         <DialogFooter className="px-6 py-4 border-t border-gray-200">
-          <Button variant="outline">Cancel</Button>
-          <Button>Save Changes</Button>
+          <Button variant="outline" onClick={handleCancel}>Cancel</Button>
+          <Button onClick={handleSaveChanges}>Save Changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

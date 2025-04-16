@@ -81,6 +81,25 @@ namespace WebTestUI.Backend.Services
                 }
             }
 
+            // Update Language if provided
+            if (model.Language != null) // Check for null instead of empty string for nullable fields
+            {
+                user.Language = model.Language;
+            }
+
+            // Update other settings if provided in the DTO
+            if (model.Timezone != null) user.Timezone = model.Timezone;
+            if (model.DateFormat != null) user.DateFormat = model.DateFormat;
+            if (model.AutoLogoutEnabled.HasValue) user.AutoLogoutEnabled = model.AutoLogoutEnabled.Value;
+            if (model.SessionTimeoutMinutes.HasValue) user.SessionTimeoutMinutes = model.SessionTimeoutMinutes.Value;
+            if (model.Theme != null) user.Theme = model.Theme;
+            if (model.CompactViewEnabled.HasValue) user.CompactViewEnabled = model.CompactViewEnabled.Value;
+            if (model.ShowSidebarEnabled.HasValue) user.ShowSidebarEnabled = model.ShowSidebarEnabled.Value;
+            if (model.UsageAnalyticsEnabled.HasValue) user.UsageAnalyticsEnabled = model.UsageAnalyticsEnabled.Value;
+            if (model.CrashReportsEnabled.HasValue) user.CrashReportsEnabled = model.CrashReportsEnabled.Value;
+            if (model.MarketingEmailsEnabled.HasValue) user.MarketingEmailsEnabled = model.MarketingEmailsEnabled.Value;
+
+
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
             {
@@ -195,7 +214,20 @@ namespace WebTestUI.Backend.Services
                 Phone = user.Phone,
                 Address = user.Address,
                 Website = user.Website,
-                TwoFactorEnabled = user.TwoFactorEnabled
+                TwoFactorEnabled = user.TwoFactorEnabled,
+                Language = user.Language, // Add Language
+
+                // Map other settings
+                Timezone = user.Timezone,
+                DateFormat = user.DateFormat,
+                AutoLogoutEnabled = user.AutoLogoutEnabled,
+                SessionTimeoutMinutes = user.SessionTimeoutMinutes,
+                Theme = user.Theme,
+                CompactViewEnabled = user.CompactViewEnabled,
+                ShowSidebarEnabled = user.ShowSidebarEnabled,
+                UsageAnalyticsEnabled = user.UsageAnalyticsEnabled,
+                CrashReportsEnabled = user.CrashReportsEnabled,
+                MarketingEmailsEnabled = user.MarketingEmailsEnabled
             };
         }
     }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebTestUI.Backend.Data;
 
@@ -11,9 +12,11 @@ using WebTestUI.Backend.Data;
 namespace WebTestUI.Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250416082548_AddLanguageToUser")]
+    partial class AddLanguageToUser
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -166,24 +169,12 @@ namespace WebTestUI.Backend.Migrations
                     b.Property<string>("Address")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool?>("AutoLogoutEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<bool?>("CompactViewEnabled")
-                        .HasColumnType("bit");
-
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool?>("CrashReportsEnabled")
-                        .HasColumnType("bit");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("DateFormat")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -203,9 +194,6 @@ namespace WebTestUI.Backend.Migrations
 
                     b.Property<DateTimeOffset?>("LockoutEnd")
                         .HasColumnType("datetimeoffset");
-
-                    b.Property<bool?>("MarketingEmailsEnabled")
-                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -237,18 +225,6 @@ namespace WebTestUI.Backend.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("SessionTimeoutMinutes")
-                        .HasColumnType("int");
-
-                    b.Property<bool?>("ShowSidebarEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Theme")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Timezone")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("TwoFactorCode")
                         .HasColumnType("nvarchar(max)");
 
@@ -256,9 +232,6 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("TwoFactorEnabled")
-                        .HasColumnType("bit");
-
-                    b.Property<bool?>("UsageAnalyticsEnabled")
                         .HasColumnType("bit");
 
                     b.Property<string>("UserName")

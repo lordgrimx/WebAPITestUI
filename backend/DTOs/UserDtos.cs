@@ -43,6 +43,23 @@ namespace WebTestUI.Backend.DTOs
         public string Address { get; set; }
         public string Website { get; set; }
         public bool? TwoFactorEnabled { get; set; }
+        public string? Language { get; set; } // Add Language preference
+
+        // Account Settings - General
+        public string? Timezone { get; set; }
+        public string? DateFormat { get; set; }
+        public bool? AutoLogoutEnabled { get; set; }
+        public int? SessionTimeoutMinutes { get; set; }
+
+        // Account Settings - Appearance
+        public string? Theme { get; set; } // "light", "dark", "system"
+        public bool? CompactViewEnabled { get; set; }
+        public bool? ShowSidebarEnabled { get; set; }
+
+        // Account Settings - Privacy
+        public bool? UsageAnalyticsEnabled { get; set; }
+        public bool? CrashReportsEnabled { get; set; }
+        public bool? MarketingEmailsEnabled { get; set; }
     }
 
     public class ChangePasswordDto
@@ -77,6 +94,23 @@ namespace WebTestUI.Backend.DTOs
         public string Address { get; set; }
         public string Website { get; set; }
         public bool TwoFactorEnabled { get; set; }
+        public string? Language { get; set; } // Add Language preference
+
+        // Account Settings - General
+        public string? Timezone { get; set; }
+        public string? DateFormat { get; set; }
+        public bool? AutoLogoutEnabled { get; set; }
+        public int? SessionTimeoutMinutes { get; set; }
+
+        // Account Settings - Appearance
+        public string? Theme { get; set; } // "light", "dark", "system"
+        public bool? CompactViewEnabled { get; set; }
+        public bool? ShowSidebarEnabled { get; set; }
+
+        // Account Settings - Privacy
+        public bool? UsageAnalyticsEnabled { get; set; }
+        public bool? CrashReportsEnabled { get; set; }
+        public bool? MarketingEmailsEnabled { get; set; }
     }
 
     public class UploadImageDto
