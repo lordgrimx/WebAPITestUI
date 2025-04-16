@@ -12,7 +12,25 @@
         "settings": "Settings",
         "generateCode": "Generate Code",
         "environment": "Environment",
-        "saveRequest": "Save Request"
+        "saveRequest": "Save Request",
+        "features": "Features",
+        "pricing": "Pricing",
+        "documentation": "Documentation",
+        "about": "About",
+        "monitoring": "Monitoring",
+        "share": "Share",
+        "environments": "Environments",
+        "environmentList": {
+            "development": "Development",
+            "staging": "Staging",
+            "production": "Production",
+            "add": "Add Environment"
+        },
+        "shareList": {
+            "copyLink": "Copy Link",
+            "toWorkspace": "Share to Workspace",
+            "export": "Export"
+        }
     },
     "auth": {
         "login": "Login",

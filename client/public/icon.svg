@@ -1,0 +1,10 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="64" height="64" rx="12" fill="#007BFF" />
+    <path
+        d="M18 20H46C47.1046 20 48 20.8954 48 22V42C48 43.1046 47.1046 44 46 44H18C16.8954 44 16 43.1046 16 42V22C16 20.8954 16.8954 20 18 20Z"
+        fill="white" />
+    <path
+        d="M24 26H40C41.1046 26 42 26.8954 42 28V36C42 37.1046 41.1046 38 40 38H24C22.8954 38 22 37.1046 22 36V28C22 26.8954 22.8954 26 24 26Z"
+        fill="#007BFF" />
+    <text x="32" y="56" text-anchor="middle" font-size="10" font-family="Arial, sans-serif" fill="white">PUTman</text>
+</svg>

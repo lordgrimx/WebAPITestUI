@@ -32,9 +32,12 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
   // Initialize local settings when modal opens or user data changes
   useEffect(() => {
     if (open && user && !isAuthLoading) {
+      // Mevcut dili ve kullanıcı ayarlarını kontrol et
+      const currentLanguage = user.language || i18n.language || 'en';
+      
       // Initialize with user data from AuthContext, falling back to global settings or defaults
       setLocalSettings({
-        language: user.language || globalSettings.language || 'en',
+        language: currentLanguage, // Mevcut aktif dili kullan
         timezone: user.timezone || 'utc',
         dateFormat: user.dateFormat || 'mdy',
         autoLogoutEnabled: user.autoLogoutEnabled ?? false, // Use ?? for boolean defaults
@@ -53,7 +56,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
         twoFactorEnabled: user.twoFactorEnabled,
       });
     }
-  }, [open, user, isAuthLoading, globalSettings]);
+  }, [open, user, isAuthLoading, globalSettings, i18n]);
 
 
   // Generic handler to update local settings state
@@ -63,13 +66,11 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
 
   // Dil değiştiğinde çalışacak özel fonksiyon
   const handleLanguageChange = (value) => {
-    // Yerel ayarı güncelle
+    // Sadece yerel ayarı güncelle, değişiklikleri kaydet butonuna basınca uygulanacak
     handleSettingChange('language', value);
     
-    // i18n dil ayarını değiştir (yalnızca tarayıcı ortamında)
-    if (typeof window !== 'undefined' && i18n && typeof i18n.changeLanguage === 'function') {
-      i18n.changeLanguage(value);
-    }
+    // Not: Artık burada dil değişikliği hemen uygulanmayacak
+    // Değişiklikler "Değişiklikleri Kaydet" butonuna basıldığında uygulanacak
   };
 
   // Handler for theme change (updates local state and potentially visual theme instantly)
@@ -98,6 +99,12 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
      try {
        const response = await authAxios.put('/user/profile', payload);
        toast.success("Settings updated successfully");
+
+       // Dil değişikliğini burada uygula - Değişiklikleri Kaydet'e basıldığında
+       if (typeof window !== 'undefined' && i18n && typeof i18n.changeLanguage === 'function' && 
+           payload.language && payload.language !== i18n.language) {
+         i18n.changeLanguage(payload.language);
+       }
 
        // TODO: Optionally update AuthContext user state here if needed immediately
        // updateUser(response.data); // Assuming an updateUser function exists in AuthContext

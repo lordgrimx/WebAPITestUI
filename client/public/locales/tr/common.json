@@ -12,7 +12,25 @@
         "settings": "Ayarlar",
         "generateCode": "Kod Oluştur",
         "environment": "Ortam",
-        "saveRequest": "İsteği Kaydet"
+        "saveRequest": "İsteği Kaydet",
+        "features": "Özellikler",
+        "pricing": "Fiyatlandırma",
+        "documentation": "Dokümantasyon",
+        "about": "Hakkında",
+        "monitoring": "İzleme",
+        "share": "Paylaş",
+        "environments": "Ortamlar",
+        "environmentList": {
+            "development": "Geliştirme",
+            "staging": "Test",
+            "production": "Canlı",
+            "add": "Ortam Ekle"
+        },
+        "shareList": {
+            "copyLink": "Bağlantıyı Kopyala",
+            "toWorkspace": "Çalışma Alanını Paylaş",
+            "export": "Dışa Aktar"
+        }
     },
     "auth": {
         "login": "Giriş Yap",

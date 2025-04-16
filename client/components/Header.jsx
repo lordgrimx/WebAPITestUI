@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next"; // Çeviri hook'u eklendi
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,6 +39,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
   const { user, isAuthenticated, login, logout, isLoading } = useAuth();
+  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
 
   const handleSaveRequest = async (requestData) => {
     try {
@@ -165,25 +167,25 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               href="#features"
               className="text-white hover:text-blue-200 transition-colors"
             >
-              Features
+              {t('header.features', 'Features')}
             </a>
             <a
               href="#pricing"
               className="text-white hover:text-blue-200 transition-colors"
             >
-              Pricing
+              {t('header.pricing', 'Pricing')}
             </a>
             <a
               href="#docs"
               className="text-white hover:text-blue-200 transition-colors"
             >
-              Documentation
+              {t('header.documentation', 'Documentation')}
             </a>
             <a
               href="#about"
               className="text-white hover:text-blue-200 transition-colors"
             >
-              About
+              {t('header.about', 'About')}
             </a>
           </div>
 
@@ -200,13 +202,13 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               className="px-4 py-2 text-blue-600 bg-white rounded-lg font-medium hover:bg-gray-100 transition-colors"
               onClick={openLoginModal}
             >
-              Sign In
+              {t('auth.login')}
             </Button>
             <Button
               className="px-4 py-2 text-white bg-blue-600 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               onClick={openSignupModal}
             >
-              Sign Up Free
+              {t('auth.register')}
             </Button>
           </div>
         </nav>
@@ -273,7 +275,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               onClick={() => setShowSaveRequest(true)}
             >
               <Save className="h-4 w-4" />
-              <span>Save</span>
+              <span>{t('general.save')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -282,7 +284,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               onClick={() => setShowGenerateCode(true)}
             >
               <Code className="h-4 w-4" />
-              <span>Generate Code</span>
+              <span>{t('header.generateCode')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -291,14 +293,14 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               onClick={() => setShowSettings(true)}
             >
               <Settings className="h-4 w-4" />
-              <span>Settings</span>
+              <span>{t('header.settings')}</span>
             </Button>
             <Link 
               href="/monitor" 
               className="inline-flex items-center px-2 py-1 text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
             >
               <Activity className="h-4 w-4 mr-1" />
-              <span>Monitoring</span>
+              <span>{t('header.monitoring')}</span>
             </Link>
           </div>
         </div>
@@ -307,32 +309,32 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="space-x-1">
                 <Globe className="h-4 w-4" />
-                <span>Environment</span>
+                <span>{t('header.environment')}</span>
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Environments</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('header.environments', 'Environments')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="flex justify-between cursor-pointer">
                 <span className="flex items-center">
                   <Check className="h-4 w-4 text-green-500 mr-2" />
-                  Development
+                  {t('header.environmentList.development', 'Development')}
                 </span>
                 <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
               </DropdownMenuItem>
               <DropdownMenuItem className="flex justify-between cursor-pointer">
-                <span>Staging</span>
+                <span>{t('header.environmentList.staging', 'Staging')}</span>
                 <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
               </DropdownMenuItem>
               <DropdownMenuItem className="flex justify-between cursor-pointer">
-                <span>Production</span>
+                <span>{t('header.environmentList.production', 'Production')}</span>
                 <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <Button variant="ghost" size="sm" className="w-full justify-center">
                 <Plus className="h-4 w-4 mr-1" />
-                Add Environment
+                {t('header.environmentList.add', 'Add Environment')}
               </Button>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -341,14 +343,14 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="space-x-1">
                 <Share2 className="h-4 w-4" />
-                <span>Share</span>
+                <span>{t('header.share', 'Share')}</span>
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleCopyLink}>Copy Link</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleShareToWorkspace}>Share to Workspace</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportRequest}>Export</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCopyLink}>{t('header.shareList.copyLink', 'Copy Link')}</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareToWorkspace}>{t('header.shareList.toWorkspace')}</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportRequest}>{t('header.shareList.export')}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
