@@ -21,8 +21,13 @@
         "forgotPassword": "Şifremi Unuttum",
         "profile": "Profilim"
     },
+    "profile": {
+        "notifications": "Bildirimler",
+        "helpSupport": "Yardım & Destek",
+        "userProfile": "Kullanıcı Profili"
+    },
     "settings": {
-        "title": "Ayarlar",
+        "title": "Hesap Ayarları",
         "general": "Genel",
         "appearance": "Görünüm",
         "privacy": "Gizlilik",
@@ -36,11 +41,47 @@
             "system": "Sistem"
         },
         "autoLogout": "Otomatik Çıkış",
+        "autoLogoutDescription": "Belirli bir süre işlem yapılmadığında otomatik çıkış yap",
         "sessionTimeout": "Oturum Zaman Aşımı",
         "requestTimeout": "İstek Zaman Aşımı",
         "jsonIndentation": "JSON Girintisi",
         "defaultHeaders": "Varsayılan Başlıklar",
-        "saveChanges": "Değişiklikleri Kaydet"
+        "saveChanges": "Değişiklikleri Kaydet",
+        "selectLanguage": "Dil seçin",
+        "selectTimezone": "Saat dilimi seçin",
+        "selectDateFormat": "Tarih formatı seçin",
+        "layout": "Düzen",
+        "compactView": "Sıkışık Görünüm",
+        "compactViewDescription": "Arayüzdeki boşlukları ve dolguları azalt",
+        "showSidebar": "Kenar Çubuğunu Göster",
+        "showSidebarDescription": "Koleksiyon kenar çubuğunu varsayılan olarak göster",
+        "usageAnalytics": "Kullanım Analizi",
+        "usageAnalyticsDescription": "Hizmeti iyileştirmek için anonim kullanım verilerinin toplanmasına izin ver",
+        "crashReports": "Hata Raporları",
+        "crashReportsDescription": "Sorunları çözmemize yardımcı olmak için anonim hata raporları gönder",
+        "marketingEmails": "Pazarlama E-postaları",
+        "marketingEmailsDescription": "Yeni özellikler, ipuçları ve promosyonlar hakkında e-postalar al",
+        "dangerZone": "Tehlikeli Bölge",
+        "deleteAccount": "Hesabı Sil",
+        "deleteAccountDescription": "Hesabınızı sildiğinizde, geri dönüş yoktur. Lütfen emin olun.",
+        "languages": {
+            "english": "İngilizce (ABD)",
+            "spanish": "İspanyolca",
+            "french": "Fransızca",
+            "german": "Almanca",
+            "turkish": "Türkçe"
+        },
+        "timezones": {
+            "utc": "UTC (Eşgüdümlü Evrensel Zaman)",
+            "est": "EST (Doğu Standart Saati)",
+            "pst": "PST (Pasifik Standart Saati)",
+            "cet": "CET (Orta Avrupa Saati)"
+        },
+        "dateFormats": {
+            "mdy": "AA/GG/YYYY",
+            "dmy": "GG/AA/YYYY",
+            "ymd": "YYYY/AA/GG"
+        }
     },
     "requests": {
         "send": "Gönder",

@@ -154,7 +154,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
         }`}
       >
         <DialogHeader className="px-6 py-4 border-b border-gray-200">
-          <DialogTitle className="text-xl font-semibold">Account Settings</DialogTitle> 
+          <DialogTitle className="text-xl font-semibold">{t('settings.title')}</DialogTitle> 
           <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700">
             <X className="h-4 w-4" />
           </DialogClose>
@@ -167,19 +167,19 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                 value="general" 
                 className="py-2 px-4 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 rounded-none"
               >
-                General
+                {t('settings.general')}
               </TabsTrigger>
               <TabsTrigger 
                 value="appearance" 
                 className="py-2 px-4 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 rounded-none"
               >
-                Appearance
+                {t('settings.appearance')}
               </TabsTrigger>
               <TabsTrigger 
                 value="privacy" 
                 className="py-2 px-4 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:text-blue-600 rounded-none"
               >
-                Privacy
+                {t('settings.privacy')}
               </TabsTrigger>
             </TabsList>
             
@@ -187,7 +187,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
               <div>
                 <h3 className="font-medium text-lg mb-4 flex items-center">
                   <Globe className="mr-2 h-5 w-5" /> 
-                  Language & Region
+                  {t('settings.language')} & {t('settings.timezone')}
                 </h3>
                 <div className="space-y-4">
                   <div>
@@ -201,14 +201,14 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                         id="language" 
                         className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                       >
-                        <SelectValue placeholder="Select language" />
+                        <SelectValue placeholder={t('settings.selectLanguage', 'Select language')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="en">English (US)</SelectItem>
-                        <SelectItem value="es">Spanish</SelectItem>
-                        <SelectItem value="fr">French</SelectItem>
-                        <SelectItem value="de">German</SelectItem>
-                        <SelectItem value="tr">Turkish</SelectItem>
+                        <SelectItem value="en">{t('settings.languages.english', 'English (US)')}</SelectItem>
+                        <SelectItem value="es">{t('settings.languages.spanish', 'Spanish')}</SelectItem>
+                        <SelectItem value="fr">{t('settings.languages.french', 'French')}</SelectItem>
+                        <SelectItem value="de">{t('settings.languages.german', 'German')}</SelectItem>
+                        <SelectItem value="tr">{t('settings.languages.turkish', 'Turkish')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -223,19 +223,19 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                         id="timezone" 
                         className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                       >
-                        <SelectValue placeholder="Select timezone" />
+                        <SelectValue placeholder={t('settings.selectTimezone', 'Select timezone')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="utc">UTC (Coordinated Universal Time)</SelectItem>
-                        <SelectItem value="est">EST (Eastern Standard Time)</SelectItem>
-                        <SelectItem value="pst">PST (Pacific Standard Time)</SelectItem>
-                        <SelectItem value="cet">CET (Central European Time)</SelectItem>
+                        <SelectItem value="utc">{t('settings.timezones.utc', 'UTC (Coordinated Universal Time)')}</SelectItem>
+                        <SelectItem value="est">{t('settings.timezones.est', 'EST (Eastern Standard Time)')}</SelectItem>
+                        <SelectItem value="pst">{t('settings.timezones.pst', 'PST (Pacific Standard Time)')}</SelectItem>
+                        <SelectItem value="cet">{t('settings.timezones.cet', 'CET (Central European Time)')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   
                   <div>
-                    <Label htmlFor="date-format">Date Format</Label>
+                    <Label htmlFor="date-format">{t('settings.dateFormat')}</Label>
                      <Select 
                       value={localSettings.dateFormat || 'mdy'} 
                       onValueChange={(value) => handleSettingChange('dateFormat', value)}
@@ -244,12 +244,12 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                         id="date-format" 
                         className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                       >
-                        <SelectValue placeholder="Select date format" />
+                        <SelectValue placeholder={t('settings.selectDateFormat', 'Select date format')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="mdy">MM/DD/YYYY</SelectItem>
-                        <SelectItem value="dmy">DD/MM/YYYY</SelectItem>
-                        <SelectItem value="ymd">YYYY/MM/DD</SelectItem>
+                        <SelectItem value="mdy">{t('settings.dateFormats.mdy', 'MM/DD/YYYY')}</SelectItem>
+                        <SelectItem value="dmy">{t('settings.dateFormats.dmy', 'DD/MM/YYYY')}</SelectItem>
+                        <SelectItem value="ymd">{t('settings.dateFormats.ymd', 'YYYY/MM/DD')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -259,14 +259,14 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
               <div>
                 <h3 className="font-medium text-lg mb-4 flex items-center">
                   <Clock className="mr-2 h-5 w-5" /> 
-                  Session
+                  {t('settings.sessionTimeout')}
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="auto-logout">Auto Logout</Label>
+                      <Label htmlFor="auto-logout">{t('settings.autoLogout')}</Label>
                       <p className="text-sm text-gray-500">
-                        Automatically log out after period of inactivity
+                        {t('settings.autoLogoutDescription', 'Automatically log out after period of inactivity')}
                       </p>
                     </div>
                    <Switch 
@@ -277,7 +277,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                 </div>
                 
                 <div>
-                  <Label htmlFor="session-timeout">Session Timeout</Label>
+                  <Label htmlFor="session-timeout">{t('settings.sessionTimeout')}</Label>
                   <Input 
                     id="session-timeout" 
                     type="number" 
@@ -296,7 +296,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
               <div>
                 <h3 className="font-medium text-lg mb-4 flex items-center">
                   <Palette className="mr-2 h-5 w-5" /> 
-                  Theme
+                  {t('settings.theme.title')}
                 </h3>
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
@@ -308,7 +308,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                       onClick={() => handleThemeChange('light')}
                     >
                       <div className="w-full h-24 bg-white border border-gray-200 rounded-md mb-2"></div>
-                      <span className="text-sm font-medium">Light</span>
+                      <span className="text-sm font-medium">{t('settings.theme.light')}</span>
                     </div>
                      {/* Dark Theme */}
                     <div 
@@ -318,7 +318,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                       onClick={() => handleThemeChange('dark')}
                     >
                       <div className="w-full h-24 bg-gray-800 border border-gray-700 rounded-md mb-2"></div>
-                      <span className="text-sm font-medium">Dark</span>
+                      <span className="text-sm font-medium">{t('settings.theme.dark')}</span>
                     </div>
                      {/* System Theme (visual selection only, actual implementation might vary) */}
                     <div 
@@ -328,20 +328,20 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                        onClick={() => handleThemeChange('system')} // Allow selecting 'system'
                     >
                       <div className="w-full h-24 bg-gradient-to-r from-white to-gray-800 border border-gray-200 dark:border-gray-700 rounded-md mb-2"></div>
-                      <span className="text-sm font-medium">System</span>
+                      <span className="text-sm font-medium">{t('settings.theme.system')}</span>
                     </div>
                   </div>
                 </div>
               </div>
               
               <div>
-                <h3 className="font-medium text-lg mb-4">Layout</h3>
+                <h3 className="font-medium text-lg mb-4">{t('settings.layout', 'Layout')}</h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="compact-view">Compact View</Label>
+                      <Label htmlFor="compact-view">{t('settings.compactView', 'Compact View')}</Label>
                       <p className="text-sm text-gray-500">
-                        Reduce spacing and padding throughout the interface
+                        {t('settings.compactViewDescription', 'Reduce spacing and padding throughout the interface')}
                       </p>
                     </div>
                    <Switch 
@@ -353,9 +353,9 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                 
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="show-sidebar">Show Sidebar</Label>
+                      <Label htmlFor="show-sidebar">{t('settings.showSidebar', 'Show Sidebar')}</Label>
                       <p className="text-sm text-gray-500">
-                        Show collection sidebar by default
+                        {t('settings.showSidebarDescription', 'Show collection sidebar by default')}
                       </p>
                     </div>
                    <Switch 
@@ -372,14 +372,14 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
               <div>
                 <h3 className="font-medium text-lg mb-4 flex items-center">
                   <Shield className="mr-2 h-5 w-5" /> 
-                  Privacy Settings
+                  {t('settings.privacy')}
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="analytics">Usage Analytics</Label>
+                      <Label htmlFor="analytics">{t('settings.usageAnalytics', 'Usage Analytics')}</Label>
                       <p className="text-sm text-gray-500">
-                        Allow collection of anonymous usage data to improve the service
+                        {t('settings.usageAnalyticsDescription', 'Allow collection of anonymous usage data to improve the service')}
                       </p>
                     </div>
                    <Switch 
@@ -391,9 +391,9 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                 
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="crash-reports">Crash Reports</Label>
+                      <Label htmlFor="crash-reports">{t('settings.crashReports', 'Crash Reports')}</Label>
                       <p className="text-sm text-gray-500">
-                        Send anonymous crash reports to help us fix issues
+                        {t('settings.crashReportsDescription', 'Send anonymous crash reports to help us fix issues')}
                       </p>
                     </div>
                    <Switch 
@@ -405,9 +405,9 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                 
                   <div className="flex items-center justify-between">
                     <div>
-                      <Label htmlFor="marketing">Marketing Emails</Label>
+                      <Label htmlFor="marketing">{t('settings.marketingEmails', 'Marketing Emails')}</Label>
                       <p className="text-sm text-gray-500">
-                        Receive emails about new features, tips, and promotions
+                        {t('settings.marketingEmailsDescription', 'Receive emails about new features, tips, and promotions')}
                       </p>
                     </div>
                    <Switch 
@@ -420,14 +420,14 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
               </div>
               
               <div>
-                <h3 className="font-medium text-lg text-red-500 mb-4">Danger Zone</h3>
+                <h3 className="font-medium text-lg text-red-500 mb-4">{t('settings.dangerZone', 'Danger Zone')}</h3>
                 <div className="space-y-4 border border-red-200 dark:border-red-900/50 rounded-md p-4 bg-red-50 dark:bg-red-900/10">
                   <div>
-                    <h4 className="font-medium">Delete Account</h4>
+                    <h4 className="font-medium">{t('settings.deleteAccount', 'Delete Account')}</h4>
                     <p className="text-sm text-gray-500 mb-4">
-                      Once you delete your account, there is no going back. Please be certain.
+                      {t('settings.deleteAccountDescription', 'Once you delete your account, there is no going back. Please be certain.')}
                     </p>
-                    <Button variant="destructive" size="sm">Delete Account</Button>
+                    <Button variant="destructive" size="sm">{t('settings.deleteAccount', 'Delete Account')}</Button>
                   </div>
                 </div>
               </div>
@@ -436,8 +436,8 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
         </div>
 
         <DialogFooter className="px-6 py-4 border-t border-gray-200">
-          <Button variant="outline" onClick={handleCancel}>Cancel</Button>
-          <Button onClick={handleSaveChanges}>Save Changes</Button>
+          <Button variant="outline" onClick={handleCancel}>{t('general.cancel')}</Button>
+          <Button onClick={handleSaveChanges}>{t('settings.saveChanges')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

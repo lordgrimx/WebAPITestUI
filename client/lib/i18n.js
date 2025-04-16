@@ -15,9 +15,11 @@ if (isClient) {
         .use(LanguageDetector)
         // i18next'i react ile entegre etmek için
         .use(initReactI18next)
-        .init({
-            // varsayılan dil
+        .init({            // varsayılan dil
             fallbackLng: 'en',
+            // varsayılan namespace
+            defaultNS: 'common',
+            ns: ['common'],
             // hata ayıklama
             debug: process.env.NODE_ENV === 'development',
             // çevirilerin yükleneceği klasör

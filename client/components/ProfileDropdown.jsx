@@ -2,6 +2,7 @@
 import { useState } from "react";
 import dynamic from "next/dynamic"; // Re-add dynamic import
 import { authAxios } from "@/lib/auth-context";
+import { useTranslation } from "react-i18next"; // Çeviri hook'u eklendi
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showHelpSupportModal, setShowHelpSupportModal] = useState(false);
+  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
   
   // Get user initials for avatar
   const getInitials = () => {
@@ -111,7 +113,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={() => setShowProfileModal(true)}
           >
             <User className="mr-3 w-4 h-4" />
-            <span>My Profile</span>
+            <span>{t('auth.profile')}</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem 
@@ -119,7 +121,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={() => setShowAccountSettingsModal(true)}
           >
             <Settings className="mr-3 w-4 h-4" />
-            <span>Account Settings</span>
+            <span>{t('settings.title')}</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem 
@@ -127,7 +129,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={() => setShowNotificationsModal(true)}
           >
             <Bell className="mr-3 w-4 h-4" />
-            <span>Notifications</span>
+            <span>{t('profile.notifications', 'Notifications')}</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem 
@@ -135,7 +137,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={() => setShowHelpSupportModal(true)}
           >
             <HelpCircle className="mr-3 w-4 h-4" />
-            <span>Help & Support</span>
+            <span>{t('profile.helpSupport', 'Help & Support')}</span>
           </DropdownMenuItem>
             <DropdownMenuSeparator />
           
@@ -144,7 +146,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={onLogout}
           >
             <LogOut className="mr-3 w-4 h-4" />
-            <span>Logout</span>
+            <span>{t('auth.logout')}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
