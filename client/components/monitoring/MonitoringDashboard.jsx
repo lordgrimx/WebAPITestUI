@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { Button } from '../ui/button';
 import { toast } from 'react-toastify';
 import { authAxios, useAuth } from '@/lib/auth-context'; // Import useAuth
-
+import { useTranslation } from 'react-i18next';
 // Add this helper function at the top of the file
 const getPathFromUrl = (urlString) => {
   try {
@@ -84,6 +84,7 @@ const MonitoringDashboard = () => {
   const [endpointFilter, setEndpointFilter] = useState('All');
   const [selectedEndpoint, setSelectedEndpoint] = useState(null);
   const [timeRange, setTimeRange] = useState('24h');
+  const { t } = useTranslation(); // Initialize i18next
 
   // Add chart refs
   const [charts, setCharts] = useState({
@@ -239,12 +240,12 @@ const MonitoringDashboard = () => {
       const { total, errors } = timeGroups[time];
       return total > 0 ? (errors / total) * 100 : 0;
     });
-
+    const respTimeText = t('monitoring.responseTime');
     // Set options for response time chart
     responseTimeChart.setOption({
       animation: false,
       title: {
-        text: 'Response Time (ms)',
+        text: respTimeText+' (ms)',
         left: 'center',
         textStyle: { color: '#e2e8f0' }
       },
@@ -271,12 +272,11 @@ const MonitoringDashboard = () => {
         }
       }]
     });
-
     // Set options for request count chart
     requestCountChart.setOption({
       animation: false,
       title: {
-        text: "Request Count",
+        text: t('monitoring.requestCount'),
         left: "center",
         textStyle: { color: "#e2e8f0" }
       },
@@ -296,12 +296,11 @@ const MonitoringDashboard = () => {
         itemStyle: { color: "#48bb78" }
       }]
     });
-
     // Set options for error rate chart
     errorRateChart.setOption({
       animation: false,
       title: {
-        text: "Error Rate (%)",
+        text: t('monitoring.errorRate'),
         left: "center",
         textStyle: { color: "#e2e8f0" }
       },
@@ -336,7 +335,7 @@ const MonitoringDashboard = () => {
     statusDistributionChart.setOption({
       animation: false,
       title: {
-        text: "Status Code Distribution",
+        text: t('monitoring.statusDistribution'),
         left: "center",
         textStyle: { color: "#e2e8f0" }
       },
@@ -454,7 +453,7 @@ const MonitoringDashboard = () => {
                 value={selectedProject?.id || selectedProject?._id || ''}
                 onChange={(e) => handleProjectSelect(e.target.value)}
               >
-                <option value="">Select Collection</option>
+                <option value="">{t('monitoring.selectCollection')}</option>
                 {collections?.map(collection => (
                   <option key={collection.id || collection._id} value={collection.id || collection._id}>
                     {collection.name}
@@ -465,14 +464,14 @@ const MonitoringDashboard = () => {
             
             <div className="flex items-center bg-green-500 px-2 py-1 rounded-full text-xs">
               <i className="fas fa-circle text-xs mr-1"></i>
-              <span>Connected</span>
+              <span>{t('monitoring.connected')}</span>
             </div>
           </div>
           
           <div className="relative w-1/3">
             <input
               type="text"
-              placeholder="Search endpoints, services..."
+              placeholder={t('monitoring.searchEndpoint')}
               className="bg-gray-700 w-full rounded-md py-2 pl-10 pr-4 text-sm border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -483,7 +482,7 @@ const MonitoringDashboard = () => {
           <div className="flex items-center space-x-4">
             <div className="relative">
               <button className="flex items-center bg-gray-700 hover:bg-gray-600 rounded-md px-3 py-2 text-sm cursor-pointer !rounded-button whitespace-nowrap">
-                <span>Refresh: {refreshRate}</span>
+                <span>{t('monitoring.refresh')}: {refreshRate}</span>
                 <i className="fas fa-chevron-down ml-2 text-xs"></i>
               </button>
             </div>
@@ -519,7 +518,7 @@ const MonitoringDashboard = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search endpoints..."
+                placeholder={t('monitoring.searchEndpoint')}
                 className="bg-gray-700 w-full rounded-md py-2 pl-10 pr-4 text-sm border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -532,19 +531,19 @@ const MonitoringDashboard = () => {
                 onClick={() => setEndpointFilter('All')} 
                 className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'All' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
-                All
+                {t('monitoring.all')}
               </button>
               <button 
                 onClick={() => setEndpointFilter('Active')} 
                 className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Active' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
-                Active
+                {t('monitoring.active')}
               </button>
               <button 
                 onClick={() => setEndpointFilter('Inactive')} 
                 className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Inactive' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
-                Inactive
+                {t('monitoring.inactive')}
               </button>
             </div>
           </div>
@@ -580,7 +579,7 @@ const MonitoringDashboard = () => {
               </div>
             ) : (
               <div className="px-4 py-2 text-gray-400">
-                Select a collection to view endpoints
+                {t('monitoring.selectCollectionToViewEndpoints')}
               </div>
             )}
           </div>
@@ -616,12 +615,12 @@ const MonitoringDashboard = () => {
             <table className="w-full">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Timestamp</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Method</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Endpoint</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Response Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.timestamp')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.method')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.endpoint')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.status')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.responseTime')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">

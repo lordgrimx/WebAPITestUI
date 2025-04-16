@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSettings } from "@/lib/settings-context";
 import { useTheme } from "next-themes";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ export default function SettingsModal({ open, setOpen }) {
   // Get global settings from context
   const { settings, updateSettings } = useSettings();
   const { theme, setTheme } = useTheme();
+  const { t } = useTranslation();
   
   // Local state for form values
   const [defaultHeaders, setDefaultHeaders] = useState([...settings.defaultHeaders, { id: Date.now(), name: "", value: "" }]);
@@ -121,7 +123,7 @@ export default function SettingsModal({ open, setOpen }) {
         className="min-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
       >
         <DialogHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <DialogTitle className="text-xl font-semibold">Settings</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">{t('settings.titleApi')}</DialogTitle>
           <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             <X className="h-4 w-4" />
           </DialogClose>
@@ -131,8 +133,8 @@ export default function SettingsModal({ open, setOpen }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* General Settings */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">General</h4>              <div>
-                <Label className="block text-sm font-medium mb-1">Theme</Label>
+              <h4 className="font-medium text-lg">{t('settings.general')}</h4>              <div>
+                <Label className="block text-sm font-medium mb-1">{t('settings.theme.title')}</Label>
                 <div className="flex space-x-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroup 
@@ -142,24 +144,24 @@ export default function SettingsModal({ open, setOpen }) {
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="light" id="light" />
-                        <Label htmlFor="light">Light</Label>
+                        <Label htmlFor="light">{t('settings.theme.light')}</Label>
                       </div>
                       
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="dark" id="dark" />
-                        <Label htmlFor="dark">Dark</Label>
+                        <Label htmlFor="dark">{t('settings.theme.dark')}</Label>
                       </div>
                       
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="system" id="system" />
-                        <Label htmlFor="system">System</Label>
+                        <Label htmlFor="system">{t('settings.theme.system')}</Label>
                       </div>
                     </RadioGroup>
                   </div>
                 </div>
               </div>              <div>
                 <Label className="block text-sm font-medium mb-1">
-                  Request Timeout (ms)
+                  {t('settings.requestTimeout')}
                 </Label>
                 <Input
                   type="number"
@@ -172,7 +174,7 @@ export default function SettingsModal({ open, setOpen }) {
 
               <div>
                 <Label className="block text-sm font-medium mb-1">
-                  Response Size Limit (KB)
+                  {t('settings.responseSize')}
                 </Label>
                 <Input
                   type="number"
@@ -186,14 +188,14 @@ export default function SettingsModal({ open, setOpen }) {
 
             {/* Default Headers */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">Default Headers</h4>
+              <h4 className="font-medium text-lg">{t('settings.defaultHeaders')}</h4>
 
               <div className="space-y-2">
                 {defaultHeaders.map((header, index) => (
                   <div key={header.id} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-5">                      <Input
                         type="text"
-                        placeholder="Header name"
+                        placeholder={t('settings.headerName')}
                         value={header.name}
                         onChange={(e) => updateHeader(header.id, 'name', e.target.value)}
                       />
@@ -201,7 +203,7 @@ export default function SettingsModal({ open, setOpen }) {
                     <div className="col-span-6">
                       <Input
                         type="text"
-                        placeholder="Header value"
+                        placeholder={t('settings.headerValue')}
                         value={header.value}
                         onChange={(e) => updateHeader(header.id, 'value', e.target.value)}
                       />
@@ -233,7 +235,7 @@ export default function SettingsModal({ open, setOpen }) {
 
             {/* Proxy Settings */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">Proxy Settings</h4>
+              <h4 className="font-medium text-lg">{t('settings.proxySettings')}</h4>
 
               <div>
                 <div className="flex items-center mb-2">
@@ -243,13 +245,13 @@ export default function SettingsModal({ open, setOpen }) {
                     onCheckedChange={setProxyEnabled} 
                   />
                   <Label htmlFor="enable-proxy" className="ml-2 text-sm">
-                    Enable Proxy
+                    {t('settings.enableProxy')}
                   </Label>
                 </div>
 
                 <div className="space-y-2">                  <div>
                     <Label className="block text-sm font-medium mb-1">
-                      Proxy URL
+                      {t('settings.proxyUrl')}
                     </Label>
                     <Input
                       type="text"
@@ -263,7 +265,7 @@ export default function SettingsModal({ open, setOpen }) {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <Label className="block text-sm font-medium mb-1">
-                        Username
+                        {t('settings.username')}
                       </Label>
                       <Input
                         type="text"
@@ -274,7 +276,7 @@ export default function SettingsModal({ open, setOpen }) {
                     </div>
                     <div>
                       <Label className="block text-sm font-medium mb-1">
-                        Password
+                        {t('settings.password')}
                       </Label>
                       <Input
                         type="password"
@@ -290,14 +292,14 @@ export default function SettingsModal({ open, setOpen }) {
 
             {/* API Key Management */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">API Key Management</h4>
+              <h4 className="font-medium text-lg">{t('settings.apiKeyManagement')}</h4>
 
               <div className="space-y-2">
                 {apiKeys.map((key, index) => (
                   <div key={key.id} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-4">                      <Input
                         type="text"
-                        placeholder="Key name"
+                        placeholder={t('settings.keyName')}
                         value={key.name}
                         onChange={(e) => updateApiKey(key.id, 'name', e.target.value)}
                       />
@@ -305,7 +307,7 @@ export default function SettingsModal({ open, setOpen }) {
                     <div className="col-span-7">
                       <Input
                         type="password"
-                        placeholder="API key value"
+                        placeholder={t('settings.apiKeyValue')}
                         value={key.value}
                         onChange={(e) => updateApiKey(key.id, 'value', e.target.value)}
                       />
@@ -337,40 +339,40 @@ export default function SettingsModal({ open, setOpen }) {
 
             {/* Response Formatting */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">Response Formatting</h4>
+              <h4 className="font-medium text-lg">{t('settings.responseFormatting')}</h4>
 
               <div>
                 <Label className="block text-sm font-medium mb-1">
-                  JSON Indentation
+                  {t('settings.jsonIndentation')}
                 </Label>                <Select 
                   value={jsonIndentation} 
                   onValueChange={setJsonIndentation}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select indentation" />
+                    <SelectValue placeholder={t('settings.selectIndentation', 'Select indentation')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="2">2 spaces</SelectItem>
-                    <SelectItem value="4">4 spaces</SelectItem>
-                    <SelectItem value="tab">Tab</SelectItem>
+                    <SelectItem value="2">{t('settings.indentation.twoSpaces', '2 spaces')}</SelectItem>
+                    <SelectItem value="4">{t('settings.indentation.fourSpaces', '4 spaces')}</SelectItem>
+                    <SelectItem value="tab">{t('settings.indentation.tab', 'Tab')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <Label className="block text-sm font-medium mb-1">
-                  Default Response View
+                  {t('settings.defaultResponseView')}
                 </Label>                <Select 
                   value={defaultResponseView} 
                   onValueChange={setDefaultResponseView}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select view" />
+                    <SelectValue placeholder={t('settings.selectView', 'Select view')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pretty">Pretty</SelectItem>
-                    <SelectItem value="raw">Raw</SelectItem>
-                    <SelectItem value="preview">Preview</SelectItem>
+                    <SelectItem value="pretty">{t('settings.views.pretty', 'Pretty')}</SelectItem>
+                    <SelectItem value="raw">{t('settings.views.raw', 'Raw')}</SelectItem>
+                    <SelectItem value="preview">{t('settings.views.preview', 'Preview')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -382,7 +384,7 @@ export default function SettingsModal({ open, setOpen }) {
                   onCheckedChange={setWrapLines} 
                 />
                 <Label htmlFor="wrap-lines" className="ml-2 text-sm">
-                  Wrap long lines
+                  {t('settings.wrapLines', 'Wrap long lines')}
                 </Label>
               </div>
 
@@ -393,7 +395,7 @@ export default function SettingsModal({ open, setOpen }) {
                   onCheckedChange={setHighlightSyntax} 
                 />
                 <Label htmlFor="highlight-syntax" className="ml-2 text-sm">
-                  Highlight syntax
+                  {t('settings.highlightSyntax', 'Highlight syntax')}
                 </Label>
               </div>
             </div>
@@ -402,10 +404,10 @@ export default function SettingsModal({ open, setOpen }) {
 
         <DialogFooter className="px-6 py-4 border-t border-gray-200">
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
+            {t('general.cancel', 'Cancel')}
           </Button>
           <Button onClick={handleSaveChanges}>
-            Save Changes
+            {t('settings.saveChanges', 'Save Changes')}
           </Button>
         </DialogFooter>
       </DialogContent>
