@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "DoZNW2dgWPM=",
+  "dgSpecHash": "gBxFeoWsnvw=",
   "success": true,
-  "projectFilePath": "C:\\Users\\semih\\Desktop\\testproject4\\backend\\WebTestUI.Backend.csproj",
+  "projectFilePath": "C:\\Users\\semih\\Desktop\\testprojesii\\backend\\WebTestUI.Backend.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\semih\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\semih\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",

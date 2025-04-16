@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WebTestUI.Backend.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class FixHistoryRequestCascadeDelete : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -31,10 +31,10 @@ namespace WebTestUI.Backend.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ProfileImage = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Website = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ProfileImage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Website = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
                     TwoFactorCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TwoFactorCodeExpiry = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -57,6 +57,26 @@ namespace WebTestUI.Backend.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "K6Tests",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Script = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AuthType = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AuthToken = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RequestId = table.Column<int>(type: "int", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    UpdatedAt = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_K6Tests", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -273,14 +293,12 @@ namespace WebTestUI.Backend.Migrations
                         name: "FK_HistoryEntries_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-table.ForeignKey(
-    name: "FK_HistoryEntries_Requests_RequestId",
-    column: x => x.RequestId,
-    principalTable: "Requests",
-    principalColumn: "Id",
-    onDelete: ReferentialAction.NoAction);
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_HistoryEntries_Requests_RequestId",
+                        column: x => x.RequestId,
+                        principalTable: "Requests",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateIndex(
@@ -348,6 +366,16 @@ table.ForeignKey(
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_K6Tests_RequestId",
+                table: "K6Tests",
+                column: "RequestId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_K6Tests_Status",
+                table: "K6Tests",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Requests_CollectionId",
                 table: "Requests",
                 column: "CollectionId");
@@ -381,6 +409,9 @@ table.ForeignKey(
 
             migrationBuilder.DropTable(
                 name: "HistoryEntries");
+
+            migrationBuilder.DropTable(
+                name: "K6Tests");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import axios from "axios";
+import { authAxios } from '@/lib/auth-context';
 import { toast } from "react-toastify";
 import { useRouter } from 'next/navigation';
 
@@ -27,36 +27,53 @@ export default function LoadTestDialog({
         try {
             setIsGenerating(true);
             
-            // Backend API kullanarak test oluşturma ve kaydetme
-            const response = await axios.post('/api/k6/generate', {
-                name: testName,
-                requestId: requestData.id,
+            const requestBody = {
                 requestData: {
                     method: requestData.method,
                     url: requestData.url,
-                    headers: requestData.headers,
-                    body: requestData.body,
-                    params: requestData.params,
-                    authType: authType || undefined,
-                    authToken: authToken || undefined
+                    headers: requestData.headers || "{}",
+                    body: requestData.body || "",
+                    params: requestData.params || "",
+                    authType: authType || "",
+                    authToken: authToken || ""
                 },
-                options: { 
-                    vus, 
-                    duration 
+                options: {
+                    vus: parseInt(vus),
+                    duration: duration
                 }
-            });
+            };
 
-            const testId = response.data.testId;
+            console.log('Request Body:', JSON.stringify(requestBody, null, 2));
+            
+            // Query parametrelerini URL'e ekleyerek API çağrısı yapma
+            const response = await authAxios.post(
+                `/K6Test/generate-and-save?name=${encodeURIComponent(testName)}&description=&requestId=${requestData.id || ''}`,
+                requestBody
+            );
+
+            const testId = response.data.id;
             
             onTestCreated?.(testId);
             onOpenChange(false);
-            toast.success("Load test created successfully");
-            window.location.href = '/loadtests';
+            toast.success("Yük testi başarıyla oluşturuldu");
+            router.push('/loadtests');
             
         } catch (error) {
-            console.error("Error creating load test:", error);
-            toast.error("Failed to create load test", {
-                description: error.response?.data?.message || error.message
+            console.error("Yük testi oluşturulurken hata:", error);
+            console.error("Hata detayları:", {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                headers: error.response?.headers,
+                config: {
+                    url: error.config?.url,
+                    method: error.config?.method,
+                    data: error.config?.data
+                }
+            });
+            
+            toast.error("Yük testi oluşturulamadı", {
+                description: error.response?.data?.message || error.response?.data || error.message
             });
         } finally {
             setIsGenerating(false);

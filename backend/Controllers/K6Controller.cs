@@ -5,19 +5,37 @@ using System.IO;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using WebTestUI.Backend.DTOs;
+using WebTestUI.Backend.Services;
+using System.Text;
+using System.Text.Json;
 
 namespace WebTestUI.Backend.Controllers
 {
+
+     // Default path, can be overridden in configuration
+
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     public class K6Controller : ControllerBase
     {
+        
         private readonly ILogger<K6Controller> _logger;
+        private readonly IConfiguration _configuration;
+        private readonly IK6TestService _k6TestService;
+        private readonly string _k6ExecutablePath;
+        private readonly Dictionary<string, Process> _runningTests;
 
-        public K6Controller(ILogger<K6Controller> logger)
+        public K6Controller(
+            ILogger<K6Controller> logger,
+            IConfiguration configuration,
+            IK6TestService k6TestService)
         {
             _logger = logger;
+            _configuration = configuration;
+            _k6TestService = k6TestService;
+            _k6ExecutablePath = _configuration["K6:ExecutablePath"] ?? "k6";
+            _runningTests = new Dictionary<string, Process>();
         }
 
         [HttpPost("run")]
@@ -25,233 +43,241 @@ namespace WebTestUI.Backend.Controllers
         {
             try
             {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
+                var tempDir = Path.GetTempPath();
+                if (!Directory.Exists(tempDir))
                 {
-                    return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
+                    Directory.CreateDirectory(tempDir);
                 }
+                _logger.LogInformation($"Temp directory path: {tempDir}");
+                
+                var scriptFileName = $"k6-script-{Guid.NewGuid()}.js";
+                var scriptPath = Path.Combine(tempDir, scriptFileName);
+                _logger.LogInformation($"Creating script file at: {scriptPath}");
 
-                if (string.IsNullOrEmpty(request.Script))
+                try 
                 {
-                    return BadRequest(new { message = "K6 script boş olamaz." });
-                }
-
-                // Create a temporary file for the script
-                var tempFilePath = Path.GetTempFileName() + ".js";
-                await System.IO.File.WriteAllTextAsync(tempFilePath, request.Script);
-
-                try
-                {
-                    // Execute k6 command
-                    var processStartInfo = new ProcessStartInfo
+                    // Ensure the file is properly written and flushed
+                    using (var writer = new StreamWriter(scriptPath, false, Encoding.UTF8))
                     {
-                        FileName = "k6",
-                        Arguments = $"run {tempFilePath}",
+                        await writer.WriteAsync(request.Script);
+                        await writer.FlushAsync();
+                    }
+
+                    if (!System.IO.File.Exists(scriptPath))
+                    {
+                        _logger.LogError($"Failed to create script file: {scriptPath}");
+                        return StatusCode(500, new { error = "Failed to create script file" });
+                    }
+
+                    var fileInfo = new FileInfo(scriptPath);
+                    _logger.LogInformation($"Script file created successfully. Size: {fileInfo.Length} bytes");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error writing script file: {ex.Message}");
+                    return StatusCode(500, new { error = $"Script file creation error: {ex.Message}" });
+                }
+
+                var jsonOutputPath = Path.Combine(tempDir, $"k6-output-{Guid.NewGuid()}.json");
+                _logger.LogInformation($"JSON çıktı dosyası: {jsonOutputPath}");
+
+                var args = new List<string>
+                {
+                    "run",
+                    "--out", $"json={jsonOutputPath}"
+                };
+
+                if (request.Options != null)
+                {
+                    if (request.Options.Vus.HasValue)
+                        args.Add($"--vus={request.Options.Vus.Value}");
+                    
+                    if (!string.IsNullOrEmpty(request.Options.Duration))
+                        args.Add($"--duration={request.Options.Duration}");
+                    
+                    if (request.Options.Iterations.HasValue)
+                        args.Add($"--iterations={request.Options.Iterations.Value}");
+                }
+
+                args.Add(scriptPath);
+
+                var process = new Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = _k6ExecutablePath,
+                        Arguments = string.Join(" ", args),
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-
-                    using var process = new Process();
-                    process.StartInfo = processStartInfo;
-                    process.Start();
-
-                    var output = await process.StandardOutput.ReadToEndAsync();
-                    var error = await process.StandardError.ReadToEndAsync();
-                    await process.WaitForExitAsync();
-
-                    if (process.ExitCode != 0)
-                    {
-                        _logger.LogError("K6 execution failed: {Error}", error);
-                        return StatusCode(500, new { message = "K6 testi başarısız oldu.", error = error });
+                        CreateNoWindow = true,
+                        WorkingDirectory = request.WorkingDirectory ?? Path.GetTempPath()
                     }
+                };
 
-                    // Parse metrics from the output
-                    var results = new K6ResultDto
-                    {
-                        Vus = request.Options?.Vus ?? 10,
-                        Duration = request.Options?.Duration ?? "30s",
-                        RequestsPerSecond = 0,
-                        FailureRate = 0,
-                        AverageResponseTime = 0,
-                        P95ResponseTime = 0,
-                        Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                        DetailedMetrics = new K6DetailedMetricsDto
-                        {
-                            ChecksRate = 0,
-                            DataReceived = "0 B",
-                            DataSent = "0 B",
-                            HttpReqRate = 0,
-                            HttpReqFailed = 0,
-                            SuccessRate = 0,
-                            Iterations = 0,
-                            HttpReqDuration = new K6DurationMetricsDto(),
-                            IterationDuration = new K6DurationMetricsDto()
-                        }
-                    };
+                var output = new StringBuilder();
+                var error = new StringBuilder();
 
-                    // Extract http_reqs rate
-                    var reqsMatch = Regex.Match(output, @"http_reqs[\s\S]+?:\s+\d+\s+([0-9.]+)\/s");
-                    if (reqsMatch.Success && reqsMatch.Groups.Count > 1)
-                    {
-                        results.RequestsPerSecond = float.Parse(reqsMatch.Groups[1].Value);
-                    }
-
-                    // Extract failure rate
-                    var failureMatch = Regex.Match(output, @"failure_rate[\s\S]+?:\s+([0-9.]+)%");
-                    if (failureMatch.Success && failureMatch.Groups.Count > 1)
-                    {
-                        results.FailureRate = float.Parse(failureMatch.Groups[1].Value);
-                    }
-
-                    // Extract average response time
-                    var avgRespMatch = Regex.Match(output, @"http_req_duration[\s\S]+?avg=([0-9.]+)([mµ]?)s");
-                    if (avgRespMatch.Success && avgRespMatch.Groups.Count > 2)
-                    {
-                        float avg = float.Parse(avgRespMatch.Groups[1].Value);
-                        string unit = avgRespMatch.Groups[2].Value;
-
-                        // Convert to milliseconds
-                        if (unit == "µ")
-                        {
-                            avg /= 1000; // Convert microseconds to milliseconds
-                        }
-                        else if (string.IsNullOrEmpty(unit))
-                        {
-                            avg *= 1000; // Convert seconds to milliseconds
-                        }
-
-                        results.AverageResponseTime = avg;
-                    }
-
-                    // Extract p95 response time
-                    var p95Match = Regex.Match(output, @"http_req_duration[\s\S]+?p\(95\)=([0-9.]+)([mµ]?)s");
-                    if (p95Match.Success && p95Match.Groups.Count > 2)
-                    {
-                        float p95 = float.Parse(p95Match.Groups[1].Value);
-                        string unit = p95Match.Groups[2].Value;
-
-                        // Convert to milliseconds
-                        if (unit == "µ")
-                        {
-                            p95 /= 1000; // Convert microseconds to milliseconds
-                        }
-                        else if (string.IsNullOrEmpty(unit))
-                        {
-                            p95 *= 1000; // Convert seconds to milliseconds
-                        }
-
-                        results.P95ResponseTime = p95;
-                    }
-
-                    // Extract detailed metrics
-                    ExtractDetailedMetrics(output, results.DetailedMetrics);
-
-                    return Ok(results);
-                }
-                finally
+                process.OutputDataReceived += (sender, e) =>
                 {
-                    // Clean up the temporary file
-                    if (System.IO.File.Exists(tempFilePath))
+                    if (e.Data != null)
                     {
-                        System.IO.File.Delete(tempFilePath);
+                        output.AppendLine(e.Data);
+                        _logger.LogInformation($"K6 Output: {e.Data}");
                     }
+                };
+
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (e.Data != null)
+                    {
+                        error.AppendLine(e.Data);
+                        _logger.LogError($"K6 Error: {e.Data}");
+                    }
+                };
+
+                var testId = Guid.NewGuid().ToString();
+                _runningTests[testId] = process;
+
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await process.WaitForExitAsync();
+
+                var exitCode = process.ExitCode;
+                process.Close();
+
+               
+
+                if (exitCode != 0)
+                {
+                    return StatusCode(500, new { error = error.ToString() });
+                }
+
+                try
+                {
+                    var metrics = ParseK6Output(output.ToString());
+                    return Ok(new K6MetricsResponseDto
+                    {
+                        Status = "completed",
+                        Metrics = metrics,
+                        RunId = testId,
+                        TestId = testId,
+                        StartTime = DateTime.UtcNow,
+                        EndTime = DateTime.UtcNow
+                    });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error parsing K6 output: {ex.Message}");
+                    return StatusCode(500, new { error = "Error parsing K6 output" });
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "K6 testi çalıştırılırken bir hata oluştu");
-                return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
+                _logger.LogError($"Error running K6 test: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
             }
         }
 
-        private void ExtractDetailedMetrics(string output, K6DetailedMetricsDto metrics)
+        [HttpGet("metrics/{runId}")]
+        public IActionResult GetMetrics(string runId)
         {
-            // Extract checks rate
-            var checksMatch = Regex.Match(output, @"checks[\s\S]+?:\s+\d+\s+([0-9.]+)\/s");
-            if (checksMatch.Success && checksMatch.Groups.Count > 1)
+            if (!_runningTests.TryGetValue(runId, out var process))
             {
-                metrics.ChecksRate = float.Parse(checksMatch.Groups[1].Value);
+                return NotFound(new { error = "Test run not found" });
             }
 
-            // Extract data received
-            var dataReceivedMatch = Regex.Match(output, @"data_received[\s\S]+?:\s+([0-9.]+\s+[A-Z]+)");
-            if (dataReceivedMatch.Success && dataReceivedMatch.Groups.Count > 1)
+            if (!process.HasExited)
             {
-                metrics.DataReceived = dataReceivedMatch.Groups[1].Value;
+                return Ok(new { status = "running" });
             }
 
-            // Extract data sent
-            var dataSentMatch = Regex.Match(output, @"data_sent[\s\S]+?:\s+([0-9.]+\s+[A-Z]+)");
-            if (dataSentMatch.Success && dataSentMatch.Groups.Count > 1)
+            _runningTests.Remove(runId);
+            return Ok(new { status = "completed" });
+        }
+
+        [HttpPost("stop/{runId}")]
+        public IActionResult StopTest(string runId)
+        {
+            if (!_runningTests.TryGetValue(runId, out var process))
             {
-                metrics.DataSent = dataSentMatch.Groups[1].Value;
+                return NotFound(new { error = "Test run not found" });
             }
 
-            // Extract HTTP request rate
-            var httpReqRateMatch = Regex.Match(output, @"http_reqs[\s\S]+?:\s+\d+\s+([0-9.]+)\/s");
-            if (httpReqRateMatch.Success && httpReqRateMatch.Groups.Count > 1)
+            try
             {
-                metrics.HttpReqRate = float.Parse(httpReqRateMatch.Groups[1].Value);
-            }
+                if (!process.HasExited)
+                {
+                    process.Kill(true);
+                }
 
-            // Extract HTTP request failed rate
-            var httpReqFailedMatch = Regex.Match(output, @"http_req_failed[\s\S]+?:\s+([0-9.]+)%");
-            if (httpReqFailedMatch.Success && httpReqFailedMatch.Groups.Count > 1)
-            {
-                metrics.HttpReqFailed = float.Parse(httpReqFailedMatch.Groups[1].Value);
+                _runningTests.Remove(runId);
+                return Ok(new { status = "stopped" });
             }
-
-            // Extract success rate (100% - failure rate)
-            var successRateMatch = Regex.Match(output, @"failure_rate[\s\S]+?:\s+([0-9.]+)%");
-            if (successRateMatch.Success && successRateMatch.Groups.Count > 1)
+            catch (Exception ex)
             {
-                metrics.SuccessRate = 100 - float.Parse(successRateMatch.Groups[1].Value);
-            }
-
-            // Extract iterations count
-            var iterationsMatch = Regex.Match(output, @"iterations[\s\S]+?:\s+(\d+)\s+");
-            if (iterationsMatch.Success && iterationsMatch.Groups.Count > 1)
-            {
-                metrics.Iterations = int.Parse(iterationsMatch.Groups[1].Value);
-            }
-
-            // Extract HTTP request duration metrics
-            var httpDurationMatch = Regex.Match(output, @"http_req_duration[\s\S]+?min=([0-9.]+)([mµ]?)s[\s\S]+?med=([0-9.]+)([mµ]?)s[\s\S]+?max=([0-9.]+)([mµ]?)s[\s\S]+?p\(90\)=([0-9.]+)([mµ]?)s[\s\S]+?p\(95\)=([0-9.]+)([mµ]?)s");
-            if (httpDurationMatch.Success && httpDurationMatch.Groups.Count > 10)
-            {
-                metrics.HttpReqDuration.Min = ConvertToMilliseconds(float.Parse(httpDurationMatch.Groups[1].Value), httpDurationMatch.Groups[2].Value);
-                metrics.HttpReqDuration.Med = ConvertToMilliseconds(float.Parse(httpDurationMatch.Groups[3].Value), httpDurationMatch.Groups[4].Value);
-                metrics.HttpReqDuration.Max = ConvertToMilliseconds(float.Parse(httpDurationMatch.Groups[5].Value), httpDurationMatch.Groups[6].Value);
-                metrics.HttpReqDuration.P90 = ConvertToMilliseconds(float.Parse(httpDurationMatch.Groups[7].Value), httpDurationMatch.Groups[8].Value);
-                metrics.HttpReqDuration.P95 = ConvertToMilliseconds(float.Parse(httpDurationMatch.Groups[9].Value), httpDurationMatch.Groups[10].Value);
-            }
-
-            // Extract iteration duration metrics if available
-            var iterDurationMatch = Regex.Match(output, @"iteration_duration[\s\S]+?min=([0-9.]+)([mµ]?)s[\s\S]+?med=([0-9.]+)([mµ]?)s[\s\S]+?max=([0-9.]+)([mµ]?)s[\s\S]+?p\(90\)=([0-9.]+)([mµ]?)s[\s\S]+?p\(95\)=([0-9.]+)([mµ]?)s");
-            if (iterDurationMatch.Success && iterDurationMatch.Groups.Count > 10)
-            {
-                metrics.IterationDuration.Min = ConvertToMilliseconds(float.Parse(iterDurationMatch.Groups[1].Value), iterDurationMatch.Groups[2].Value);
-                metrics.IterationDuration.Med = ConvertToMilliseconds(float.Parse(iterDurationMatch.Groups[3].Value), iterDurationMatch.Groups[4].Value);
-                metrics.IterationDuration.Max = ConvertToMilliseconds(float.Parse(iterDurationMatch.Groups[5].Value), iterDurationMatch.Groups[6].Value);
-                metrics.IterationDuration.P90 = ConvertToMilliseconds(float.Parse(iterDurationMatch.Groups[7].Value), iterDurationMatch.Groups[8].Value);
-                metrics.IterationDuration.P95 = ConvertToMilliseconds(float.Parse(iterDurationMatch.Groups[9].Value), iterDurationMatch.Groups[10].Value);
+                _logger.LogError($"Error stopping K6 test: {ex.Message}");
+                return StatusCode(500, new { error = ex.Message });
             }
         }
 
-        private float ConvertToMilliseconds(float value, string unit)
+        private K6DetailedMetricsDto ParseK6Output(string output)
         {
-            if (unit == "µ")
+            try
             {
-                return value / 1000; // Convert microseconds to milliseconds
+                var lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                var metricsLine = lines.LastOrDefault(l => l.Contains("\"type\":\"metric\""));
+
+                if (string.IsNullOrEmpty(metricsLine))
+                {
+                    throw new Exception("No metrics found in K6 output");
+                }
+
+                var metricsJson = JsonSerializer.Deserialize<JsonElement>(metricsLine);
+                var metrics = new K6DetailedMetricsDto();
+
+                if (metricsJson.TryGetProperty("data", out var data))
+                {
+                    metrics.Checks = ExtractMetricData(data, "checks");
+                    metrics.Data = ExtractMetricData(data, "data");
+                    metrics.Http_Reqs = ExtractMetricData(data, "http_reqs");
+                    metrics.Iterations = ExtractMetricData(data, "iterations");
+                    metrics.Vus = ExtractMetricData(data, "vus");
+                    metrics.Vus_Max = ExtractMetricData(data, "vus_max");
+                }
+
+                return metrics;
             }
-            else if (string.IsNullOrEmpty(unit))
+            catch (Exception ex)
             {
-                return value * 1000; // Convert seconds to milliseconds
+                _logger.LogError($"Error parsing K6 metrics: {ex.Message}");
+                throw;
+            }
+        }
+
+        private MetricData ExtractMetricData(JsonElement data, string metricName)
+        {
+            if (!data.TryGetProperty(metricName, out var metric))
+            {
+                return null;
             }
 
-            return value; // Already in milliseconds
+            return new MetricData
+            {
+                Rate = metric.GetProperty("rate").GetDouble(),
+                Count = metric.GetProperty("count").GetDouble(),
+                Trend = new TrendStats
+                {
+                    Avg = metric.GetProperty("avg").GetDouble(),
+                    Min = metric.GetProperty("min").GetDouble(),
+                    Med = metric.GetProperty("med").GetDouble(),
+                    Max = metric.GetProperty("max").GetDouble(),
+                    P90 = metric.GetProperty("p90").GetDouble(),
+                    P95 = metric.GetProperty("p95").GetDouble()
+                }
+            };
         }
     }
 }

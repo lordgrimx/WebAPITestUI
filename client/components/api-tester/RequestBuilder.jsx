@@ -46,6 +46,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSettings } from "@/lib/settings-context"; // Import the useSettings hook
+import { authAxios } from "@/lib/auth-context";
 
 // HTTP Methods
 const httpMethods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"];
@@ -721,7 +722,7 @@ export default function RequestBuilder({
       
       setIsLoadingRequest(true);
       try {
-        const response = await axios.get(`/api/requests/${selectedRequestId}`);
+        const response = await authAxios.get(`/requests/${selectedRequestId}`);
         if (response.data) {
           console.log("Loaded request data:", response.data);
           setRequestDataFromBackend(response.data);

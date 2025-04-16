@@ -12,15 +12,15 @@ using WebTestUI.Backend.Data;
 namespace WebTestUI.Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250415084734_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250416100900_FixHistoryRequestCascadeDelete")]
+    partial class FixHistoryRequestCascadeDelete
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.4")
+                .HasAnnotation("ProductVersion", "8.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -167,7 +167,6 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Address")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -209,7 +208,6 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
@@ -219,7 +217,6 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("ProfileImage")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SecurityStamp")
@@ -239,7 +236,6 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Website")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
@@ -372,6 +368,53 @@ namespace WebTestUI.Backend.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("HistoryEntries");
+                });
+
+            modelBuilder.Entity("WebTestUI.Backend.Data.Entities.K6Test", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AuthToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AuthType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Script")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId")
+                        .HasDatabaseName("IX_K6Tests_RequestId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_K6Tests_Status");
+
+                    b.ToTable("K6Tests");
                 });
 
             modelBuilder.Entity("WebTestUI.Backend.Data.Entities.Request", b =>
@@ -525,12 +568,12 @@ namespace WebTestUI.Backend.Migrations
                     b.HasOne("WebTestUI.Backend.Data.Entities.Request", "Request")
                         .WithMany("HistoryEntries")
                         .HasForeignKey("RequestId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("WebTestUI.Backend.Data.Entities.ApplicationUser", "User")
                         .WithMany("HistoryEntries")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Request");

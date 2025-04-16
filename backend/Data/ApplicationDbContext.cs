@@ -15,6 +15,7 @@ namespace WebTestUI.Backend.Data
         public DbSet<Request> Requests { get; set; }
         public DbSet<History> HistoryEntries { get; set; }
         public DbSet<EnvironmentVariable> Environments { get; set; }
+        public DbSet<K6Test> K6Tests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -48,14 +49,16 @@ namespace WebTestUI.Backend.Data
                 .HasOne(h => h.User)
                 .WithMany(u => u.HistoryEntries)
                 .HasForeignKey(h => h.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<History>()
                 .HasOne(h => h.Request)
                 .WithMany(r => r.HistoryEntries)
                 .HasForeignKey(h => h.RequestId)
                 .IsRequired(false)  // Optional relationship - history can exist for ad-hoc requests
-                .OnDelete(DeleteBehavior.SetNull);            // Environment
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Environment
             modelBuilder.Entity<EnvironmentVariable>()
                 .HasOne(e => e.User)
                 .WithMany(u => u.Environments)
@@ -74,6 +77,15 @@ namespace WebTestUI.Backend.Data
 
             modelBuilder.Entity<EnvironmentVariable>()
                 .HasIndex(e => new { e.UserId, e.IsActive });
+
+            // K6Test için indeksler
+            modelBuilder.Entity<K6Test>()
+                .HasIndex(k => k.RequestId)
+                .HasDatabaseName("IX_K6Tests_RequestId");
+
+            modelBuilder.Entity<K6Test>()
+                .HasIndex(k => k.Status)
+                .HasDatabaseName("IX_K6Tests_Status");
         }
     }
 }
