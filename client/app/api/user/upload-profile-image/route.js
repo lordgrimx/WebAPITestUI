@@ -13,18 +13,49 @@ export async function POST(request) {
         }
 
         // For file uploads, we need to handle the form data differently
-        const formData = await request.formData();
+        const incomingFormData = await request.formData();
+        const imageFile = incomingFormData.get('image'); // Get the file using the 'image' key
+
+        if (!imageFile) {
+            return NextResponse.json(
+                { success: false, message: 'No image file found in the request' },
+                { status: 400 }
+            );
+        }
+
+        // Create a new FormData to send to the backend
+        const backendFormData = new FormData();
+        backendFormData.append('image', imageFile); // Append the file with the key 'image'
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7136'}/api/User/upload-profile-image`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                // Don't set Content-Type as it will be set automatically with the boundary for multipart/form-data
+                // Content-Type is set automatically by fetch for FormData
             },
-            body: formData, // Pass the formData directly
+            body: backendFormData, // Pass the new FormData to the backend
         });
 
-        const data = await response.json();
+        // Check if the response body is empty or not JSON before parsing
+        const responseText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            // Handle cases where the backend might return non-JSON responses on error
+            if (!response.ok) {
+                 return NextResponse.json(
+                    { success: false, message: `Backend error: ${response.statusText}`, details: responseText },
+                    { status: response.status }
+                 );
+            }
+             // If response is ok but not JSON (unexpected), treat as an error
+             console.error('Non-JSON response from backend:', responseText);
+             return NextResponse.json(
+                { success: false, message: 'Received an unexpected response format from the server.' },
+                { status: 500 }
+             );
+        }
 
         if (!response.ok) {
             return NextResponse.json(

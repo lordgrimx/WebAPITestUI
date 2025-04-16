@@ -5,7 +5,7 @@ import * as echarts from 'echarts';
 import { format } from "date-fns";
 import { Button } from '../ui/button';
 import { toast } from 'react-toastify';
-import { authAxios } from '@/lib/auth-context';
+import { authAxios, useAuth } from '@/lib/auth-context'; // Import useAuth
 
 // Add this helper function at the top of the file
 const getPathFromUrl = (urlString) => {
@@ -64,7 +64,19 @@ const formatTimestamp = (timestamp) => {
   }
 };
 
+// Define getInitials function
+const getInitials = (user) => {
+  if (!user || !user.name) return "?";
+  return user.name
+    .split(" ")
+    .map(name => name[0])
+    .join("")
+    .toUpperCase()
+    .substring(0, 2);
+};
+
 const MonitoringDashboard = () => {
+  const { user } = useAuth(); // Get user from context
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
   const [refreshRate, setRefreshRate] = useState('30s');
@@ -484,8 +496,17 @@ const MonitoringDashboard = () => {
               <i className="fas fa-cog text-lg"></i>
             </button>
             
-            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
-              <span className="font-semibold">JD</span>
+            {/* Profile Picture/Initials */}
+            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white overflow-hidden">
+              {user?.profileImageBase64 ? (
+                <img
+                  src={user.profileImageBase64}
+                  alt={user.name || 'User Avatar'}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="font-semibold">{getInitials(user)}</span>
+              )}
             </div>
           </div>
         </div>

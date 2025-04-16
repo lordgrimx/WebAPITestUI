@@ -1,5 +1,4 @@
-using Microsoft.AspNetCore.Http;
-using WebTestUI.Backend.DTOs;
+using WebTestUI.Backend.DTOs; // Removed using Microsoft.AspNetCore.Http;
 
 namespace WebTestUI.Backend.Services.Interfaces
 {
@@ -9,6 +8,7 @@ namespace WebTestUI.Backend.Services.Interfaces
         Task<UserDto> UpdateUserProfileAsync(string userId, UpdateProfileDto model);
         Task<bool> ChangePasswordAsync(string userId, ChangePasswordDto model);
         Task<bool> ToggleTwoFactorAsync(string userId, bool enable);
-        Task<string> UploadProfileImageAsync(string userId, IFormFile image);
+        // Updated signature to accept Base64 string and return nullable string
+        Task<string?> UploadProfileImageAsync(string userId, string imageBase64);
     }
 }

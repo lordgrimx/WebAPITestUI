@@ -71,10 +71,17 @@ namespace WebTestUI.Backend.DTOs
         public string Name { get; set; }
         public string Email { get; set; }
         public string Role { get; set; }
-        public string ProfileImage { get; set; }
+        // public string ProfileImage { get; set; } // Removed old property
+        public string? ProfileImageBase64 { get; set; } // Added Base64 property (nullable)
         public string Phone { get; set; }
         public string Address { get; set; }
         public string Website { get; set; }
         public bool TwoFactorEnabled { get; set; }
+    }
+
+    public class UploadImageDto
+    {
+        [Required]
+        public string ImageBase64 { get; set; }
     }
 }

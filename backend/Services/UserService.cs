@@ -1,27 +1,31 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration; // Keep for potential future use, but not strictly needed for Base64
 using WebTestUI.Backend.Data.Entities;
 using WebTestUI.Backend.DTOs;
 using WebTestUI.Backend.Services.Interfaces;
+using System; // Add for Convert
+using System.IO; // Keep for potential future use, but not strictly needed for Base64
+using System.Linq; // Keep for potential future use
+using System.Threading.Tasks; // Keep for async methods
 
 namespace WebTestUI.Backend.Services
 {
     public class UserService : IUserService
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IFileStorageService _fileStorageService;
-        private readonly IConfiguration _configuration;
+        // private readonly IFileStorageService _fileStorageService; // Removed dependency
+        private readonly IConfiguration _configuration; // Keep for potential future use
         private readonly ILogger<UserService> _logger;
 
         public UserService(
             UserManager<ApplicationUser> userManager,
-            IFileStorageService fileStorageService,
+            // IFileStorageService fileStorageService, // Removed dependency
             IConfiguration configuration,
             ILogger<UserService> logger)
         {
             _userManager = userManager;
-            _fileStorageService = fileStorageService;
-            _configuration = configuration;
+            // _fileStorageService = fileStorageService; // Removed dependency
+            _configuration = configuration; // Keep for potential future use
             _logger = logger;
         }
 
@@ -129,61 +133,51 @@ namespace WebTestUI.Backend.Services
             return result.Succeeded;
         }
 
-        public async Task<string> UploadProfileImageAsync(string userId, IFormFile image)
+        // Updated to accept Base64 string
+        public async Task<string?> UploadProfileImageAsync(string userId, string imageBase64)
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
             {
+                 _logger.LogWarning("UploadProfileImageAsync: User not found with ID {UserId}", userId);
                 return null;
             }
 
             try
             {
-                // Dosya uzantısını ve boyutunu kontrol et
-                var maxFileSize = _configuration.GetValue<int>("FileStorage:MaxFileSizeBytes", 2 * 1024 * 1024); // Varsayılan 2MB
-                var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+                 // Basic validation for Base64 string (optional but recommended)
+                 if (string.IsNullOrWhiteSpace(imageBase64) || !imageBase64.Contains(","))
+                 {
+                     _logger.LogWarning("UploadProfileImageAsync: Invalid Base64 string format for user {UserId}", userId);
+                     return null; // Or throw an exception
+                 }
 
-                var extension = Path.GetExtension(image.FileName).ToLowerInvariant();
-                if (!allowedExtensions.Contains(extension))
+                // Update user profile with Base64 string
+                // The Base64 string usually includes the data URI scheme (e.g., "data:image/png;base64,...")
+                // Store it directly or strip the prefix if needed, depending on how you'll use it on the frontend.
+                // Storing with the prefix is generally easier for direct use in <img> src.
+                user.ProfileImageBase64 = imageBase64;
+
+                var result = await _userManager.UpdateAsync(user);
+
+                if (!result.Succeeded)
                 {
-                    _logger.LogWarning("Geçersiz dosya uzantısı: {Extension}", extension);
+                    _logger.LogError("UploadProfileImageAsync: Failed to update user {UserId}. Errors: {Errors}",
+                        userId, string.Join(", ", result.Errors.Select(e => e.Description)));
                     return null;
                 }
 
-                if (image.Length > maxFileSize)
-                {
-                    _logger.LogWarning("Dosya boyutu çok büyük: {Size} bytes", image.Length);
-                    return null;
-                }
-
-                // Eski profil resmini temizle
-                if (!string.IsNullOrEmpty(user.ProfileImage))
-                {
-                    // Burada eski resmin silinmesi işlemi yapılabilir
-                    // _fileStorageService.DeleteFile(user.ProfileImage);
-                }
-
-                // Profil resmini yükle
-                var fileName = $"profile_{userId}{extension}";
-                var filePath = await _fileStorageService.SaveFileAsync(image, fileName, "profiles");
-
-                if (string.IsNullOrEmpty(filePath))
-                {
-                    return null;
-                }
-
-                // Kullanıcı profilini güncelle
-                user.ProfileImage = filePath;
-                await _userManager.UpdateAsync(user);
-
-                return filePath;
+                _logger.LogInformation("UploadProfileImageAsync: Successfully updated profile image for user {UserId}", userId);
+                // Return the Base64 string itself or just a success indicator/URL if applicable
+                return user.ProfileImageBase64;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Profil resmi yüklenirken bir hata oluştu");
+                _logger.LogError(ex, "UploadProfileImageAsync: Error uploading profile image for user {UserId}", userId);
                 return null;
             }
         }
+
 
         // Helper metot: ApplicationUser'ı UserDto'ya dönüştürür
         private async Task<UserDto> MapToUserDtoAsync(ApplicationUser user)
@@ -196,7 +190,8 @@ namespace WebTestUI.Backend.Services
                 Name = user.Name,
                 Email = user.Email,
                 Role = roles.FirstOrDefault() ?? "User",
-                ProfileImage = user.ProfileImage,
+                // ProfileImage = user.ProfileImage, // Removed old property
+                ProfileImageBase64 = user.ProfileImageBase64, // Added Base64 property
                 Phone = user.Phone,
                 Address = user.Address,
                 Website = user.Website,
