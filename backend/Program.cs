@@ -90,6 +90,16 @@ builder.Services.AddHttpClient("ApiClient", client =>
     client.Timeout = TimeSpan.FromSeconds(60); // 60 saniye timeout
 });
 
+// Add Logging
+builder.Services.AddLogging(logging =>
+{
+    logging.ClearProviders();
+    logging.AddConsole()
+           .AddDebug()
+           .SetMinimumLevel(LogLevel.Warning) // This will hide Information level logs
+           .AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning); // This will specifically filter EF Core logs
+});
+
 // Register services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -99,6 +109,7 @@ builder.Services.AddScoped<IRequestService, RequestService>();
 builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IK6TestService, K6TestService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();

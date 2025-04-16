@@ -4590,11 +4590,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\semih\\Desktop\\testproject4\\backend\\WebTestUI.Backend.csproj",
+      "projectUniqueName": "C:\\Users\\semih\\Desktop\\testprojesii\\backend\\WebTestUI.Backend.csproj",
       "projectName": "WebTestUI.Backend",
-      "projectPath": "C:\\Users\\semih\\Desktop\\testproject4\\backend\\WebTestUI.Backend.csproj",
+      "projectPath": "C:\\Users\\semih\\Desktop\\testprojesii\\backend\\WebTestUI.Backend.csproj",
       "packagesPath": "C:\\Users\\semih\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\semih\\Desktop\\testproject4\\backend\\obj\\",
+      "outputPath": "C:\\Users\\semih\\Desktop\\testprojesii\\backend\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\semih\\AppData\\Roaming\\NuGet\\NuGet.Config",

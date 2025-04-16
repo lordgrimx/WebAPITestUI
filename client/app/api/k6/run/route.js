@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { authAxios } from '@/lib/auth-context';
 
 export async function POST(request) {
     try {
-        const { script, testId, options } = await request.json();
+        const { script, testId, options, authType, authToken } = await request.json();
         const token = cookies().get('token')?.value;
 
         if (!token) {
@@ -13,28 +14,18 @@ export async function POST(request) {
             );
         }
 
-        // Forward the request to the backend k6 controller
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:7136'}/api/K6/run`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                script,
-                testId,
-                options
-            }),
+        // Backend'e K6 test isteğini gönder
+        const response = await authAxios.post('/K6/run', {
+            script,
+            testId,
+            options,
+            authType,
+            authToken
         });
 
-        const data = await response.json();
+        const data = response.data;
 
-        if (!response.ok) {
-            return NextResponse.json(
-                { success: false, message: data.message || 'K6 execution failed', errors: data.errors },
-                { status: response.status }
-            );
-        }        // Return the results from the backend with consistent formatting
+        // Backend'den gelen sonuçları frontend formatına dönüştür
         const results = {
             vus: data.vus || options?.vus || 10,
             duration: data.duration || options?.duration || "30s",
@@ -84,7 +75,7 @@ export async function POST(request) {
             averageResponseTime: 0,
             p95ResponseTime: 0,
             timestamp: Date.now()
-        }, { status: 500 });
+        }, { status: error.response?.status || 500 });
     }
 }
 
@@ -93,7 +84,7 @@ export async function OPTIONS() {
         headers: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         },
     });
 }

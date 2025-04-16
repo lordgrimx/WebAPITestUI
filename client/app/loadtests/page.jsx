@@ -36,6 +36,9 @@ import {
 import { toast } from 'sonner';
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { authAxios } from '@/lib/auth-context';
+import { toast as sonnerToast } from 'sonner';
+import LoadTestDialog from '@/components/api-tester/LoadTestDialog';
 
 function MetricItem({ label, value }) {
   return (
@@ -46,122 +49,169 @@ function MetricItem({ label, value }) {
   );
 }
 
-// TODO: API servislerini buraya ekle
-const fetchK6Tests = async () => { /* ... */ };
-const runK6Test = async (testId, script, options) => { /* ... */ };
-const updateTestResults = async (testId, status, results) => { /* ... */ };
-const removeK6Test = async (testId) => { /* ... */ };
+const executeK6Test = async (testId) => {
+  const response = await authAxios.post(`/K6Test/${testId}/execute`);
+  return response.data;
+};
 
+const deleteK6Test = async (testId) => {
+  const response = await authAxios.delete(`/K6Test/${testId}`);
+  return response.data;
+};
 
 export default function LoadTestsPage() {
- 
+  const [k6Tests, setK6Tests] = useState([]);
   const [selectedTest, setSelectedTest] = useState(null);
   const [isRunning, setIsRunning] = useState({});
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
-  // TODO: Testleri backend'den çek
+  // Testleri backend'den çekme
   useEffect(() => {
-    // fetchK6Tests().then(setK6Tests);
-    console.log("TODO: Fetch k6 tests from backend");
+    const fetchTests = async () => {
+      try {
+        const response = await authAxios.get('/K6Test');
+        setK6Tests(response.data);
+      } catch (error) {
+        console.error("Testler yüklenirken hata oluştu:", error);
+        toast.error("Testler yüklenemedi", {
+          description: error.response?.data?.message || error.message
+        });
+      }
+    };
+
+    fetchTests();
   }, []);
 
   const handleRunTest = async (testId) => {
     try {
       setIsRunning(prev => ({ ...prev, [testId]: true }));
-      toast.info("Executing test...", { description: "This may take a moment" });
+      toast.info("Test çalıştırılıyor...", { description: "Bu işlem biraz zaman alabilir" });
       
+      // Önce testi çalıştır
+      const testInfo = await executeK6Test(testId);
       
-      const testInfo = await executeK6Test({ testId });
-      
-      // Execute k6 test via local API
-      const response = await fetch('/api/k6/run', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          script: testInfo.script,
-          testId: testInfo.testId,
-          options: testInfo.options
-        })
+      // K6 test scriptini çalıştır
+      const response = await authAxios.post('/K6/run', {
+        script: testInfo.script,
+        options: testInfo.options || {
+          vus: 10,
+          duration: "30s"
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
+      const results = response.data;
 
-      const results = await response.json();
-
-      // TODO: Backend'e sonuçları güncelle
-      // await updateTestResults(testId, "completed", {
-      //   vus: results.vus || 10,
-      //   duration: results.duration || "30s",
-      //   requestsPerSecond: results.requestsPerSecond || 0,
-      //   failureRate: results.failureRate || 0,
-      //   averageResponseTime: results.averageResponseTime || 0,
-      //   p95ResponseTime: results.p95ResponseTime || 0,
-      //   timestamp: Date.now(),
-      //   detailedMetrics: results.detailedMetrics
-      // });
-      console.log("TODO: Update test results in backend", testId, results);
-      // Geçici olarak state'i güncelle
+      // State'i güncelle
       setK6Tests(prevTests => prevTests.map(t => {
-        if (t._id === testId) {
+        if (t.id === testId) {
           return {
             ...t,
             status: "completed",
             results: {
-              vus: results.vus || 10,
-              duration: results.duration || "30s",
-              requestsPerSecond: results.requestsPerSecond || 0,
-              failureRate: results.failureRate || 0,
-              averageResponseTime: results.averageResponseTime || 0,
-              p95ResponseTime: results.p95ResponseTime || 0,
+              vus: testInfo.options?.vus || 10,
+              duration: testInfo.options?.duration || "30s",
+              requestsPerSecond: results.metrics?.http_reqs?.rate || 0,
+              failureRate: 100 - (results.metrics?.checks?.rate || 0),
+              averageResponseTime: results.metrics?.http_reqs?.trend?.avg || 0,
+              p95ResponseTime: results.metrics?.http_reqs?.trend?.p95 || 0,
               timestamp: Date.now(),
-              detailedMetrics: results.detailedMetrics // Add detailed metrics
+              detailedMetrics: {
+                checksRate: results.metrics?.checks?.rate || 0,
+                dataReceived: "N/A",
+                dataSent: "N/A",
+                httpReqRate: results.metrics?.http_reqs?.rate || 0,
+                httpReqFailed: 100 - (results.metrics?.checks?.rate || 0),
+                successRate: results.metrics?.checks?.rate || 0,
+                iterations: results.metrics?.iterations?.count || 0,
+                httpReqDuration: {
+                  avg: results.metrics?.http_reqs?.trend?.avg || 0,
+                  min: results.metrics?.http_reqs?.trend?.min || 0,
+                  med: results.metrics?.http_reqs?.trend?.med || 0,
+                  max: results.metrics?.http_reqs?.trend?.max || 0,
+                  p90: results.metrics?.http_reqs?.trend?.p90 || 0,
+                  p95: results.metrics?.http_reqs?.trend?.p95 || 0
+                },
+                iterationDuration: {
+                  avg: results.metrics?.iterations?.trend?.avg || 0,
+                  min: results.metrics?.iterations?.trend?.min || 0,
+                  med: results.metrics?.iterations?.trend?.med || 0,
+                  max: results.metrics?.iterations?.trend?.max || 0,
+                  p90: results.metrics?.iterations?.trend?.p90 || 0,
+                  p95: results.metrics?.iterations?.trend?.p95 || 0
+                }
+              }
             }
           };
         }
         return t;
       }));
 
-      toast.success("Test execution completed", {
-        description: `RPS: ${results.requestsPerSecond.toFixed(2)}, Failure Rate: ${results.failureRate.toFixed(2)}%`
+      // Test sonuçlarını backend'e kaydet
+      await authAxios.put(`/K6Test/${testId}/results`, {
+        status: "completed",
+        results: {
+          vus: testInfo.options?.vus || 10,
+          duration: testInfo.options?.duration || "30s",
+          requestsPerSecond: results.metrics?.http_reqs?.rate || 0,
+          failureRate: 100 - (results.metrics?.checks?.rate || 0),
+          averageResponseTime: results.metrics?.http_reqs?.trend?.avg || 0,
+          p95ResponseTime: results.metrics?.http_reqs?.trend?.p95 || 0,
+          timestamp: Date.now(),
+          detailedMetrics: {
+            checksRate: results.metrics?.checks?.rate || 0,
+            dataReceived: "N/A",
+            dataSent: "N/A",
+            httpReqRate: results.metrics?.http_reqs?.rate || 0,
+            httpReqFailed: 100 - (results.metrics?.checks?.rate || 0),
+            successRate: results.metrics?.checks?.rate || 0,
+            iterations: results.metrics?.iterations?.count || 0,
+            httpReqDuration: {
+              avg: results.metrics?.http_reqs?.trend?.avg || 0,
+              min: results.metrics?.http_reqs?.trend?.min || 0,
+              med: results.metrics?.http_reqs?.trend?.med || 0,
+              max: results.metrics?.http_reqs?.trend?.max || 0,
+              p90: results.metrics?.http_reqs?.trend?.p90 || 0,
+              p95: results.metrics?.http_reqs?.trend?.p95 || 0
+            },
+            iterationDuration: {
+              avg: results.metrics?.iterations?.trend?.avg || 0,
+              min: results.metrics?.iterations?.trend?.min || 0,
+              med: results.metrics?.iterations?.trend?.med || 0,
+              max: results.metrics?.iterations?.trend?.max || 0,
+              p90: results.metrics?.iterations?.trend?.p90 || 0,
+              p95: results.metrics?.iterations?.trend?.p95 || 0
+            }
+          }
+        }
+      });
+
+      toast.success("Test tamamlandı", {
+        description: `RPS: ${results.metrics?.http_reqs?.rate?.toFixed(2) || 0}, Hata Oranı: ${(100 - (results.metrics?.checks?.rate || 0)).toFixed(2)}%`
       });
     } catch (error) {
-      console.error("Error running test:", error);
+      console.error("Test çalıştırılırken hata:", error);
+      setK6Tests(prevTests => prevTests.map(t => {
+        if (t.id === testId) {
+          return {
+            ...t,
+            status: "failed",
+            results: {
+              vus: 0,
+              duration: "0s",
+              requestsPerSecond: 0,
+              failureRate: 100,
+              averageResponseTime: 0,
+              p95ResponseTime: 0,
+              timestamp: Date.now()
+            }
+          };
+        }
+        return t;
+      }));
 
-      // TODO: Backend'e hata durumunu güncelle
-      // await updateTestResults(testId, "failed", {
-      //   vus: 0,
-      //   duration: "0s",
-      //   requestsPerSecond: 0,
-      //   failureRate: 100,
-      //   averageResponseTime: 0,
-      //   p95ResponseTime: 0,
-      //   timestamp: Date.now()
-      // });
-      console.log("TODO: Update test status to failed in backend", testId);
-       // Geçici olarak state'i güncelle
-       setK6Tests(prevTests => prevTests.map(t => {
-         if (t._id === testId) {
-           return {
-             ...t,
-             status: "failed",
-             results: {
-               vus: 0,
-               duration: "0s",
-               requestsPerSecond: 0,
-               failureRate: 100,
-               averageResponseTime: 0,
-               p95ResponseTime: 0,
-               timestamp: Date.now()
-             }
-           };
-         }
-         return t;
-       }));
-
-      toast.error("Failed to run test", { description: error.message });
+      toast.error("Test çalıştırılamadı", { 
+        description: error.response?.data?.message || error.message 
+      });
     } finally {
       setIsRunning(prev => ({ ...prev, [testId]: false }));
     }
@@ -169,15 +219,30 @@ export default function LoadTestsPage() {
 
   const handleDeleteTest = async (testId) => {
     try {
-      // TODO: Backend'den testi sil
-      // await removeK6Test(testId);
-      console.log("TODO: Delete test from backend", testId);
-      // Geçici olarak state'i güncelle
-      setK6Tests(prevTests => prevTests.filter(t => t._id !== testId));
-      toast.success("Test deleted successfully (locally)");
+      await deleteK6Test(testId);
+      setK6Tests(prevTests => prevTests.filter(t => t.id !== testId));
+      toast.success("Test başarıyla silindi");
     } catch (error) {
-      toast.error("Failed to delete test");
+      console.error("Test silinirken hata oluştu:", error);
+      toast.error("Test silinemedi", {
+        description: error.response?.data?.message || error.message
+      });
     }
+  };
+
+  const handleTestCreated = (newTestId) => {
+    // Yeni test oluşturulduktan sonra listeyi güncelle
+    const fetchTests = async () => {
+      try {
+        const response = await authAxios.get('/K6Test');
+        setK6Tests(response.data);
+      } catch (error) {
+        console.error("Testler yüklenirken hata oluştu:", error);
+        toast.error("Testler yüklenemedi");
+      }
+    };
+
+    fetchTests();
   };
 
   const statusIcons = {
@@ -227,7 +292,10 @@ export default function LoadTestsPage() {
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Load Tests</h1>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <Button 
+          className="bg-blue-600 hover:bg-blue-700"
+          onClick={() => setIsCreateDialogOpen(true)}
+        >
           Create New Test
         </Button>
       </div>
@@ -237,7 +305,7 @@ export default function LoadTestsPage() {
           const performanceScore = calculatePerformanceScore(test);
           
           return (
-            <Card key={test._id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <Card key={test.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div>
@@ -318,15 +386,15 @@ export default function LoadTestsPage() {
                   {['created', 'failed', 'completed'].includes(test.status) && (
                     <>
                       <Button
-                        onClick={() => handleRunTest(test._id)}
-                        disabled={isRunning[test._id]}
+                        onClick={() => handleRunTest(test.id)}
+                        disabled={isRunning[test.id]}
                         className={`flex-1 ${
-                          isRunning[test._id] 
+                          isRunning[test.id] 
                             ? 'bg-blue-400' 
                             : 'bg-blue-600 hover:bg-blue-700'
                         } text-white`}
                       >
-                        {isRunning[test._id] ? (
+                        {isRunning[test.id] ? (
                           <>
                             <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Running...
                           </>
@@ -338,14 +406,14 @@ export default function LoadTestsPage() {
                       </Button>
                       <Button
                         variant="outline"
-                        onClick={() => handleDeleteTest(test._id)}
+                        onClick={() => handleDeleteTest(test.id)}
                         className="bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-600 hover:text-rose-700"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>
                   )}
-                  {test.status === 'running' && !isRunning[test._id] && (
+                  {test.status === 'running' && !isRunning[test.id] && (
                     <Button
                       disabled
                       className="flex-1 bg-blue-500 text-white"
@@ -360,318 +428,331 @@ export default function LoadTestsPage() {
         })}
       </div>
 
-<Dialog open={!!selectedTest} onOpenChange={() => setSelectedTest(null)}>
-  <DialogContent className="max-w-4xl w-full overflow-hidden">
-    <DialogHeader>
-      <DialogTitle className="flex items-center gap-2">
-        <span>Test Details: {selectedTest?.name}</span>
-        <Badge className={`${statusColors[selectedTest?.status || 'created']} text-white`}>
-          <span className="flex items-center gap-1">
-            {statusIcons[selectedTest?.status]}
-            {selectedTest?.status}
-          </span>
-        </Badge>
-      </DialogTitle>
-    </DialogHeader>
-    
-    <div className="mt-4">
-      <Tabs defaultValue="results">
-        <TabsList className="w-full">
-          <TabsTrigger value="results" className="flex-1">Results</TabsTrigger>
-          <TabsTrigger value="script" className="flex-1">Script</TabsTrigger>
-          <TabsTrigger value="metrics" className="flex-1">Metrics</TabsTrigger>
-          <TabsTrigger value="logs" className="flex-1">Logs</TabsTrigger>
-        </TabsList>
-        
-        <div className="h-[500px] overflow-hidden">
-          <TabsContent value="results" className="h-full">
-            {selectedTest?.results ? (
-              <ScrollArea className="h-full pr-4">
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm text-slate-500">Virtual Users</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-baseline">
-                        <span className="text-3xl font-bold">{selectedTest.results.vus}</span>
-                        <span className="ml-2 text-sm text-slate-500">VUs</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm text-slate-500">Duration</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-baseline">
-                            <span className="text-3xl font-bold">{selectedTest.results.duration}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm text-slate-500">Requests/Second</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-baseline">
-                            <span className="text-3xl font-bold">{selectedTest.results.requestsPerSecond.toFixed(2)}</span>
-                            <span className="ml-2 text-sm text-slate-500">req/s</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm text-slate-500">Failure Rate</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-baseline">
-                            <span className={`text-3xl font-bold ${
-                              selectedTest.results.failureRate > 5 ? 'text-rose-500' : 'text-emerald-500'
-                            }`}>
-                              {selectedTest.results.failureRate.toFixed(2)}%
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm text-slate-500">Avg Response Time</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-baseline">
-                            <span className="text-3xl font-bold">{selectedTest.results.averageResponseTime.toFixed(2)}</span>
-                            <span className="ml-2 text-sm text-slate-500">ms</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm text-slate-500">P95 Response Time</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-baseline">
-                            <span className="text-3xl font-bold">{selectedTest.results.p95ResponseTime.toFixed(2)}</span>
-                            <span className="ml-2 text-sm text-slate-500">ms</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                  
-                </div>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Raw Results</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="bg-slate-50 p-4 rounded-lg overflow-x-auto text-sm">
-                      {JSON.stringify(selectedTest.results, null, 1)}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </ScrollArea>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                <AlertTriangle className="h-12 w-12 mb-4 text-slate-400" />
-                <p>No results available for this test yet.</p>
-                {['created', 'failed'].includes(selectedTest?.status) && (
-                  <Button 
-                    onClick={() => {
-                      setSelectedTest(null);
-                      handleRunTest(selectedTest._id);
-                    }}
-                    className="mt-4 bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Play className="h-4 w-4 mr-2" /> Run Test Now
-                  </Button>
-                )}
-              </div>
-            )}
-          </TabsContent>
+      <LoadTestDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onTestCreated={handleTestCreated}
+        requestData={{
+          method: "GET",
+          url: "",
+          headers: "{}",
+          body: "",
+          params: "{}"
+        }}
+      />
+
+      <Dialog open={!!selectedTest} onOpenChange={() => setSelectedTest(null)}>
+        <DialogContent className="max-w-4xl w-full overflow-hidden">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span>Test Details: {selectedTest?.name}</span>
+              <Badge className={`${statusColors[selectedTest?.status || 'created']} text-white`}>
+                <span className="flex items-center gap-1">
+                  {statusIcons[selectedTest?.status]}
+                  {selectedTest?.status}
+                </span>
+              </Badge>
+            </DialogTitle>
+          </DialogHeader>
           
-          <TabsContent value="script" className="h-full">
-            <ScrollArea className="h-full pr-4" style={{ maxWidth: 'calc(100vw - 4rem)' }}>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Test Script</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <pre className="bg-slate-50 p-4 rounded-lg whitespace-pre-wrap break-all text-sm">
-                    {selectedTest?.script || 'No script available'}
-                  </pre>
-                </CardContent>
-              </Card>
-            </ScrollArea>
-          </TabsContent>
-
-          <TabsContent value="metrics" className="h-full">
-            <ScrollArea className="h-full pr-4">
-              {selectedTest?.results?.detailedMetrics ? (
-                <div className="space-y-6">
-                  {/* General Metrics */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>General Metrics</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Checks Rate</p>
-                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.checksRate.toFixed(2)}%</p>
+          <div className="mt-4">
+            <Tabs defaultValue="results">
+              <TabsList className="w-full">
+                <TabsTrigger value="results" className="flex-1">Results</TabsTrigger>
+                <TabsTrigger value="script" className="flex-1">Script</TabsTrigger>
+                <TabsTrigger value="metrics" className="flex-1">Metrics</TabsTrigger>
+                <TabsTrigger value="logs" className="flex-1">Logs</TabsTrigger>
+              </TabsList>
+              
+              <div className="h-[500px] overflow-hidden">
+                <TabsContent value="results" className="h-full">
+                  {selectedTest?.results ? (
+                    <ScrollArea className="h-full pr-4">
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm text-slate-500">Virtual Users</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-baseline">
+                              <span className="text-3xl font-bold">{selectedTest.results.vus}</span>
+                              <span className="ml-2 text-sm text-slate-500">VUs</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm text-slate-500">Duration</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-baseline">
+                              <span className="text-3xl font-bold">{selectedTest.results.duration}</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm text-slate-500">Requests/Second</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-baseline">
+                              <span className="text-3xl font-bold">{selectedTest.results.requestsPerSecond.toFixed(2)}</span>
+                              <span className="ml-2 text-sm text-slate-500">req/s</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm text-slate-500">Failure Rate</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-baseline">
+                              <span className={`text-3xl font-bold ${
+                                selectedTest.results.failureRate > 5 ? 'text-rose-500' : 'text-emerald-500'
+                              }`}>
+                                {selectedTest.results.failureRate.toFixed(2)}%
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm text-slate-500">Avg Response Time</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-baseline">
+                              <span className="text-3xl font-bold">{selectedTest.results.averageResponseTime.toFixed(2)}</span>
+                              <span className="ml-2 text-sm text-slate-500">ms</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm text-slate-500">P95 Response Time</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-baseline">
+                              <span className="text-3xl font-bold">{selectedTest.results.p95ResponseTime.toFixed(2)}</span>
+                              <span className="ml-2 text-sm text-slate-500">ms</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                    
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Data Received</p>
-                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.dataReceived}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Data Sent</p>
-                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.dataSent}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Duration Metrics */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Duration Metrics (ms)</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {/* HTTP Request Duration */}
-                        <div>
-                          <h4 className="font-medium mb-2">HTTP Request Duration</h4>
-                          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-                            <MetricItem label="AVG" value={selectedTest.results.detailedMetrics.httpReqDuration.avg} />
-                            <MetricItem label="MIN" value={selectedTest.results.detailedMetrics.httpReqDuration.min} />
-                            <MetricItem label="MED" value={selectedTest.results.detailedMetrics.httpReqDuration.med} />
-                            <MetricItem label="MAX" value={selectedTest.results.detailedMetrics.httpReqDuration.max} />
-                            <MetricItem label="P90" value={selectedTest.results.detailedMetrics.httpReqDuration.p90} />
-                            <MetricItem label="P95" value={selectedTest.results.detailedMetrics.httpReqDuration.p95} />
-                          </div>
-                        </div>
-
-                        {/* Iteration Duration */}
-                        <div>
-                          <h4 className="font-medium mb-2">Iteration Duration</h4>
-                          <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-                            <MetricItem label="AVG" value={selectedTest.results.detailedMetrics.iterationDuration.avg} />
-                            <MetricItem label="MIN" value={selectedTest.results.detailedMetrics.iterationDuration.min} />
-                            <MetricItem label="MED" value={selectedTest.results.detailedMetrics.iterationDuration.med} />
-                            <MetricItem label="MAX" value={selectedTest.results.detailedMetrics.iterationDuration.max} />
-                            <MetricItem label="P90" value={selectedTest.results.detailedMetrics.iterationDuration.p90} />
-                            <MetricItem label="P95" value={selectedTest.results.detailedMetrics.iterationDuration.p95} />
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Rates and Counts */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Rates and Counts</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">HTTP Request Rate</p>
-                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.httpReqRate.toFixed(2)}/s</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Success Rate</p>
-                        <p className="text-2xl font-semibold text-green-600">{selectedTest.results.detailedMetrics.successRate.toFixed(2)}%</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Failed Requests</p>
-                        <p className="text-2xl font-semibold text-red-600">{selectedTest.results.detailedMetrics.httpReqFailed.toFixed(2)}%</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Total Iterations</p>
-                        <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.iterations}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                  <AlertTriangle className="h-12 w-12 mb-4 text-slate-400" />
-                  <p>No detailed metrics available for this test.</p>
-                </div>
-              )}
-            </ScrollArea>
-          </TabsContent>
-          
-          <TabsContent value="logs" className="h-full">
-            <ScrollArea className="h-full pr-4">
-              {selectedTest?.logs?.length > 0 ? (
-                <div className="space-y-3">
-                  {selectedTest.logs.map((log, index) => (
-                    <div
-                      key={index}
-                      className={`p-4 rounded-lg border ${
-                        log.level === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' :
-                        log.level === 'warn' ? 'bg-amber-50 border-amber-200 text-amber-800' :
-                        'bg-slate-50 border-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs opacity-70">
-                          {format(log.timestamp, 'HH:mm:ss.SSS')}
-                        </span>
-                        <Badge variant={
-                          log.level === 'error' ? 'destructive' : 
-                          log.level === 'warn' ? 'outline' : 'secondary'
-                        }>
-                          {log.level}
-                        </Badge>
-                      </div>
-                      <div className="font-medium">{log.message}</div>
-                      {log.data && (
-                        <pre className="mt-2 text-xs bg-white bg-opacity-50 p-3 rounded overflow-x-auto border border-slate-200">
-                          {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
-                        </pre>
+                      
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Raw Results</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <pre className="bg-slate-50 p-4 rounded-lg overflow-x-auto text-sm">
+                            {JSON.stringify(selectedTest.results, null, 1)}
+                          </pre>
+                        </CardContent>
+                      </Card>
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                      <AlertTriangle className="h-12 w-12 mb-4 text-slate-400" />
+                      <p>No results available for this test yet.</p>
+                      {['created', 'failed'].includes(selectedTest?.status) && (
+                        <Button 
+                          onClick={() => {
+                            setSelectedTest(null);
+                            handleRunTest(selectedTest.id);
+                          }}
+                          className="mt-4 bg-blue-600 hover:bg-blue-700"
+                        >
+                          <Play className="h-4 w-4 mr-2" /> Run Test Now
+                        </Button>
                       )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                  <Clock className="h-12 w-12 mb-4 text-slate-400" />
-                  <p>No logs available for this test.</p>
-                </div>
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="script" className="h-full">
+                  <ScrollArea className="h-full pr-4" style={{ maxWidth: 'calc(100vw - 4rem)' }}>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Test Script</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <pre className="bg-slate-50 p-4 rounded-lg whitespace-pre-wrap break-all text-sm">
+                          {selectedTest?.script || 'No script available'}
+                        </pre>
+                      </CardContent>
+                    </Card>
+                  </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="metrics" className="h-full">
+                  <ScrollArea className="h-full pr-4">
+                    {selectedTest?.results?.detailedMetrics ? (
+                      <div className="space-y-6">
+                        {/* General Metrics */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>General Metrics</CardTitle>
+                          </CardHeader>
+                          <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Checks Rate</p>
+                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.checksRate.toFixed(2)}%</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Data Received</p>
+                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.dataReceived}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Data Sent</p>
+                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.dataSent}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Duration Metrics */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Duration Metrics (ms)</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-4">
+                              {/* HTTP Request Duration */}
+                              <div>
+                                <h4 className="font-medium mb-2">HTTP Request Duration</h4>
+                                <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                                  <MetricItem label="AVG" value={selectedTest.results.detailedMetrics.httpReqDuration.avg} />
+                                  <MetricItem label="MIN" value={selectedTest.results.detailedMetrics.httpReqDuration.min} />
+                                  <MetricItem label="MED" value={selectedTest.results.detailedMetrics.httpReqDuration.med} />
+                                  <MetricItem label="MAX" value={selectedTest.results.detailedMetrics.httpReqDuration.max} />
+                                  <MetricItem label="P90" value={selectedTest.results.detailedMetrics.httpReqDuration.p90} />
+                                  <MetricItem label="P95" value={selectedTest.results.detailedMetrics.httpReqDuration.p95} />
+                                </div>
+                              </div>
+
+                              {/* Iteration Duration */}
+                              <div>
+                                <h4 className="font-medium mb-2">Iteration Duration</h4>
+                                <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+                                  <MetricItem label="AVG" value={selectedTest.results.detailedMetrics.iterationDuration.avg} />
+                                  <MetricItem label="MIN" value={selectedTest.results.detailedMetrics.iterationDuration.min} />
+                                  <MetricItem label="MED" value={selectedTest.results.detailedMetrics.iterationDuration.med} />
+                                  <MetricItem label="MAX" value={selectedTest.results.detailedMetrics.iterationDuration.max} />
+                                  <MetricItem label="P90" value={selectedTest.results.detailedMetrics.iterationDuration.p90} />
+                                  <MetricItem label="P95" value={selectedTest.results.detailedMetrics.iterationDuration.p95} />
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Rates and Counts */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle>Rates and Counts</CardTitle>
+                          </CardHeader>
+                          <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">HTTP Request Rate</p>
+                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.httpReqRate.toFixed(2)}/s</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Success Rate</p>
+                              <p className="text-2xl font-semibold text-green-600">{selectedTest.results.detailedMetrics.successRate.toFixed(2)}%</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Failed Requests</p>
+                              <p className="text-2xl font-semibold text-red-600">{selectedTest.results.detailedMetrics.httpReqFailed.toFixed(2)}%</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-sm text-muted-foreground">Total Iterations</p>
+                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.iterations}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                        <AlertTriangle className="h-12 w-12 mb-4 text-slate-400" />
+                        <p>No detailed metrics available for this test.</p>
+                      </div>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
+                
+                <TabsContent value="logs" className="h-full">
+                  <ScrollArea className="h-full pr-4">
+                    {selectedTest?.logs?.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedTest.logs.map((log, index) => (
+                          <div
+                            key={index}
+                            className={`p-4 rounded-lg border ${
+                              log.level === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' :
+                              log.level === 'warn' ? 'bg-amber-50 border-amber-200 text-amber-800' :
+                              'bg-slate-50 border-slate-200 text-slate-800'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs opacity-70">
+                                {format(log.timestamp, 'HH:mm:ss.SSS')}
+                              </span>
+                              <Badge variant={
+                                log.level === 'error' ? 'destructive' : 
+                                log.level === 'warn' ? 'outline' : 'secondary'
+                              }>
+                                {log.level}
+                              </Badge>
+                            </div>
+                            <div className="font-medium">{log.message}</div>
+                            {log.data && (
+                              <pre className="mt-2 text-xs bg-white bg-opacity-50 p-3 rounded overflow-x-auto border border-slate-200">
+                                {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
+                              </pre>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                        <Clock className="h-12 w-12 mb-4 text-slate-400" />
+                        <p>No logs available for this test.</p>
+                      </div>
+                    )}
+                  </ScrollArea>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+          
+          <DialogFooter>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedTest(null)}
+              >
+                Close
+              </Button>
+              {['created', 'completed', 'failed'].includes(selectedTest?.status) && (
+                <Button 
+                  onClick={() => {
+                    setSelectedTest(null);
+                    handleRunTest(selectedTest.id);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Play className="h-4 w-4 mr-2" /> Run Test
+                </Button>
               )}
-            </ScrollArea>
-          </TabsContent>
-        </div>
-      </Tabs>
-    </div>
-    
-    <DialogFooter>
-      <div className="flex gap-2">
-        <Button 
-          variant="outline" 
-          onClick={() => setSelectedTest(null)}
-        >
-          Close
-        </Button>
-        {['created', 'completed', 'failed'].includes(selectedTest?.status) && (
-          <Button 
-            onClick={() => {
-              setSelectedTest(null);
-              handleRunTest(selectedTest._id);
-            }}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Play className="h-4 w-4 mr-2" /> Run Test
-          </Button>
-        )}
-      </div>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

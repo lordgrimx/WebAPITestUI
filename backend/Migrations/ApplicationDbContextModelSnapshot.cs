@@ -17,7 +17,7 @@ namespace WebTestUI.Backend.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.4")
+                .HasAnnotation("ProductVersion", "8.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -367,6 +367,53 @@ namespace WebTestUI.Backend.Migrations
                     b.ToTable("HistoryEntries");
                 });
 
+            modelBuilder.Entity("WebTestUI.Backend.Data.Entities.K6Test", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AuthToken")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("AuthType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("RequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Script")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RequestId")
+                        .HasDatabaseName("IX_K6Tests_RequestId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_K6Tests_Status");
+
+                    b.ToTable("K6Tests");
+                });
+
             modelBuilder.Entity("WebTestUI.Backend.Data.Entities.Request", b =>
                 {
                     b.Property<int>("Id")
@@ -518,12 +565,12 @@ namespace WebTestUI.Backend.Migrations
                     b.HasOne("WebTestUI.Backend.Data.Entities.Request", "Request")
                         .WithMany("HistoryEntries")
                         .HasForeignKey("RequestId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("WebTestUI.Backend.Data.Entities.ApplicationUser", "User")
                         .WithMany("HistoryEntries")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Request");
