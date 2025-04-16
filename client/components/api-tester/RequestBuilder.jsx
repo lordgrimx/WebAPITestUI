@@ -1,6 +1,6 @@
 "use client";
-
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from 'react-i18next'; // useTranslation hook'unu ekle
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // GenerateCodeModal import removed as it's handled in Header now
@@ -22,11 +22,8 @@ import {
   Lock,
   Globe,
   User,
-  Save, // Added Save icon for consistency if needed later
   Activity
 } from "lucide-react";
-import axios from "axios";
-// Convex bağımlılıkları kaldırıldı
 import {
   Dialog,
   DialogContent,
@@ -36,7 +33,6 @@ import {
   DialogTitle,
   DialogClose
 } from "@/components/ui/dialog";
-import { useDebounce } from "@/hooks/useDebounce"; // Add this import
 import { toast } from "react-toastify";
 import LoadTestDialog from "@/components/api-tester/LoadTestDialog"; // Assuming LoadTestDialog is a component
 import {
@@ -64,6 +60,8 @@ const methodColors = {
 
 // Params Tab Content
 function ParamsTab({ params, setParams, darkMode }) { // Add darkMode prop
+  const { t } = useTranslation('common');
+  
   const handleParamChange = (id, field, value) => {
     const updatedParams = params.map(p =>
       p.id === id ? { ...p, [field]: value } : p
@@ -104,8 +102,8 @@ function ParamsTab({ params, setParams, darkMode }) { // Add darkMode prop
     <div className={`p-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
       <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center mb-2">
         <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}></div> {/* Checkbox space */}
-        <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>KEY</div>
-        <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>VALUE</div>
+        <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('requests.key')}</div>
+        <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('requests.value')}</div>
         <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}></div> {/* Delete button space */}
       </div>
       {params.map((param, index) => (
@@ -113,17 +111,17 @@ function ParamsTab({ params, setParams, darkMode }) { // Add darkMode prop
           <Checkbox
             checked={param.enabled}
             onCheckedChange={(checked) => handleCheckboxChange(param.id, checked)}
-            aria-label="Enable parameter"
+            aria-label={t('requests.enableParameter')}
             className={darkMode ? 'dark' : ''} // Add dark mode class if needed for Checkbox styling
           />
           <Input
-            placeholder="Key"
+            placeholder={t('requests.keyPlaceholder')}
             value={param.key}
             onChange={(e) => handleParamChange(param.id, 'key', e.target.value)}
             className={`h-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
           />
           <Input
-            placeholder="Value"
+            placeholder={t('requests.valuePlaceholder')}
             value={param.value}
             onChange={(e) => handleParamChange(param.id, 'value', e.target.value)}
             className={`h-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -135,14 +133,14 @@ function ParamsTab({ params, setParams, darkMode }) { // Add darkMode prop
             onClick={() => removeParamRow(param.id)}
             // Disable delete for the last row
             disabled={params.length <= 1}
-            aria-label="Remove parameter"
+            aria-label={t('requests.removeParameter')}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ))}
        <Button variant="outline" size="sm" onClick={addParamRow} className={`mt-2 ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}>
-         <Plus className="h-4 w-4 mr-1" /> Add Param
+         <Plus className="h-4 w-4 mr-1" /> {t('requests.addParam')}
        </Button>
     </div>
   );
@@ -150,6 +148,8 @@ function ParamsTab({ params, setParams, darkMode }) { // Add darkMode prop
 
 // Headers Tab Content
 function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
+  const { t } = useTranslation('common');
+  
   const handleHeaderChange = (id, field, value) => {
     const updatedHeaders = headers.map(h =>
       h.id === id ? { ...h, [field]: value } : h
@@ -190,8 +190,8 @@ function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
     <div className={`p-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
       <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center mb-2">
         <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}></div>
-        <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>KEY</div>
-        <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>VALUE</div>
+        <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('requests.key')}</div>
+        <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('requests.value')}</div>
         <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}></div>
       </div>
       {headers.map((header, index) => (
@@ -199,17 +199,17 @@ function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
           <Checkbox
             checked={header.enabled}
             onCheckedChange={(checked) => handleCheckboxChange(header.id, checked)}
-            aria-label="Enable header"
+            aria-label={t('requests.enableHeader')}
             className={darkMode ? 'dark' : ''} // Add dark mode class if needed for Checkbox styling
           />
           <Input
-            placeholder="Key"
+            placeholder={t('requests.keyPlaceholder')}
             value={header.key}
             onChange={(e) => handleHeaderChange(header.id, 'key', e.target.value)}
             className={`h-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
           />
           <Input
-            placeholder="Value"
+            placeholder={t('requests.valuePlaceholder')}
             value={header.value}
             onChange={(e) => handleHeaderChange(header.id, 'value', e.target.value)}
             className={`h-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -221,14 +221,14 @@ function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
             onClick={() => removeHeaderRow(header.id)}
             // Disable delete for the last row
             disabled={headers.length <= 1}
-            aria-label="Remove header"
+            aria-label={t('requests.removeHeader')}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ))}
       <Button variant="outline" size="sm" onClick={addHeaderRow} className={`mt-2 ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}>
-        <Plus className="h-4 w-4 mr-1" /> Add Header
+        <Plus className="h-4 w-4 mr-1" /> {t('requests.addHeader')}
       </Button>
     </div>
   );
@@ -237,14 +237,15 @@ function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
 
 // Auth Tab Content
 function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKeys = [] }) { // Add apiKeys prop with default value
+  const { t } = useTranslation('common');
+  
   const authTypes = [
-    { value: "none", label: "No Auth" },
-    { value: "managedApiKey", label: "Managed API Key" }, // New type for managed keys
-    { value: "apiKey", label: "Manual API Key" }, // Renamed for clarity
-    { value: "basic", label: "Basic Auth" },
-    { value: "bearer", label: "Bearer Token" },
-    // { value: "apiKey", label: "API Key" }, // Replaced by Manual and Managed
-    { value: "oauth2", label: "OAuth 2.0" }
+    { value: "none", label: t('requests.noAuth') },
+    { value: "managedApiKey", label: t('requests.managedApiKey') }, 
+    { value: "apiKey", label: t('requests.manualApiKey') }, 
+    { value: "basic", label: t('requests.basicAuth') },
+    { value: "bearer", label: t('requests.bearerToken') },
+    { value: "oauth2", label: t('requests.oauth2') }
   ];
 
   // Use local state for token input to avoid direct mutation of prop if needed elsewhere
@@ -306,16 +307,16 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
     <div className={`p-4 space-y-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
       <div>
         <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-          Auth Type
+          {t('requests.authType')}
         </label>
         <Select value={auth?.type || 'none'} onValueChange={handleAuthTypeChange}>
           <SelectTrigger className={`w-[200px] ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
-            <SelectValue placeholder="Select auth type" />
+            <SelectValue placeholder={t('requests.selectAuthType')} />
           </SelectTrigger>
           <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
             {authTypes.map((type) => (
               <SelectItem key={type.value} value={type.value} disabled={type.value === 'managedApiKey' && apiKeys.length === 0}>
-                {type.label} {type.value === 'managedApiKey' && apiKeys.length === 0 ? '(No keys defined)' : ''}
+                {type.label} {type.value === 'managedApiKey' && apiKeys.length === 0 ? `(${t('requests.noKeysInSettings')})` : ''}
               </SelectItem>
             ))}
           </SelectContent>
@@ -326,7 +327,7 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
       {auth?.type === "managedApiKey" && (
         <div className="space-y-2">
           <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-            Select Managed Key
+            {t('requests.selectManagedKey')}
           </label>
           <Select
             value={selectedManagedKeyId}
@@ -334,7 +335,7 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
             disabled={apiKeys.length === 0}
           >
             <SelectTrigger className={`w-full ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
-              <SelectValue placeholder={apiKeys.length > 0 ? "Select a key from Settings" : "No keys defined in Settings"} />
+              <SelectValue placeholder={apiKeys.length > 0 ? t('requests.selectKeyFromSettings') : t('requests.noKeysInSettings')} />
             </SelectTrigger>
             <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
               {apiKeys.map((key) => (
@@ -346,7 +347,7 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
           </Select>
           {selectedManagedKeyId && (
             <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-              Key details will be automatically applied from Settings.
+              {t('requests.keyDetailsFromSettings')}
             </p>
           )}
         </div>
@@ -356,12 +357,12 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
         <div className="space-y-4">
           <div>
             <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-              Username
+              {t('requests.username')}
             </label>
             <div className="relative">
               <Input
                 type="text"
-                placeholder="Username"
+                placeholder={t('requests.usernamePlaceholder')}
                 value={auth.username || ""}
                 onChange={(e) => handleAuthFieldChange('username', e.target.value)}
                 className={`pl-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -371,12 +372,12 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
           </div>
           <div>
             <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-              Password
+              {t('requests.password')}
             </label>
             <div className="relative">
               <Input
                 type="password"
-                placeholder="Password"
+                placeholder={t('requests.passwordPlaceholder')}
                 value={auth.password || ""}
                 onChange={(e) => handleAuthFieldChange('password', e.target.value)}
                 className={`pl-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -390,12 +391,12 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
       {auth?.type === "bearer" && (
         <div>
           <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-            Bearer Token
+            {t('requests.bearerToken')}
           </label>
           <div className="relative">
             <Input
               type="text"
-              placeholder="Enter your bearer token"
+              placeholder={t('requests.bearerTokenPlaceholder')}
               value={tokenInput}
               onChange={handleTokenChange}
               className={`pl-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -403,7 +404,7 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
             <Key className={`h-4 w-4 absolute left-2 top-2 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
           </div>
           <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-            Token will be included in Authorization header
+            {t('requests.bearerTokenNote')}
           </p>
         </div>
       )}
@@ -411,14 +412,14 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
       {/* Manual API Key Input */}
       {auth?.type === "apiKey" && (
         <div className="space-y-4">
-          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Enter API key details manually.</p>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('requests.enterApiKeyManually')}</p>
           <div>
             <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-              Key Name (Header or Query Param Name)
+              {t('requests.apiKeyName')}
             </label>
             <Input
               type="text"
-              placeholder="API Key Name"
+              placeholder={t('requests.apiKeyNamePlaceholder')}
               value={auth.apiKeyName || ""}
               onChange={(e) => handleAuthFieldChange('apiKeyName', e.target.value)}
               className={`${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -426,11 +427,11 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
           </div>
           <div>
             <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-              Key Value
+              {t('requests.apiKeyValue')}
             </label>
             <Input
               type="text"
-              placeholder="API Key Value"
+              placeholder={t('requests.apiKeyValuePlaceholder')}
               value={auth.apiKeyValue || ""}
               onChange={(e) => handleAuthFieldChange('apiKeyValue', e.target.value)}
               className={`${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -438,18 +439,18 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
           </div>
           <div>
             <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-              Add to
+              {t('requests.apiKeyAddTo')}
             </label>
             <Select
               value={auth.apiKeyLocation || "header"}
               onValueChange={(value) => handleAuthFieldChange('apiKeyLocation', value)}
             >
               <SelectTrigger className={`w-[200px] ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
-                <SelectValue placeholder="Select location" />
+                <SelectValue placeholder={t('requests.selectLocation')} />
               </SelectTrigger>
               <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
-                <SelectItem value="header">Header</SelectItem>
-                <SelectItem value="query">Query Parameter</SelectItem>
+                <SelectItem value="header">{t('requests.header')}</SelectItem>
+                <SelectItem value="query">{t('requests.queryParameter')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -460,12 +461,12 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
          <div className="space-y-4">
            <div>
              <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-               Access Token URL
+               {t('requests.accessTokenUrl')}
              </label>
              <div className="relative">
                <Input
                  type="url"
-                 placeholder="https://example.com/oauth/token"
+                 placeholder={t('requests.accessTokenUrlPlaceholder')}
                  value={auth.accessTokenUrl || ""}
                  onChange={(e) => handleAuthFieldChange('accessTokenUrl', e.target.value)}
                  className={`pl-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -475,11 +476,11 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
            </div>
            <div>
              <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-               Client ID
+               {t('requests.clientId')}
              </label>
              <Input
                type="text"
-               placeholder="Client ID"
+               placeholder={t('requests.clientIdPlaceholder')}
                value={auth.clientId || ""}
                onChange={(e) => handleAuthFieldChange('clientId', e.target.value)}
                className={`${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -487,11 +488,11 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
            </div>
            <div>
              <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-               Client Secret
+               {t('requests.clientSecret')}
              </label>
              <Input
                type="password"
-               placeholder="Client Secret"
+               placeholder={t('requests.clientSecretPlaceholder')}
                value={auth.clientSecret || ""}
                onChange={(e) => handleAuthFieldChange('clientSecret', e.target.value)}
                className={`${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
@@ -499,28 +500,28 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
            </div>
            <div>
              <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-               Scope
+               {t('requests.scope')}
              </label>
              <Input
                type="text"
-               placeholder="read:user write:user"
+               placeholder={t('requests.scopePlaceholder')}
                value={auth.scope || ""}
                onChange={(e) => handleAuthFieldChange('scope', e.target.value)}
                className={`${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
              />
              <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-               Separate scopes with spaces
+               {t('requests.scopeNote')}
              </p>
            </div>
            <Button variant="outline" size="sm" className={`mt-2 ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}>
-             Request Token (Not Implemented)
+             {t('requests.requestToken')}
            </Button>
          </div>
       )}
 
       {(!auth || auth?.type === "none") && (
         <div className={`${darkMode ? 'text-gray-400' : 'text-gray-500'} text-sm`}>
-          No authentication will be applied to the request.
+          {t('requests.noAuthDesc')}
         </div>
       )}
     </div>
@@ -530,6 +531,7 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
 
 // Tests Tab Content
 function TestsTab({ tests, setTests, darkMode, receivedTestResults = [] }) { // Add receivedTestResults prop
+  const { t } = useTranslation('common');
 
   // Function to handle opening documentation
   const openDocumentation = () => {
@@ -580,13 +582,13 @@ pm.test("Content-Type header is application/json", function () {
     <div className={`p-4 space-y-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
       <div>
         <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-          Test Script <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>(JavaScript - Postman API)</span>
+          {t('requests.testScript')} <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('requests.testScriptInfo')}</span>
         </label>
         <div className={`border rounded overflow-hidden ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <div className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'} p-2 border-b flex justify-between items-center`}>
             <div className={`text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} flex items-center`}>
               <Code className="h-4 w-4 mr-1" />
-              Tests
+              {t('requests.testsTitle')}
             </div>
             <div className="flex items-center space-x-2">
               <Button
@@ -595,7 +597,7 @@ pm.test("Content-Type header is application/json", function () {
                 className={`text-xs h-7 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'}`}
                 onClick={insertExampleScript} // Add onClick handler
               >
-                Examples
+                {t('requests.examples')}
               </Button>
               <Button
                 variant="ghost"
@@ -603,7 +605,7 @@ pm.test("Content-Type header is application/json", function () {
                 className={`text-xs h-7 ${darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-200'}`}
                 onClick={openDocumentation} // Add onClick handler
               >
-                Documentation
+                {t('requests.documentation')}
               </Button>
             </div>
           </div>
@@ -611,12 +613,12 @@ pm.test("Content-Type header is application/json", function () {
             value={tests?.script || ""} // Use optional chaining
             onChange={(e) => setTests({ ...tests, script: e.target.value })}
             className={`w-full h-64 p-3 font-mono text-sm focus:outline-none ${darkMode ? 'bg-gray-900 text-white placeholder-gray-500' : 'bg-white text-black placeholder-gray-400'}`}
-            placeholder={`// Write your tests here using the Postman API (pm.*)\npm.test("Status code is 200", function() {\n  pm.expect(pm.response.code).to.equal(200);\n});`}
+            placeholder={`// ${t('requests.tests')}...\npm.test("Status code is 200", function() {\n  pm.expect(pm.response.code).to.equal(200);\n});`}
           />
         </div>
       </div>      <div>
         <h3 className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
-          Test Results
+          {t('requests.testResults')}
         </h3>
         {testResultsToDisplay.length > 0 ? (
           <div className="space-y-2">
@@ -649,7 +651,7 @@ pm.test("Content-Type header is application/json", function () {
           </div>
         ) : (
           <div className={`${darkMode ? 'text-gray-400 bg-gray-800 border-gray-700' : 'text-gray-500 bg-gray-50 border-gray-200'} text-sm border rounded p-3`}>
-            Test results will appear here after sending the request.
+            {t('requests.testResultsInfo')}
           </div>
         )}
       </div>
@@ -672,6 +674,7 @@ export default function RequestBuilder({
   apiKeys = [], // Receive apiKeys prop
   testResults = [] // Receive test results from ApiTester
 }) {
+  const { t } = useTranslation('common'); // Initialize useTranslation
   const { settings } = useSettings();
 
   // Initialize state based on initialData if provided, otherwise default
@@ -743,22 +746,22 @@ export default function RequestBuilder({
     if (!urlToValidate) {
         setUrlError(null); // Clear error if URL is empty
         return;
-    };
+    }
 
     setIsValidatingUrl(true);
     setUrlError(null);    try {
       // Basic check for protocol
       if (!urlToValidate.startsWith('http://') && !urlToValidate.startsWith('https://')) {
-         throw new Error("URL must start with http:// or https://");
+         throw new Error(t('requests.invalidUrl'));
       }
       const urlObj = new URL(urlToValidate);
       // Optional: Add more specific validation if needed (e.g., check hostname)
     } catch (error) {
-      setUrlError(error.message || 'Invalid URL format');
+      setUrlError(error.message || t('requests.urlErrorInvalid'));
     } finally {
       setIsValidatingUrl(false);
     }
-  }, []);
+  }, [t]);
 
   // Debounce URL updates and validation
   useEffect(() => {
@@ -1058,14 +1061,13 @@ export default function RequestBuilder({
 
 
   return (
-    <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
-      {/* Display error if any */}
+    <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>      {/* Display error if any */}
       {error && (
         <div className={`${darkMode ? 'bg-red-900/30 border-red-700 text-red-300' : 'bg-red-100 border-red-400 text-red-700'} px-4 py-2 text-sm mb-2 mx-2 rounded relative`} role="alert">
-           <strong className="font-bold">Hata:</strong>
+           <strong className="font-bold">{t('requests.error')}:</strong>
            <span className="block sm:inline"> {error}</span>
            <span className="absolute top-0 bottom-0 right-0 px-4 py-2" onClick={() => setError(null)}>
-             <svg className={`fill-current h-6 w-6 ${darkMode ? 'text-red-400' : 'text-red-500'}`} role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Kapat</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
+             <svg className={`fill-current h-6 w-6 ${darkMode ? 'text-red-400' : 'text-red-500'}`} role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>{t('requests.close')}</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/></svg>
            </span>
         </div>
       )}
@@ -1111,7 +1113,7 @@ export default function RequestBuilder({
             className={`${methodColors[method]} text-white flex items-center`}
             disabled={isValidatingUrl} // Disable while validating
           >
-            <SendHorizontal className="h-4 w-4 mr-1" /> Send
+            <SendHorizontal className="h-4 w-4 mr-1" /> {t('requests.send')}
           </Button>
           <TooltipProvider>
             <Tooltip>
@@ -1122,7 +1124,7 @@ export default function RequestBuilder({
                   className={`flex items-center ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}
                   disabled={!url || !!urlError}
                 >
-                  <Activity className="h-4 w-4 mr-1" /> Load Test
+                  <Activity className="h-4 w-4 mr-1" /> {t('requests.loadTest')}
                 </Button>
               </TooltipTrigger>
               <TooltipContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
@@ -1137,11 +1139,11 @@ export default function RequestBuilder({
       {/* Tabs: Params, Headers, Body, Auth, Tests */}
       <Tabs defaultValue="params" className="flex-1 flex flex-col min-h-0"> {/* Added min-h-0 */}
         <TabsList className={`border-b rounded-none justify-start px-2 pt-2 bg-transparent flex-shrink-0 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}> {/* Added flex-shrink-0 */}
-          <TabsTrigger value="params" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Params</TabsTrigger>
-          <TabsTrigger value="headers" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Headers</TabsTrigger>
-          <TabsTrigger value="body" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Body</TabsTrigger>
-          <TabsTrigger value="auth" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Auth</TabsTrigger>
-          <TabsTrigger value="tests" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Tests</TabsTrigger>
+          <TabsTrigger value="params" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.params')}</TabsTrigger>
+          <TabsTrigger value="headers" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.header')}</TabsTrigger>
+          <TabsTrigger value="body" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.body')}</TabsTrigger>
+          <TabsTrigger value="auth" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.auth')}</TabsTrigger>
+          <TabsTrigger value="tests" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.tests')}</TabsTrigger>
         </TabsList>
         {/* Ensure TabsContent takes remaining space and scrolls */}
         <TabsContent value="params" className="flex-1 overflow-auto">
@@ -1150,17 +1152,16 @@ export default function RequestBuilder({
         <TabsContent value="headers" className="flex-1 overflow-auto">
           <HeadersTab headers={headers} setHeaders={setHeaders} darkMode={darkMode} />
         </TabsContent>
-        <TabsContent value="body" className="p-4 text-sm flex-1 overflow-auto flex flex-col"> {/* Added flex flex-col */}
-          <div className="flex flex-col h-full flex-1"> {/* Added flex-1 */}
+        <TabsContent value="body" className="p-4 text-sm flex-1 overflow-auto flex flex-col"> {/* Added flex flex-col */}          <div className="flex flex-col h-full flex-1"> {/* Added flex-1 */}
             <textarea
               className={`w-full h-full flex-1 p-2 border rounded font-mono text-sm resize-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-black placeholder-gray-400'}`} // Added resize-none and dark mode
-              placeholder="Request body (JSON, XML, etc.)"
+              placeholder={t('requests.bodyPlaceholder')}
               value={body}
               onChange={(e) => setBody(e.target.value)}
               disabled={method === "GET" || method === "HEAD"} // Also disable for HEAD
             />
             {(method === "GET" || method === "HEAD") && (
-              <p className={`${darkMode ? 'text-amber-400' : 'text-amber-600'} text-xs mt-2`}>GET/HEAD requests cannot have a body.</p>
+              <p className={`${darkMode ? 'text-amber-400' : 'text-amber-600'} text-xs mt-2`}>{t('requests.noBodyForGetHead')}</p>
             )}
           </div>
         </TabsContent>
@@ -1173,24 +1174,23 @@ export default function RequestBuilder({
             darkMode={darkMode}
             apiKeys={apiKeys} // Pass apiKeys down
           />
-        </TabsContent>        <TabsContent value="tests" className="flex-1 overflow-auto">
+        </TabsContent>        
+        <TabsContent value="tests" className="flex-1 overflow-auto">
           <TestsTab tests={tests} setTests={setTests} darkMode={darkMode} receivedTestResults={testResults} />
         </TabsContent>
-      </Tabs>
-
-      {/* Dialog for advanced options */}
+      </Tabs>      {/* Dialog for advanced options */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent aria-describedby="request-dialog-description" className={darkMode ? 'dark bg-gray-800 border-gray-700' : ''}>
           <DialogHeader>
-            <DialogTitle className={darkMode ? 'text-white' : ''}>Advanced Options</DialogTitle>
+            <DialogTitle className={darkMode ? 'text-white' : ''}>{t('requests.advancedOptions')}</DialogTitle>
             <DialogDescription id="request-dialog-description" className={darkMode ? 'text-gray-400' : ''}>
-              Configure advanced settings for your request. (Not fully implemented)
+              {t('requests.advancedOptionsDesc')}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
-                Parallel Request Count
+                {t('requests.parallelRequestCount')}
               </label>
               <Input
                 type="number"
@@ -1202,28 +1202,16 @@ export default function RequestBuilder({
                 disabled // Disable until implemented
                 className={`${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 disabled:opacity-50' : 'disabled:opacity-50'}`}
               />
-               <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Parallel requests not yet supported.</p>
+               <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>{t('requests.parallelRequestsNotSupported')}</p>
             </div>
-            {/* <div>
-              <Checkbox
-                checked={showAdvancedOptions}
-                onCheckedChange={setShowAdvancedOptions}
-                id="show-advanced"
-                aria-label="Show advanced options"
-                className={darkMode ? 'dark' : ''}
-              />
-              <label htmlFor="show-advanced" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Show advanced options
-              </label>
-            </div> */}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} className={darkMode ? 'border-gray-600 hover:bg-gray-700' : ''}>
-              Cancel
+              {t('requests.cancel')}
             </Button>
             {/* This button triggers the actual request logic */}
             <Button onClick={executeRequest} disabled={!url || !!urlError || isValidatingUrl} className={darkMode ? 'bg-blue-600 hover:bg-blue-700' : ''}>
-              Send Request
+              {t('requests.sendRequest')}
             </Button>
           </DialogFooter>
         </DialogContent>
