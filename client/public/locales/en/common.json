@@ -1,0 +1,65 @@
+{
+    "general": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "add": "Add",
+        "search": "Search",
+        "loading": "Loading..."
+    },
+    "header": {
+        "settings": "Settings",
+        "generateCode": "Generate Code",
+        "environment": "Environment",
+        "saveRequest": "Save Request"
+    },
+    "auth": {
+        "login": "Login",
+        "logout": "Logout",
+        "register": "Register",
+        "forgotPassword": "Forgot Password",
+        "profile": "My Profile"
+    },
+    "settings": {
+        "title": "Settings",
+        "general": "General",
+        "appearance": "Appearance",
+        "privacy": "Privacy",
+        "language": "Language",
+        "timezone": "Timezone",
+        "dateFormat": "Date Format",
+        "theme": {
+            "title": "Theme",
+            "light": "Light",
+            "dark": "Dark",
+            "system": "System"
+        },
+        "autoLogout": "Auto Logout",
+        "sessionTimeout": "Session Timeout",
+        "requestTimeout": "Request Timeout",
+        "jsonIndentation": "JSON Indentation",
+        "defaultHeaders": "Default Headers",
+        "saveChanges": "Save Changes"
+    },
+    "requests": {
+        "send": "Send",
+        "method": "Method",
+        "url": "URL",
+        "params": "Params",
+        "headers": "Headers",
+        "body": "Body",
+        "auth": "Auth",
+        "tests": "Tests"
+    },
+    "response": {
+        "title": "Response",
+        "status": "Status",
+        "time": "Time",
+        "size": "Size",
+        "pretty": "Pretty",
+        "raw": "Raw",
+        "preview": "Preview",
+        "headers": "Headers"
+    }
+}

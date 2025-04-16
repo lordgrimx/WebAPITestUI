@@ -1,0 +1,65 @@
+{
+    "general": {
+        "save": "Kaydet",
+        "cancel": "İptal",
+        "delete": "Sil",
+        "edit": "Düzenle",
+        "add": "Ekle",
+        "search": "Ara",
+        "loading": "Yükleniyor..."
+    },
+    "header": {
+        "settings": "Ayarlar",
+        "generateCode": "Kod Oluştur",
+        "environment": "Ortam",
+        "saveRequest": "İsteği Kaydet"
+    },
+    "auth": {
+        "login": "Giriş Yap",
+        "logout": "Çıkış Yap",
+        "register": "Kayıt Ol",
+        "forgotPassword": "Şifremi Unuttum",
+        "profile": "Profilim"
+    },
+    "settings": {
+        "title": "Ayarlar",
+        "general": "Genel",
+        "appearance": "Görünüm",
+        "privacy": "Gizlilik",
+        "language": "Dil",
+        "timezone": "Saat Dilimi",
+        "dateFormat": "Tarih Formatı",
+        "theme": {
+            "title": "Tema",
+            "light": "Açık",
+            "dark": "Koyu",
+            "system": "Sistem"
+        },
+        "autoLogout": "Otomatik Çıkış",
+        "sessionTimeout": "Oturum Zaman Aşımı",
+        "requestTimeout": "İstek Zaman Aşımı",
+        "jsonIndentation": "JSON Girintisi",
+        "defaultHeaders": "Varsayılan Başlıklar",
+        "saveChanges": "Değişiklikleri Kaydet"
+    },
+    "requests": {
+        "send": "Gönder",
+        "method": "Metot",
+        "url": "URL",
+        "params": "Parametreler",
+        "headers": "Başlıklar",
+        "body": "Gövde",
+        "auth": "Kimlik Doğrulama",
+        "tests": "Testler"
+    },
+    "response": {
+        "title": "Yanıt",
+        "status": "Durum",
+        "time": "Süre",
+        "size": "Boyut",
+        "pretty": "Düzenli",
+        "raw": "Ham",
+        "preview": "Önizleme",
+        "headers": "Başlıklar"
+    }
+}

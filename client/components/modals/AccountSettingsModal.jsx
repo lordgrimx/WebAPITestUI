@@ -21,11 +21,13 @@ import { useAuth } from "@/lib/auth-context"; // Import useAuth
 import { authAxios } from "@/lib/auth-context"; // Import authAxios for API calls
 import { toast } from "sonner"; // Import toast for notifications
 import { useEffect } from "react"; // Import useEffect
+import { useTranslation } from "react-i18next"; // Çoklu dil desteği için eklendi
 function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
   const [activeTab, setActiveTab] = useState("general");
   const { settings: globalSettings, updateSetting: updateGlobalSetting } = useSettings(); // Rename for clarity
   const { user, isLoading: isAuthLoading } = useAuth(); // Get user and loading state
   const [localSettings, setLocalSettings] = useState({}); // State for local edits
+  const { t, i18n } = useTranslation("common"); // Çeviri hook'u
 
   // Initialize local settings when modal opens or user data changes
   useEffect(() => {
@@ -57,6 +59,17 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
   // Generic handler to update local settings state
   const handleSettingChange = (key, value) => {
     setLocalSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Dil değiştiğinde çalışacak özel fonksiyon
+  const handleLanguageChange = (value) => {
+    // Yerel ayarı güncelle
+    handleSettingChange('language', value);
+    
+    // i18n dil ayarını değiştir (yalnızca tarayıcı ortamında)
+    if (typeof window !== 'undefined' && i18n && typeof i18n.changeLanguage === 'function') {
+      i18n.changeLanguage(value);
+    }
   };
 
   // Handler for theme change (updates local state and potentially visual theme instantly)
@@ -178,11 +191,11 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                 </h3>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="language">Language</Label>
-                    {/* Bind value to localSettings and use generic handler */}
+                    <Label htmlFor="language">{t('settings.language')}</Label>
+                    {/* Bind value to localSettings and use language-specific handler */}
                     <Select 
                       value={localSettings.language || 'en'} // Provide default if undefined
-                      onValueChange={(value) => handleSettingChange('language', value)}
+                      onValueChange={(value) => handleLanguageChange(value)}
                     >
                       <SelectTrigger 
                         id="language" 
@@ -201,7 +214,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
                   </div>
                   
                   <div>
-                    <Label htmlFor="timezone">Timezone</Label>
+                    <Label htmlFor="timezone">{t('settings.timezone')}</Label>
                     <Select 
                       value={localSettings.timezone || 'utc'} 
                       onValueChange={(value) => handleSettingChange('timezone', value)}
