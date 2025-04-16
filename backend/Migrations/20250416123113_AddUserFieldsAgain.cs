@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WebTestUI.Backend.Migrations
 {
     /// <inheritdoc />
-    public partial class FixHistoryRequestCascadeDelete : Migration
+    public partial class AddUserFieldsAgain : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -31,13 +31,24 @@ namespace WebTestUI.Backend.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ProfileImage = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ProfileImageBase64 = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Website = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
                     TwoFactorCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     TwoFactorCodeExpiry = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Language = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Timezone = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DateFormat = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AutoLogoutEnabled = table.Column<bool>(type: "bit", nullable: true),
+                    SessionTimeoutMinutes = table.Column<int>(type: "int", nullable: true),
+                    Theme = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CompactViewEnabled = table.Column<bool>(type: "bit", nullable: true),
+                    ShowSidebarEnabled = table.Column<bool>(type: "bit", nullable: true),
+                    UsageAnalyticsEnabled = table.Column<bool>(type: "bit", nullable: true),
+                    CrashReportsEnabled = table.Column<bool>(type: "bit", nullable: true),
+                    MarketingEmailsEnabled = table.Column<bool>(type: "bit", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     LastLogin = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
