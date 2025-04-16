@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context"; // Import useAuth
-import axios from "axios"; // Backend API istekleri için axios
+import { authAxios } from "@/lib/auth-context"; // Import authAxios
 import { toast } from "sonner"; // Import toast for notifications
 import { X, User, Mail, Phone, MapPin, Globe, Camera, Loader2 } from "lucide-react";
 import imageCompression from 'browser-image-compression'; // Import the library
@@ -91,31 +91,64 @@ function ProfileModal({ open, setOpen, darkMode }) {
         console.log(`Compressed file size: ${compressedFile.size / 1024 / 1024} MB`);
         // --- End Compression ---
 
-        // FormData oluştur
-        const formData = new FormData();
-        formData.append('file', compressedFile);
+        // Read the compressed file as Base64
+        const reader = new FileReader();
+        reader.readAsDataURL(compressedFile);
+        reader.onloadend = async () => {
+          const base64String = reader.result;
 
-        // Backend API'ye profil resmi yükle
-        const response = await axios.post('/api/user/upload-profile-image', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
+          if (!base64String) {
+            toast.error("Dosya okunamadı.");
+            setIsSaving(false);
+            return;
           }
-        });
 
-        if (!response.data || !response.data.imageUrl) {
-          throw new Error('Failed to upload profile image');
-        }
-        
-        // API'den dönen resim URL'ini kullan
-        const imageUrl = response.data.imageUrl;
-        
-        // UI'ı yeni resim URL'i ile güncelle
-        setProfileImageUrl(imageUrl);
-        
-        toast.success("Profil resmi başarıyla yüklendi!");
-      } catch (error) {
-        console.error("Profil resmi yükleme hatası:", error);
-        toast.error("Profil resmi yüklenirken bir hata oluştu.");
+          try {
+            // Send Base64 string to the backend API
+            const response = await authAxios.post('/user/upload-profile-image', {
+              imageBase64: base64String // Send as JSON object
+            }); // Content-Type 'application/json' is default for objects
+
+            // Check if the response contains the updated Base64 string
+            if (!response.data || !response.data.imageBase64) {
+               // Check for specific error messages from backend
+               const errorMessage = response.data?.message || 'Profil resmi yüklenemedi (backend hatası).';
+               console.error("Backend upload error:", response.data);
+               throw new Error(errorMessage);
+            }
+
+            // Use the Base64 string returned from the API for UI update
+            const returnedBase64 = response.data.imageBase64;
+
+            // Update the UI with the new Base64 image data
+            setProfileImageUrl(returnedBase64); // Directly use the Base64 string
+
+            toast.success("Profil resmi başarıyla yüklendi!");
+
+          } catch (error) {
+             console.error("Profil resmi yükleme hatası (axios post):", error);
+             // Display more specific error from backend if available
+             const apiErrorMessage = error.response?.data?.message || error.message || "Profil resmi yüklenirken bir hata oluştu.";
+             // Check for 400 Bad Request specifically
+             if (error.response?.status === 400) {
+                 toast.error("Geçersiz istek", { description: apiErrorMessage });
+             } else {
+                 toast.error("Yükleme Hatası", { description: apiErrorMessage });
+             }
+          } finally {
+            // Ensure isSaving is set to false regardless of reader success/failure
+             setIsSaving(false);
+          }
+        };
+        reader.onerror = (error) => {
+          console.error("Dosya okuma hatası:", error);
+          toast.error("Dosya okunurken bir hata oluştu.");
+          setIsSaving(false); // Ensure loading state is reset on reader error
+        };
+
+      } catch (error) { // Catch errors from imageCompression or initial file handling
+        console.error("Profil resmi işleme/sıkıştırma hatası:", error);
+        toast.error("Resim işlenirken bir hata oluştu.");
       } finally {
         setIsSaving(false);
       }
@@ -140,9 +173,9 @@ function ProfileModal({ open, setOpen, darkMode }) {
           setIsSaving(false);
           return;
         }
-          // Change the password (use the function from the hook)
+        // Change the password (use the function from the hook)
         try {
-          await axios.post('/api/user/change-password', {
+          await authAxios.post('/user/change-password', {
             currentPassword,
             newPassword
           });
@@ -157,17 +190,16 @@ function ProfileModal({ open, setOpen, darkMode }) {
           toast.error("Şifre değiştirilemedi. Mevcut şifrenizi kontrol edin.");
           setIsSaving(false);
           return;
-        }
-      }
+        }        }
         // Update profile information
-      await axios.post('/api/user/update-profile', {
+      await authAxios.put('/user/profile', {
         name: name || undefined,
         phone: phone || undefined,
         address: address || undefined,
         website: website || undefined,
         twoFactorEnabled: twoFactorEnabled,
         // The profile image is handled separately in the handleFileChange function
-      }, { headers });
+      });
       
       toast.success("Profil başarıyla güncellendi!");
       setOpen(false); // Close modal on success

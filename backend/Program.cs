@@ -147,6 +147,9 @@ app.UseCors("AllowSpecificOrigin");
 
 app.UseCors();
 
+// Enable static file serving (for wwwroot)
+app.UseStaticFiles(); 
+
 app.UseAuthentication();
 app.UseAuthorization();
 

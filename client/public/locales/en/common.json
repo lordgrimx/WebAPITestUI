@@ -1,0 +1,124 @@
+{
+    "general": {
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "add": "Add",
+        "search": "Search",
+        "loading": "Loading..."
+    },
+    "header": {
+        "settings": "Settings",
+        "generateCode": "Generate Code",
+        "environment": "Environment",
+        "saveRequest": "Save Request",
+        "features": "Features",
+        "pricing": "Pricing",
+        "documentation": "Documentation",
+        "about": "About",
+        "monitoring": "Monitoring",
+        "share": "Share",
+        "environments": "Environments",
+        "environmentList": {
+            "development": "Development",
+            "staging": "Staging",
+            "production": "Production",
+            "add": "Add Environment"
+        },
+        "shareList": {
+            "copyLink": "Copy Link",
+            "toWorkspace": "Share to Workspace",
+            "export": "Export"
+        }
+    },
+    "auth": {
+        "login": "Login",
+        "logout": "Logout",
+        "register": "Register",
+        "forgotPassword": "Forgot Password",
+        "profile": "My Profile"
+    },
+    "profile": {
+        "notifications": "Notifications",
+        "helpSupport": "Help & Support",
+        "userProfile": "User Profile"
+    },
+    "settings": {
+        "title": "Account Settings",
+        "general": "General",
+        "appearance": "Appearance",
+        "privacy": "Privacy",
+        "language": "Language",
+        "timezone": "Timezone",
+        "dateFormat": "Date Format",
+        "theme": {
+            "title": "Theme",
+            "light": "Light",
+            "dark": "Dark",
+            "system": "System"
+        },
+        "autoLogout": "Auto Logout",
+        "autoLogoutDescription": "Automatically log out after period of inactivity",
+        "sessionTimeout": "Session Timeout",
+        "requestTimeout": "Request Timeout",
+        "jsonIndentation": "JSON Indentation",
+        "defaultHeaders": "Default Headers",
+        "saveChanges": "Save Changes",
+        "selectLanguage": "Select language",
+        "selectTimezone": "Select timezone",
+        "selectDateFormat": "Select date format",
+        "layout": "Layout",
+        "compactView": "Compact View",
+        "compactViewDescription": "Reduce spacing and padding throughout the interface",
+        "showSidebar": "Show Sidebar",
+        "showSidebarDescription": "Show collection sidebar by default",
+        "usageAnalytics": "Usage Analytics",
+        "usageAnalyticsDescription": "Allow collection of anonymous usage data to improve the service",
+        "crashReports": "Crash Reports",
+        "crashReportsDescription": "Send anonymous crash reports to help us fix issues",
+        "marketingEmails": "Marketing Emails",
+        "marketingEmailsDescription": "Receive emails about new features, tips, and promotions",
+        "dangerZone": "Danger Zone",
+        "deleteAccount": "Delete Account",
+        "deleteAccountDescription": "Once you delete your account, there is no going back. Please be certain.",
+        "languages": {
+            "english": "English (US)",
+            "spanish": "Spanish",
+            "french": "French",
+            "german": "German",
+            "turkish": "Turkish"
+        },
+        "timezones": {
+            "utc": "UTC (Coordinated Universal Time)",
+            "est": "EST (Eastern Standard Time)",
+            "pst": "PST (Pacific Standard Time)",
+            "cet": "CET (Central European Time)"
+        },
+        "dateFormats": {
+            "mdy": "MM/DD/YYYY",
+            "dmy": "DD/MM/YYYY",
+            "ymd": "YYYY/MM/DD"
+        }
+    },
+    "requests": {
+        "send": "Send",
+        "method": "Method",
+        "url": "URL",
+        "params": "Params",
+        "headers": "Headers",
+        "body": "Body",
+        "auth": "Auth",
+        "tests": "Tests"
+    },
+    "response": {
+        "title": "Response",
+        "status": "Status",
+        "time": "Time",
+        "size": "Size",
+        "pretty": "Pretty",
+        "raw": "Raw",
+        "preview": "Preview",
+        "headers": "Headers"
+    }
+}

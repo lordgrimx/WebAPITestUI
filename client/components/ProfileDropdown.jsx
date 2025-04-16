@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import dynamic from "next/dynamic"; // Re-add dynamic import
+import { authAxios } from "@/lib/auth-context";
+import { useTranslation } from "react-i18next"; // Çeviri hook'u eklendi
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +28,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showHelpSupportModal, setShowHelpSupportModal] = useState(false);
+  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
   
   // Get user initials for avatar
   const getInitials = () => {
@@ -68,11 +71,11 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
         <DropdownMenuTrigger asChild>
           {/* Display profile image if available, otherwise initials */}
           <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white cursor-pointer overflow-hidden">
-            {user?.profileImage ? (
-              <img 
-                src={user.profileImage} 
-                alt={user.name || 'User Avatar'} 
-                className="w-full h-full object-cover" 
+            {user?.profileImageBase64 ? ( // Check for Base64 property
+              <img
+                src={user.profileImageBase64} // Use Base64 string as src
+                alt={user.name || 'User Avatar'}
+                className="w-full h-full object-cover"
               />
             ) : (
               getInitials()
@@ -87,11 +90,11 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
           <div className={`py-3 px-4 border-b ${darkMode ? "border-gray-700" : "border-gray-200"} flex items-center`}>
             {/* Display profile image in dropdown header as well */}
             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white mr-3 overflow-hidden">
-              {user?.profileImage ? (
-                <img 
-                  src={user.profileImage} 
-                  alt={user.name || 'User Avatar'} 
-                  className="w-full h-full object-cover" 
+              {user?.profileImageBase64 ? ( // Check for Base64 property
+                <img
+                  src={user.profileImageBase64} // Use Base64 string as src
+                  alt={user.name || 'User Avatar'}
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 getInitials()
@@ -110,7 +113,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={() => setShowProfileModal(true)}
           >
             <User className="mr-3 w-4 h-4" />
-            <span>My Profile</span>
+            <span>{t('auth.profile')}</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem 
@@ -118,7 +121,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={() => setShowAccountSettingsModal(true)}
           >
             <Settings className="mr-3 w-4 h-4" />
-            <span>Account Settings</span>
+            <span>{t('settings.title')}</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem 
@@ -126,7 +129,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={() => setShowNotificationsModal(true)}
           >
             <Bell className="mr-3 w-4 h-4" />
-            <span>Notifications</span>
+            <span>{t('profile.notifications', 'Notifications')}</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem 
@@ -134,7 +137,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={() => setShowHelpSupportModal(true)}
           >
             <HelpCircle className="mr-3 w-4 h-4" />
-            <span>Help & Support</span>
+            <span>{t('profile.helpSupport', 'Help & Support')}</span>
           </DropdownMenuItem>
             <DropdownMenuSeparator />
           
@@ -143,7 +146,7 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
             onClick={onLogout}
           >
             <LogOut className="mr-3 w-4 h-4" />
-            <span>Logout</span>
+            <span>{t('auth.logout')}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -1,0 +1,124 @@
+{
+    "general": {
+        "save": "Kaydet",
+        "cancel": "İptal",
+        "delete": "Sil",
+        "edit": "Düzenle",
+        "add": "Ekle",
+        "search": "Ara",
+        "loading": "Yükleniyor..."
+    },
+    "header": {
+        "settings": "Ayarlar",
+        "generateCode": "Kod Oluştur",
+        "environment": "Ortam",
+        "saveRequest": "İsteği Kaydet",
+        "features": "Özellikler",
+        "pricing": "Fiyatlandırma",
+        "documentation": "Dokümantasyon",
+        "about": "Hakkında",
+        "monitoring": "İzleme",
+        "share": "Paylaş",
+        "environments": "Ortamlar",
+        "environmentList": {
+            "development": "Geliştirme",
+            "staging": "Test",
+            "production": "Canlı",
+            "add": "Ortam Ekle"
+        },
+        "shareList": {
+            "copyLink": "Bağlantıyı Kopyala",
+            "toWorkspace": "Çalışma Alanını Paylaş",
+            "export": "Dışa Aktar"
+        }
+    },
+    "auth": {
+        "login": "Giriş Yap",
+        "logout": "Çıkış Yap",
+        "register": "Kayıt Ol",
+        "forgotPassword": "Şifremi Unuttum",
+        "profile": "Profilim"
+    },
+    "profile": {
+        "notifications": "Bildirimler",
+        "helpSupport": "Yardım & Destek",
+        "userProfile": "Kullanıcı Profili"
+    },
+    "settings": {
+        "title": "Hesap Ayarları",
+        "general": "Genel",
+        "appearance": "Görünüm",
+        "privacy": "Gizlilik",
+        "language": "Dil",
+        "timezone": "Saat Dilimi",
+        "dateFormat": "Tarih Formatı",
+        "theme": {
+            "title": "Tema",
+            "light": "Açık",
+            "dark": "Koyu",
+            "system": "Sistem"
+        },
+        "autoLogout": "Otomatik Çıkış",
+        "autoLogoutDescription": "Belirli bir süre işlem yapılmadığında otomatik çıkış yap",
+        "sessionTimeout": "Oturum Zaman Aşımı",
+        "requestTimeout": "İstek Zaman Aşımı",
+        "jsonIndentation": "JSON Girintisi",
+        "defaultHeaders": "Varsayılan Başlıklar",
+        "saveChanges": "Değişiklikleri Kaydet",
+        "selectLanguage": "Dil seçin",
+        "selectTimezone": "Saat dilimi seçin",
+        "selectDateFormat": "Tarih formatı seçin",
+        "layout": "Düzen",
+        "compactView": "Sıkışık Görünüm",
+        "compactViewDescription": "Arayüzdeki boşlukları ve dolguları azalt",
+        "showSidebar": "Kenar Çubuğunu Göster",
+        "showSidebarDescription": "Koleksiyon kenar çubuğunu varsayılan olarak göster",
+        "usageAnalytics": "Kullanım Analizi",
+        "usageAnalyticsDescription": "Hizmeti iyileştirmek için anonim kullanım verilerinin toplanmasına izin ver",
+        "crashReports": "Hata Raporları",
+        "crashReportsDescription": "Sorunları çözmemize yardımcı olmak için anonim hata raporları gönder",
+        "marketingEmails": "Pazarlama E-postaları",
+        "marketingEmailsDescription": "Yeni özellikler, ipuçları ve promosyonlar hakkında e-postalar al",
+        "dangerZone": "Tehlikeli Bölge",
+        "deleteAccount": "Hesabı Sil",
+        "deleteAccountDescription": "Hesabınızı sildiğinizde, geri dönüş yoktur. Lütfen emin olun.",
+        "languages": {
+            "english": "İngilizce (ABD)",
+            "spanish": "İspanyolca",
+            "french": "Fransızca",
+            "german": "Almanca",
+            "turkish": "Türkçe"
+        },
+        "timezones": {
+            "utc": "UTC (Eşgüdümlü Evrensel Zaman)",
+            "est": "EST (Doğu Standart Saati)",
+            "pst": "PST (Pasifik Standart Saati)",
+            "cet": "CET (Orta Avrupa Saati)"
+        },
+        "dateFormats": {
+            "mdy": "AA/GG/YYYY",
+            "dmy": "GG/AA/YYYY",
+            "ymd": "YYYY/AA/GG"
+        }
+    },
+    "requests": {
+        "send": "Gönder",
+        "method": "Metot",
+        "url": "URL",
+        "params": "Parametreler",
+        "headers": "Başlıklar",
+        "body": "Gövde",
+        "auth": "Kimlik Doğrulama",
+        "tests": "Testler"
+    },
+    "response": {
+        "title": "Yanıt",
+        "status": "Durum",
+        "time": "Süre",
+        "size": "Boyut",
+        "pretty": "Düzenli",
+        "raw": "Ham",
+        "preview": "Önizleme",
+        "headers": "Başlıklar"
+    }
+}

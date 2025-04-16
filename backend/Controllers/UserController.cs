@@ -132,31 +132,44 @@ namespace WebTestUI.Backend.Controllers
         }
 
         [HttpPost("upload-profile-image")]
-        public async Task<IActionResult> UploadProfileImage(IFormFile image)
+        // Updated to accept Base64 string from request body
+        public async Task<IActionResult> UploadProfileImage([FromBody] UploadImageDto dto)
         {
+            _logger.LogInformation("UploadProfileImage endpoint called (Base64).");
+
+            // Check if the model state is valid (includes checking [Required] on ImageBase64)
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("UploadProfileImage: Invalid model state.");
+                return BadRequest(ModelState);
+            }
+
             try
             {
-                if (image == null || image.Length == 0)
-                {
-                    return BadRequest(new { message = "Lütfen bir resim dosyası seçin." });
-                }
-
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userId))
                 {
+                    _logger.LogWarning("UploadProfileImage: User session not found.");
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                var filePath = await _userService.UploadProfileImageAsync(userId, image);
-                if (string.IsNullOrEmpty(filePath))
+                _logger.LogInformation("Attempting to upload profile image for user {UserId}", userId);
+
+                // Call the updated service method with the Base64 string
+                var uploadedImageBase64 = await _userService.UploadProfileImageAsync(userId, dto.ImageBase64);
+
+                if (string.IsNullOrEmpty(uploadedImageBase64))
                 {
+                    _logger.LogWarning("UploadProfileImage: Service returned null or empty for user {UserId}", userId);
                     return BadRequest(new { message = "Profil resmi yüklenemedi." });
                 }
 
+                 _logger.LogInformation("Successfully uploaded profile image for user {UserId}", userId);
+                // Return the updated Base64 string or just a success message
                 return Ok(new
                 {
                     message = "Profil resmi başarıyla yüklendi.",
-                    imageUrl = filePath
+                    imageBase64 = uploadedImageBase64 // Return the saved Base64 string
                 });
             }
             catch (Exception ex)

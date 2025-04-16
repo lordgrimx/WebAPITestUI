@@ -6,7 +6,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import axios from "axios";
+import { authAxios } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings-context"; // Import the settings hook
 // Proxy için https-proxy-agent gerekebilir, ancak bunu API rotasında kullanacağız.
@@ -132,7 +132,6 @@ export default function ApiTester() {
   // Function to record history using the backend API with proper token handling
   const recordHistory = async (historyData) => {
     try {
-      const token = localStorage.getItem('token');
       // Transform the data to match RecordHistoryDto structure exactly
       const payload = {
         method: historyData.method,
@@ -160,12 +159,7 @@ export default function ApiTester() {
 
       console.log("Sending history payload:", payload); // Debug log
 
-      const response = await axios.post('/api/history', payload, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await authAxios.post('/history', payload);
       
       if (response.data) {
         toast.success("Request recorded in history");
@@ -222,7 +216,7 @@ export default function ApiTester() {
 
       if (settings.proxyEnabled && settings.proxyUrl) {
         console.log("Proxy enabled. Sending request via backend proxy route.");
-        targetUrl = '/api/proxy'; // Target the backend proxy route
+        targetUrl = '/proxy'; // Target the backend proxy route
         // Prepare payload for the proxy route
         requestPayload = {
           originalRequest: {
@@ -331,7 +325,7 @@ export default function ApiTester() {
 
       // Make the actual API request (either direct or via proxy)
       console.log("Final Axios Config:", axiosConfig);
-      const axiosResponse = await axios(axiosConfig);
+      const axiosResponse = await authAxios(axiosConfig);
 
       // Handle successful response (Proxy route should return the target API's response structure)
       console.log("Response received (potentially via proxy):", axiosResponse);

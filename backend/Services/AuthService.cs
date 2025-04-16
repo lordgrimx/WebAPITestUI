@@ -227,12 +227,12 @@ namespace WebTestUI.Backend.Services
             {
                 Id = user.Id,
                 Name = user.Name,
-                Email = user.Email = string.Empty,
-                Role = roles.FirstOrDefault() ?? "User", // Use await and remove .Result
-                ProfileImage = user.ProfileImage = string.Empty,
-                Phone = user.Phone = string.Empty,
-                Address = user.Address = string.Empty,
-                Website = user.Website = string.Empty,
+                Email = user.Email, // Correct assignment
+                Role = roles.FirstOrDefault() ?? "User",
+                ProfileImageBase64 = user.ProfileImageBase64, // Use Base64 property
+                Phone = user.Phone, // Correct assignment
+                Address = user.Address, // Correct assignment
+                Website = user.Website, // Correct assignment
                 TwoFactorEnabled = user.TwoFactorEnabled
             };
         }
