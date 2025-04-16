@@ -227,6 +227,33 @@
         "truncated": "Kısaltılmış",
         "limit": "limiti",
         "truncatedWarning": "Yanıt boyutu nedeniyle kısaltıldı",
-        "someMissingData": "Bazı veriler eksik olabilir."
+        "someMissingData": "Bazı veriler eksik olabilir"
+    },
+    "saveRequest": {
+        "title": "İsteği Kaydet",
+        "requestName": "İstek Adı",
+        "requestNamePlaceholder": "örn. Kullanıcı Listesi Al",
+        "description": "Açıklama (isteğe bağlı)",
+        "descriptionPlaceholder": "Bu istek için bir açıklama ekleyin",
+        "collection": "Koleksiyon",
+        "selectCollection": "Bir koleksiyon seçin",
+        "loadingCollections": "Koleksiyonlar yükleniyor...",
+        "createNewCollection": "+ Yeni koleksiyon oluştur",
+        "newCollectionName": "Yeni Koleksiyon Adı",
+        "newCollectionPlaceholder": "örn. Kimlik Doğrulama API",
+        "addToFavorites": "Favorilere ekle",
+        "cancel": "İptal",
+        "save": "Kaydet",
+        "enterCollectionName": "Lütfen bir koleksiyon adı girin",
+        "requestSaved": "İstek başarıyla kaydedildi",
+        "failedToSave": "İstek kaydedilemedi"
+    },
+    "generateCode": {
+        "title": "Kod Oluştur",
+        "copyToClipboard": "Panoya Kopyala",
+        "close": "Kapat",
+        "usingFetchAPI": "Fetch API Kullanımı",
+        "error": "Hata",
+        "curlError": "cURL Hatası #"
     }
 }

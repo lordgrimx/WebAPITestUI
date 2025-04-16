@@ -227,6 +227,33 @@
         "truncated": "Truncated",
         "limit": "limit",
         "truncatedWarning": "Response was truncated due to size",
-        "someMissingData": "Some data may be missing."
+        "someMissingData": "Some data may be missing"
+    },
+    "saveRequest": {
+        "title": "Save Request",
+        "requestName": "Request Name",
+        "requestNamePlaceholder": "e.g. Get User List",
+        "description": "Description (optional)",
+        "descriptionPlaceholder": "Add a description for this request",
+        "collection": "Collection",
+        "selectCollection": "Select a collection",
+        "loadingCollections": "Loading collections...",
+        "createNewCollection": "+ Create new collection",
+        "newCollectionName": "New Collection Name",
+        "newCollectionPlaceholder": "e.g. Authentication API",
+        "addToFavorites": "Add to favorites",
+        "cancel": "Cancel",
+        "save": "Save",
+        "enterCollectionName": "Please enter a collection name",
+        "requestSaved": "Request saved successfully",
+        "failedToSave": "Failed to save request"
+    },
+    "generateCode": {
+        "title": "Generate Code",
+        "usingFetchAPI": "Using Fetch API",
+        "error": "Error",
+        "curlError": "cURL Error",
+        "copyToClipboard": "Copy to Clipboard",
+        "close": "Close"
     }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ export default function GenerateCodeModal({
   url = "https://api.example.com/v1/users",
   parameterRows = []
 }) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("javascript");
   
   const languageTabs = [
@@ -64,7 +66,7 @@ export default function GenerateCodeModal({
   
   // Code snippets for different languages
   const codeSnippets = {
-    javascript: `// Using Fetch API
+    javascript: `// ${t('generateCode.usingFetchAPI')}
 const options = {
   method: '${selectedMethod}',
   headers: {
@@ -79,7 +81,7 @@ const options = {
 fetch('${fullUrl}', options)
   .then(response => response.json())
   .then(data => console.log(data))
-  .catch(error => console.error('Error:', error));`,
+  .catch(error => console.error('${t('generateCode.error')}:', error));`,
 
     python: `import requests
 
@@ -186,7 +188,7 @@ $err = curl_error($curl);
 curl_close($curl);
 
 if ($err) {
-  echo "cURL Error #:" . $err;
+  echo "${t('generateCode.curlError')}:" . $err;
 } else {
   echo $response;
 }
@@ -265,7 +267,7 @@ func main() {
         }`}
       >
         <DialogHeader className="px-6 py-4 border-b border-gray-200">
-          <DialogTitle className="text-xl font-semibold">Generate Code</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">{t('generateCode.title')}</DialogTitle>
           <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700">
             <X className="h-4 w-4" />
           </DialogClose>
@@ -312,13 +314,13 @@ func main() {
             onClick={copyToClipboard}
             className="mt-4 bg-blue-500 hover:bg-blue-600 text-white"
           >
-            <Copy className="h-4 w-4 mr-2" /> Copy to Clipboard
+            <Copy className="h-4 w-4 mr-2" /> {t('generateCode.copyToClipboard')}
           </Button>
         </div>
 
         <DialogFooter className="px-6 py-4 border-t border-gray-200">
           <Button variant="secondary" onClick={() => setOpen(false)}>
-            Close
+            {t('generateCode.close')}
           </Button>
         </DialogFooter>
       </DialogContent>
