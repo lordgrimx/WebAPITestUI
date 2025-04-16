@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context"; // Import useAuth
-import axios from "axios"; // Backend API istekleri için axios
+import { authAxios } from "@/lib/auth-context"; // Import authAxios
 import { toast } from "sonner"; // Import toast for notifications
 import { X, User, Mail, Phone, MapPin, Globe, Camera, Loader2 } from "lucide-react";
 import imageCompression from 'browser-image-compression'; // Import the library
@@ -96,7 +96,7 @@ function ProfileModal({ open, setOpen, darkMode }) {
         formData.append('file', compressedFile);
 
         // Backend API'ye profil resmi yükle
-        const response = await axios.post('/api/user/upload-profile-image', formData, {
+        const response = await authAxios.post('/user/upload-profile-image', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
           }
@@ -140,9 +140,9 @@ function ProfileModal({ open, setOpen, darkMode }) {
           setIsSaving(false);
           return;
         }
-          // Change the password (use the function from the hook)
+        // Change the password (use the function from the hook)
         try {
-          await axios.post('/api/user/change-password', {
+          await authAxios.post('/user/change-password', {
             currentPassword,
             newPassword
           });
@@ -157,17 +157,16 @@ function ProfileModal({ open, setOpen, darkMode }) {
           toast.error("Şifre değiştirilemedi. Mevcut şifrenizi kontrol edin.");
           setIsSaving(false);
           return;
-        }
-      }
+        }        }
         // Update profile information
-      await axios.post('/api/user/update-profile', {
+      await authAxios.put('/user/profile', {
         name: name || undefined,
         phone: phone || undefined,
         address: address || undefined,
         website: website || undefined,
         twoFactorEnabled: twoFactorEnabled,
         // The profile image is handled separately in the handleFileChange function
-      }, { headers });
+      });
       
       toast.success("Profil başarıyla güncellendi!");
       setOpen(false); // Close modal on success

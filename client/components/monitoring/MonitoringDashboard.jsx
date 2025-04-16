@@ -5,6 +5,7 @@ import * as echarts from 'echarts';
 import { format } from "date-fns";
 import { Button } from '../ui/button'; // Replace with actual UI library
 import { toast } from 'react-toastify';
+import { authAxios } from '@/lib/auth-context';
 
 // Add this helper function at the top of the file
 const getPathFromUrl = (urlString) => {
@@ -89,8 +90,34 @@ const MonitoringDashboard = () => {
     return () => setMounted(false);
   }, []);
 
-  const collections = useQuery(api.collections.getCollections);
-  const history = useQuery(api.history.getRecentHistory, { limit: 50 }); // Update to get history
+  const [collections, setCollections] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Collections ve History verilerini çek
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Collections'ı çek
+        const collectionsResponse = await authAxios.get('/collections');
+        setCollections(collectionsResponse.data);
+
+        // History'i çek
+        const historyResponse = await authAxios.get('/history', { params: { limit: 50 } });
+        setHistory(historyResponse.data);
+
+      } catch (error) {
+        console.error('Veri çekme hatası:', error);
+        toast.error('Veriler yüklenirken bir hata oluştu');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []); // Sadece component mount olduğunda çalışsın
 
   // Transform history data for requests table
   const requests = useMemo(() => 
@@ -99,7 +126,7 @@ const MonitoringDashboard = () => {
       timestamp: format(new Date(hist.timestamp), 'yyyy-MM-dd HH:mm:ss'),
       method: hist.method,
       endpoint: getPathFromUrl(hist.url),
-      statusCode: hist.status || 200,
+      statusCode: hist.statusCode || 200,
       responseTime: hist.duration || 0,
       responseData: hist.responseData, // Add response data
       responseHeaders: hist.responseHeaders // Add response headers
@@ -113,10 +140,10 @@ const MonitoringDashboard = () => {
       id: request.id,
       name: request.endpoint,
       service: selectedProject?.name || "Default Service",
-      status: 'active', // You might want to add status to your schema
+      status: 'active',
       method: request.method,
       url: request.endpoint,
-      errorRate: 0 // This could be calculated from history data
+      errorRate: 0 // Bu değer backend'den gelebilir veya hesaplanabilir
     })) || [],
     [requests, selectedProject]
   );
@@ -387,7 +414,7 @@ const MonitoringDashboard = () => {
                 value={selectedProject?._id || ''}
                 onChange={(e) => handleProjectSelect(e.target.value)}
               >
-                <option value="">Select Collection</option>
+                <option key="default" value="">Select Collection</option>
                 {collections?.map(collection => (
                   <option key={collection._id} value={collection._id}>
                     {collection.name}
@@ -453,18 +480,21 @@ const MonitoringDashboard = () => {
             
             <div className="mt-4 flex space-x-2">
               <button 
+                key="all-filter"
                 onClick={() => setEndpointFilter('All')} 
                 className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'All' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
                 All
               </button>
               <button 
+                key="active-filter"
                 onClick={() => setEndpointFilter('Active')} 
                 className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Active' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
                 Active
               </button>
               <button 
+                key="inactive-filter"
                 onClick={() => setEndpointFilter('Inactive')} 
                 className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Inactive' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
@@ -563,7 +593,7 @@ const MonitoringDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full`} 
                         style={{ 
-                          backgroundColor: `${getStatusColor(request.statusCode)}20`, // Add transparency
+                          backgroundColor: `${getStatusColor(request.statusCode)}20`,
                           color: getStatusColor(request.statusCode) 
                         }}>
                         {request.statusCode || 'Unknown'}
@@ -572,11 +602,11 @@ const MonitoringDashboard = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{request.responseTime} ms</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <Button
+                        key={`view-${request.id}`}
                         variant="ghost"
                         size="sm"
                         className="text-blue-400 hover:text-blue-300 mr-3"
                         onClick={() => {
-                          // Show response data in a dialog or modal
                           try {
                             const responseData = request.responseData 
                               ? JSON.parse(request.responseData)
@@ -586,7 +616,6 @@ const MonitoringDashboard = () => {
                               : {};
                             console.log('Response Data:', responseData);
                             console.log('Headers:', headers);
-                            // You can add a modal/dialog here to show the data
                             toast.info("Response Data", {
                               description: <pre className="max-h-60 overflow-auto">
                                 {JSON.stringify(responseData, null, 2)}
@@ -601,11 +630,11 @@ const MonitoringDashboard = () => {
                         <i className="fas fa-eye"></i>
                       </Button>
                       <Button
+                        key={`download-${request.id}`}
                         variant="ghost"
                         size="sm"
                         className="text-gray-400 hover:text-gray-300"
                         onClick={() => {
-                          // Download response data
                           const blob = new Blob([request.responseData], { type: 'application/json' });
                           const url = URL.createObjectURL(blob);
                           const a = document.createElement('a');

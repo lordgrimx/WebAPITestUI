@@ -1,42 +1,46 @@
+// This file handles dynamic API routes for history items
+import { authAxios } from '@/lib/auth-context';
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
+// This handler supports GET and DELETE methods for /api/history/[id]
 export async function GET(request, { params }) {
+    const token = request.headers.get('authorization');
+
+    if (!token) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
     try {
-        const headersList = headers();
-        const token = headersList.get('authorization')?.split(' ')[1];
-        const id = params.id;
+        // Forward the request to your backend API using authAxios
+        const response = await authAxios.get(`/history/${params.id}`);
 
-        if (!token) {
-            return NextResponse.json(
-                { success: false, message: 'Unauthorized: No authentication token found' },
-                { status: 401 }
-            );
-        }
-
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:5296'}/api/History`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return NextResponse.json(
-                { success: false, message: data.message || 'Failed to fetch history entry', errors: data.errors },
-                { status: response.status }
-            );
-        }
-
-        return NextResponse.json(data);
+        return NextResponse.json(response.data);
     } catch (error) {
-        console.error('Get history entry API error:', error);
+        console.error('Error fetching history entry:', error);
         return NextResponse.json(
-            { success: false, message: 'An error occurred while fetching the history entry.' },
-            { status: 500 }
+            { message: error.response?.data?.message || 'An error occurred while fetching history entry' },
+            { status: error.response?.status || 500 }
+        );
+    }
+}
+
+export async function DELETE(request, { params }) {
+    const token = request.headers.get('authorization');
+
+    if (!token) {
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+        // Forward the DELETE request to your backend API using authAxios
+        const response = await authAxios.delete(`/history/${params.id}`);
+
+        return NextResponse.json({}, { status: response.status });
+    } catch (error) {
+        console.error('Error deleting history entry:', error);
+        return NextResponse.json(
+            { message: error.response?.data?.message || 'An error occurred while deleting history entry' },
+            { status: error.response?.status || 500 }
         );
     }
 }

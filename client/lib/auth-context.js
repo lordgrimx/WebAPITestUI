@@ -5,7 +5,7 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5296/api';
 
-const authAxios = axios.create({
+export const authAxios = axios.create({
     baseURL: API_BASE_URL,
 });
 
