@@ -160,24 +160,32 @@ namespace WebTestUI.Backend.Controllers
                 {
                     _logger.LogWarning($"Could not delete temporary script file {scriptPath}: {ex.Message}");
                 }
-
                 if (exitCode != 0)
                 {
-                    // Clean up JSON output file even on error
-                    try
+                    // Special handling for threshold violations (exit code 99)
+                    if (exitCode == 99)
                     {
-                        if (System.IO.File.Exists(jsonOutputPath))
+                        _logger.LogWarning($"K6 threshold crossed, but continuing with results. Details: {error.ToString()}");
+                        // Continue processing results since threshold violations are not actual test failures
+                    }
+                    else
+                    {
+                        // Clean up JSON output file for actual errors
+                        try
                         {
-                            System.IO.File.Delete(jsonOutputPath);
-                            _logger.LogInformation($"Deleted temporary JSON output file on error: {jsonOutputPath}");
+                            if (System.IO.File.Exists(jsonOutputPath))
+                            {
+                                System.IO.File.Delete(jsonOutputPath);
+                                _logger.LogInformation($"Deleted temporary JSON output file on error: {jsonOutputPath}");
+                            }
                         }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning($"Could not delete temporary JSON output file {jsonOutputPath} on error: {ex.Message}");
+                        }
+                        _logger.LogError($"K6 process exited with code {exitCode}. Error output: {error.ToString()}");
+                        return StatusCode(500, new { error = $"K6 process failed with exit code {exitCode}. Error: {error.ToString()}" });
                     }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning($"Could not delete temporary JSON output file {jsonOutputPath} on error: {ex.Message}");
-                    }
-                    _logger.LogError($"K6 process exited with code {exitCode}. Error output: {error.ToString()}");
-                    return StatusCode(500, new { error = $"K6 process failed with exit code {exitCode}. Error: {error.ToString()}" });
                 }
 
                 // Read metrics from the JSON output file

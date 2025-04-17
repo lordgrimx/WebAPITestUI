@@ -168,33 +168,32 @@ export default function LoadTestsPage() {  const { t } = useTranslation();
       }));      // Test sonuçlarını backend'e kaydet
       try {
         console.log("Saving test results to backend for test ID:", testId);
-        
-        // Format metrics in a way the backend expects
+          // Format metrics in a way the backend expects
         const formattedResults = {
           status: "completed",
-          metrics: {
+          results: {
             vus: testInfo.options?.vus || 10,
             duration: testInfo.options?.duration || "30s",
-            requestsPerSecond: results.metrics?.http_reqs?.rate || 0,
-            failureRate: results.metrics?.http_req_failed?.rate || 0,
-            averageResponseTime: results.metrics?.http_reqs?.trend?.avg || 0,
-            p95ResponseTime: results.metrics?.http_reqs?.trend?.p95 || 0,
-            timestamp: new Date().toISOString(),
-            detailedMetrics: JSON.stringify({
+            requestsPerSecond: results.metrics?.http_Reqs?.rate || 0,
+            failureRate: results.metrics?.http_Req_Failed?.rate || 0,
+            averageResponseTime: results.metrics?.http_Req_Duration?.trend?.avg || 0,
+            p95ResponseTime: results.metrics?.http_Req_Duration?.trend?.p95 || 0,
+            timestamp: Date.now(),
+            detailedMetrics: {
               checksRate: results.metrics?.checks?.rate || 0,
-              dataReceived: results.metrics?.data?.count || 0,
-              dataSent: results.metrics?.data?.count || 0, 
-              httpReqRate: results.metrics?.http_reqs?.rate || 0,
-              httpReqFailed: results.metrics?.http_req_failed?.rate || 0,
+              dataReceived: results.metrics?.data?.count?.toString() || "0", 
+              dataSent: results.metrics?.data?.count?.toString() || "0", 
+              httpReqRate: results.metrics?.http_Reqs?.rate || 0,
+              httpReqFailed: results.metrics?.http_Req_Failed?.rate || 0,
               successRate: results.metrics?.checks?.rate || 0,
               iterations: results.metrics?.iterations?.count || 0,
               httpReqDuration: {
-                avg: results.metrics?.http_reqs?.trend?.avg || 1230,
-                min: results.metrics?.http_reqs?.trend?.min || 0,
-                med: results.metrics?.http_reqs?.trend?.med || 0,
-                max: results.metrics?.http_reqs?.trend?.max || 0,
-                p90: results.metrics?.http_reqs?.trend?.p90 || 0,
-                p95: results.metrics?.http_reqs?.trend?.p95 || 0
+                avg: results.metrics?.http_Req_Duration?.trend?.avg || 0,
+                min: results.metrics?.http_Req_Duration?.trend?.min || 0,
+                med: results.metrics?.http_Req_Duration?.trend?.med || 0,
+                max: results.metrics?.http_Req_Duration?.trend?.max || 0,
+                p90: results.metrics?.http_Req_Duration?.trend?.p90 || 0,
+                p95: results.metrics?.http_Req_Duration?.trend?.p95 || 0
               },
               iterationDuration: {
                 avg: results.metrics?.iterations?.trend?.avg || 0,
@@ -204,7 +203,7 @@ export default function LoadTestsPage() {  const { t } = useTranslation();
                 p90: results.metrics?.iterations?.trend?.p90 || 0,
                 p95: results.metrics?.iterations?.trend?.p95 || 0
               }
-            })
+            }
           }
         };
         
