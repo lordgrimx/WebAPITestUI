@@ -7,9 +7,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useSettings } from "@/lib/settings-context"; // Import useSettings
+import { useTranslation } from 'react-i18next'; // Türkçe desteği için çeviri kütüphanesi
 
 export default function ResponseDisplay({ responseData, darkMode }) {
   const { settings } = useSettings(); // Get settings from context
+  const { t } = useTranslation('common'); // Türkçe çeviri için t fonksiyonunu ekleyelim
 
   // Determine JSON indentation based on settings
   const getJsonIndentation = () => {
@@ -41,9 +43,9 @@ export default function ResponseDisplay({ responseData, darkMode }) {
             <line x1="8" y1="12" x2="16" y2="12"></line>
           </svg>
         </div>
-        <h3 className={`text-lg font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>No Response</h3>
+        <h3 className={`text-lg font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1`}>{t('response.noResponse')}</h3>
         <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-          Click the Send button to make a request
+          {t('response.clickSendButton')}
         </p>
       </div>
     );
@@ -59,12 +61,12 @@ export default function ResponseDisplay({ responseData, darkMode }) {
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
           <Badge variant="default" className={`${darkMode ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-800'}`}>
-            {responseData.length} Responses
+            {responseData.length} {t('response.responses')}
           </Badge>
           <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{responseData.timeTaken}, {responseData.size}</span>
           {responseData.isTruncated && (
             <Badge variant="outline" className={`${darkMode ? 'bg-yellow-900/50 text-yellow-300 border-yellow-700' : 'bg-yellow-100 text-yellow-800 border-yellow-300'}`}>
-              Truncated ({maxResponseSize}KB limit)
+              {t('response.truncated')} ({maxResponseSize}KB {t('response.limit')})
             </Badge>
           )}
         </div>
@@ -74,17 +76,17 @@ export default function ResponseDisplay({ responseData, darkMode }) {
       {/* Use defaultResponseView from settings for the defaultValue */}
       <Tabs defaultValue={settings.defaultResponseView || "pretty"} className="flex-1 flex flex-col h-full">
         <TabsList className={`border-b rounded-none justify-start px-0 pt-0 bg-transparent ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-          <TabsTrigger value="pretty" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Pretty</TabsTrigger>
-          <TabsTrigger value="raw" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Raw</TabsTrigger>
-          <TabsTrigger value="preview" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Preview</TabsTrigger>
-          <TabsTrigger value="headers" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>Headers</TabsTrigger>
+          <TabsTrigger value="pretty" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('response.pretty')}</TabsTrigger>
+          <TabsTrigger value="raw" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('response.raw')}</TabsTrigger>
+          <TabsTrigger value="preview" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('response.preview')}</TabsTrigger>
+          <TabsTrigger value="headers" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('response.headers')}</TabsTrigger>
         </TabsList>
         
         {/* Tab Content with improved ScrollArea for scrollable content */}          <TabsContent value="pretty" className="flex-1 p-0 mt-0 h-full">
           <ScrollArea className="h-full w-full">
             {responseData.isTruncated && (
               <div className={`${darkMode ? 'text-yellow-400 bg-yellow-900/30 border-yellow-800' : 'text-yellow-600 bg-yellow-50 border-yellow-200'} mb-2 p-2 rounded border mx-4 mt-4`}>
-                ⚠️ Response was truncated due to large size ({responseData.size}). Some data may not be shown.
+                ⚠️ {t('response.truncatedWarning')} ({responseData.size}). {t('response.someMissingData')}
               </div>
             )}
             <div className="p-4">
@@ -131,7 +133,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
             <div className={`p-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'} w-full`}>
               {responseData.isTruncated && (
                 <div className={`${darkMode ? 'text-yellow-400 bg-yellow-900/30 border-yellow-800' : 'text-yellow-600 bg-yellow-50 border-yellow-200'} mb-4 p-2 rounded border`}>
-                  ⚠️ Response was truncated due to large size ({responseData.size}). Some data may not be shown.
+                  ⚠️ {t('response.truncatedWarning')} ({responseData.size}). {t('response.someMissingData')}
                 </div>
               )}
               
@@ -142,13 +144,13 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                       <details className="cursor-pointer">
                         <summary className="font-semibold mb-2 flex justify-between items-center">
                           <span>
-                            {item.name || item.id || item._truncated ? "Truncation Info" : `Item ${index + 1}`}
+                            {item.name || item.id || item._truncated ? t('response.truncationInfo') : `${t('response.item')} ${index + 1}`}
                             {item._truncated && (
                               <span className={`${darkMode ? 'text-yellow-400' : 'text-yellow-600'} ml-2`}>⚠️</span>
                             )}
                           </span>
                           <Badge variant="outline" className={`ml-2 ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'}`}>
-                            {typeof item === 'object' ? Object.keys(item).length : 1} fields
+                            {typeof item === 'object' ? Object.keys(item).length : 1} {t('response.fields')}
                           </Badge>
                         </summary>
                         <div className="pl-4 pt-2 space-y-2">
@@ -158,7 +160,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                               <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} break-all`}>
                                 {typeof value === 'object' && value !== null ? (
                                   <details>
-                                    <summary className={`cursor-pointer ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Object</summary>
+                                    <summary className={`cursor-pointer ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{t('response.object')}</summary>
                                     <pre className={`mt-2 p-2 ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded text-xs overflow-auto`}>
                                       {JSON.stringify(value, null, 2)}
                                     </pre>
@@ -195,7 +197,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                   ))}
                 </div>
               ) : (
-                <p>Preview not available for this content type.</p>
+                <p>{t('response.previewNotAvailable')}</p>
               )}
             </div>
           </ScrollArea>

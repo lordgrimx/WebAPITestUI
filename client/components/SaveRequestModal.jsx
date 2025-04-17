@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { authAxios } from "@/lib/auth-context";
 import { toast } from "react-toastify";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export default function SaveRequestModal({
   selectedCollection,
   initialData
 }) {
+  const { t } = useTranslation();
   const [requestName, setRequestName] = useState(initialData?.name || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [newCollectionName, setNewCollectionName] = useState("");
@@ -53,7 +55,7 @@ export default function SaveRequestModal({
         }
       } catch (error) {
         console.error("Error fetching collections:", error);
-        toast.error("Failed to load collections: " + (error.response?.data?.message || error.message));
+        toast.error(t('collections.loadError') + ": " + (error.response?.data?.message || error.message));
       } finally {
         setIsLoadingCollections(false);
       }
@@ -62,7 +64,7 @@ export default function SaveRequestModal({
     if (open) {
       fetchCollections();
     }
-  }, [open]);
+  }, [open, t]);
 
   const handleCollectionChange = (value) => {
     if (value === "new") {
@@ -90,7 +92,7 @@ export default function SaveRequestModal({
           setCollections(prev => [...prev, newCollectionResponse.data]);
         }
       } else if (showNewCollectionInput && !newCollectionName.trim()) {
-        toast.error("Please enter a collection name");
+        toast.error(t('saveRequest.enterCollectionName'));
         return;
       }
 
@@ -150,7 +152,7 @@ export default function SaveRequestModal({
       console.log("Response from save request:", response);
 
       if (response.data) {
-        toast.success("Request saved successfully");
+        toast.success(t('saveRequest.requestSaved'));
         if (onSaveRequest) {
           onSaveRequest(response.data);
         }
@@ -159,7 +161,7 @@ export default function SaveRequestModal({
       }
     } catch (error) {
       console.error("Failed to save request:", error);
-      toast.error("Failed to save request: " + (error.response?.data?.message || error.message));
+      toast.error(t('saveRequest.failedToSave') + ": " + (error.response?.data?.message || error.message));
     }
   };
 
@@ -183,7 +185,7 @@ export default function SaveRequestModal({
         }`}
       >
         <DialogHeader className="px-6 py-4 border-b border-gray-200">
-          <DialogTitle className="text-xl font-semibold">Save Request</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">{t('saveRequest.title')}</DialogTitle>
           <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700">
             <X className="h-4 w-4" />
           </DialogClose>
@@ -196,12 +198,12 @@ export default function SaveRequestModal({
                 htmlFor="request-name" 
                 className="block text-sm font-medium mb-1"
               >
-                Request Name
+                {t('saveRequest.requestName')}
               </Label>
               <Input
                 id="request-name"
                 type="text"
-                placeholder="e.g. Get User List"
+                placeholder={t('saveRequest.requestNamePlaceholder')}
                 value={requestName}
                 onChange={(e) => setRequestName(e.target.value)}
                 className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
@@ -213,11 +215,11 @@ export default function SaveRequestModal({
                 htmlFor="request-description" 
                 className="block text-sm font-medium mb-1"
               >
-                Description (optional)
+                {t('saveRequest.description')}
               </Label>
               <Textarea
                 id="request-description"
-                placeholder="Add a description for this request"
+                placeholder={t('saveRequest.descriptionPlaceholder')}
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -230,7 +232,7 @@ export default function SaveRequestModal({
                 htmlFor="collection-select" 
                 className="block text-sm font-medium mb-1"
               >
-                Collection
+                {t('saveRequest.collection')}
               </Label>
               <Select
                 value={selectedCollectionState}
@@ -240,11 +242,11 @@ export default function SaveRequestModal({
                   id="collection-select" 
                   className={`w-full ${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                 >
-                  <SelectValue placeholder="Select a collection" />
+                  <SelectValue placeholder={t('saveRequest.selectCollection')} />
                 </SelectTrigger>
                 <SelectContent>
                   {isLoadingCollections ? (
-                     <SelectItem value="loading" disabled>Loading collections...</SelectItem>
+                     <SelectItem value="loading" disabled>{t('saveRequest.loadingCollections')}</SelectItem>
                   ) : (
                     <>
                       {collections.map((collection) => (
@@ -252,7 +254,7 @@ export default function SaveRequestModal({
                           {collection.name}
                         </SelectItem>
                       ))}
-                      <SelectItem value="new">+ Create new collection</SelectItem>
+                      <SelectItem value="new">{t('saveRequest.createNewCollection')}</SelectItem>
                     </>
                   )}
                 </SelectContent>
@@ -265,12 +267,12 @@ export default function SaveRequestModal({
                   htmlFor="new-collection" 
                   className="block text-sm font-medium mb-1"
                 >
-                  New Collection Name
+                  {t('saveRequest.newCollectionName')}
                 </Label>
                 <Input
                   id="new-collection"
                   type="text"
-                  placeholder="e.g. Authentication API"
+                  placeholder={t('saveRequest.newCollectionPlaceholder')}
                   value={newCollectionName}
                   onChange={(e) => setNewCollectionName(e.target.value)}
                   className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
@@ -288,7 +290,7 @@ export default function SaveRequestModal({
                 htmlFor="add-favorite" 
                 className="text-sm"
               >
-                Add to favorites
+                {t('saveRequest.addToFavorites')}
               </Label>
             </div>
           </div>
@@ -302,10 +304,10 @@ export default function SaveRequestModal({
               resetForm();
             }}
           >
-            Cancel
+            {t('saveRequest.cancel')}
           </Button>
           <Button onClick={handleSaveRequest}>
-            Save
+            {t('saveRequest.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -6,6 +6,7 @@ import { authAxios } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useTranslation } from "react-i18next"; // Çeviri hook'u eklendi
 import {
   Accordion,
   AccordionContent,
@@ -92,6 +93,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   const [collections, setCollections] = useState([]);
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
 
   // Fetch collections
   useEffect(() => {
@@ -155,10 +157,9 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
       toast.warning("Please enter a collection name");
     }
   };
-
   const handleDeleteCollection = async (e, collectionId) => {
     e.stopPropagation();
-    if (window.confirm("Bu koleksiyonu silmek istediğinizden emin misiniz? İçindeki tüm istekler de silinebilir.")) {
+    if (window.confirm(t('collections.confirmDelete', "Bu koleksiyonu silmek istediğinizden emin misiniz? İçindeki tüm istekler de silinebilir."))) {
       try {
         await authAxios.delete(`/collections/${collectionId}`);
         // Koleksiyonları güncellemek için yeniden çağır
@@ -166,14 +167,13 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
         setCollections(updatedCollections.data);
       } catch (err) {
         console.error("Failed to delete collection:", err);
-        toast.error("Failed to delete collection: " + (err.response?.data?.message || err.message || "Unknown error"));
+        toast.error(t('collections.deleteError', "Failed to delete collection: ") + (err.response?.data?.message || err.message || "Unknown error"));
       }
     }
   };
-
   const handleDeleteRequest = async (e, requestId) => {
     e.stopPropagation();
-    if (window.confirm("Bu isteği silmek istediğinizden emin misiniz?")) {
+    if (window.confirm(t('collections.confirmDeleteRequest', "Bu isteği silmek istediğinizden emin misiniz?"))) {
       try {
         await authAxios.delete(`/requests/${requestId}`);
         // Koleksiyonları güncellemek için yeniden çağır (içinde istekler de olacak)
@@ -181,7 +181,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
         setCollections(updatedCollections.data);
       } catch (err) {
         console.error("Failed to delete request:", err);
-        toast.error("Failed to delete request: " + (err.response?.data?.message || err.message || "Unknown error"));
+        toast.error(t('collections.deleteRequestError', "Failed to delete request: ") + (err.response?.data?.message || err.message || "Unknown error"));
       }
     }
   };
@@ -231,13 +231,12 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   const handleSearchChange = useCallback((e) => {
     setSearchTerm(e.target.value);
   }, []);
-
   if (hasError || !collections) {
     return (
       <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-950 border-gray-800 text-gray-300' : 'bg-white border-gray-200 text-gray-700'} p-4`}>
         <Input
           type="search"
-          placeholder="Search collections..."
+          placeholder={t('collections.searchPlaceholder', "Search collections...")}
           className={`w-full mb-2 ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
           value={searchTerm}
           onChange={handleSearchChange}
@@ -246,22 +245,21 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
           className={`w-full ${darkMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
           onClick={() => setIsAddDialogOpen(true)}
         >
-          <Plus className="mr-2 h-4 w-4" /> New Collection
+          <Plus className="mr-2 h-4 w-4" /> {t('collections.newCollection', "New Collection")}
         </Button>
         <div className="p-4 text-center">
-          <p className={`${darkMode ? 'text-red-400' : 'text-red-500'}`}>Error loading collections</p>
-          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Please try again later or check the console for details</p>
+          <p className={`${darkMode ? 'text-red-400' : 'text-red-500'}`}>{t('collections.loadError', "Error loading collections")}</p>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.tryAgain', "Please try again later or check the console for details")}</p>
         </div>
       </div>
     );
   }
-
   return (
     <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-950 border-gray-800 text-gray-300' : 'bg-white border-gray-200 text-gray-700'}`}>
       <div className={`p-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
         <Input
           type="search"
-          placeholder="Search collections..."
+          placeholder={t('collections.searchPlaceholder', "Search collections...")}
           className={`w-full mb-2 ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
           value={searchTerm}
           onChange={handleSearchChange}
@@ -269,18 +267,18 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
             <Button className={`w-full ${darkMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
-              <Plus className="mr-2 h-4 w-4" /> New Collection
+              <Plus className="mr-2 h-4 w-4" /> {t('collections.newCollection', "New Collection")}
             </Button>
           </DialogTrigger>
           <DialogContent aria-describedby="collection-dialog-description" className={darkMode ? 'dark bg-gray-800 border-gray-700' : ''}>
             <DialogHeader>
-              <DialogTitle className={darkMode ? 'text-white' : ''}>Add New Collection</DialogTitle>
+              <DialogTitle className={darkMode ? 'text-white' : ''}>{t('collections.addNewCollection', "Add New Collection")}</DialogTitle>
               <DialogDescription id="collection-dialog-description" className={darkMode ? 'text-gray-400' : ''}>
-                Create a new collection for your API requests.
+                {t('collections.createCollectionDesc', "Create a new collection for your API requests.")}
               </DialogDescription>
             </DialogHeader>
             <Input
-              placeholder="Collection Name"
+              placeholder={t('collections.collectionName', "Collection Name")}
               value={newCollectionName}
               onChange={(e) => setNewCollectionName(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAddCollection()}
@@ -290,25 +288,25 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
             />
             <DialogFooter>
               <DialogClose asChild key="cancel-btn">
-                <Button variant="outline" className={darkMode ? 'border-gray-600 hover:bg-gray-700' : ''}>Cancel</Button>
+                <Button variant="outline" className={darkMode ? 'border-gray-600 hover:bg-gray-700' : ''}>{t('general.cancel', "Cancel")}</Button>
               </DialogClose>
-              <Button onClick={handleAddCollection} key="add-btn" className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>Add</Button>
+              <Button onClick={handleAddCollection} key="add-btn" className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{t('general.add', "Add")}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>      <div className="flex-1 overflow-auto">
         <ScrollArea className="h-full">
           <div className="p-2">
-            <h3 className={`px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>Collections</h3>
+            <h3 className={`px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.title', "Collections")}</h3>
             <Accordion type="multiple" className="w-full">
               {isLoading && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Loading collections...</p>
+                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.loading', "Loading collections...")}</p>
               )}
               {!isLoading && filteredCollections.length === 0 && searchTerm && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No collections found matching "{searchTerm}".</p>
+                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.notFound', "No collections found matching")} "{searchTerm}".</p>
               )}
               {!isLoading && filteredCollections.length === 0 && !searchTerm && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No collections yet. Click "+ New Collection" to add one.</p>
+                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.empty', "No collections yet. Click \"+ New Collection\" to add one.")}</p>
               )}
               {!isLoading && filteredCollections.map((collection,index) => (
                 <CollectionItem
@@ -318,17 +316,18 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
                   onDeleteCollection={handleDeleteCollection}
                   onDeleteRequest={handleDeleteRequest}
                   darkMode={darkMode} // Pass darkMode
+                  t={t} // Çeviri fonksiyonunu CollectionItem'a aktarıyoruz
                 />
               ))}
             </Accordion>
 
-            <h3 className={`mt-4 px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>History</h3>
+            <h3 className={`mt-4 px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.history', "History")}</h3>
             <Accordion type="multiple" className="w-full">
               {historyItems === null && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-500'}`}>Error loading history.</p>
+                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-500'}`}>{t('collections.historyError', "Error loading history.")}</p>
               )}
               {historyItems && historyItems.length === 0 && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>No recent requests.</p>
+                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.noHistory', "No recent requests.")}</p>
               )}
               {historyItems && historyItems.map((item) => (
                 <HistoryItem
@@ -338,6 +337,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
                   onHistorySelect={onHistorySelect}
                   onDeleteHistoryEntry={handleDeleteHistoryEntry}
                   darkMode={darkMode} // Pass darkMode
+                  t={t} // Çeviri fonksiyonunu HistoryItem'a aktarıyoruz
                 />
               ))}
             </Accordion>
@@ -353,7 +353,8 @@ const CollectionItem = React.memo(function CollectionItem({
   setSelectedRequestId,
   onDeleteCollection,
   onDeleteRequest,
-  darkMode // Receive darkMode
+  darkMode, // Receive darkMode
+  t // Çeviri fonksiyonunu al
 }) {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -401,9 +402,9 @@ const CollectionItem = React.memo(function CollectionItem({
         </div>
       </div>
       <AccordionContent className="pl-6 pr-2 pt-1 pb-1">
-        {isLoading && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>Loading requests...</p>}
+        {isLoading && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>{t('collections.loadingRequests', "Loading requests...")}</p>}
         {!isLoading && (!requests || requests.length === 0) && (
-          <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>No requests in this collection.</p>
+          <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>{t('collections.noRequests', "No requests in this collection.")}</p>
         )}
         {!isLoading && requests && requests.map((request) => {
           const style = getMethodStyle(request.method);
@@ -449,7 +450,8 @@ const HistoryItem = React.memo(function HistoryItem({
   item,
   onHistorySelect,
   onDeleteHistoryEntry,
-  darkMode
+  darkMode,
+  t // Çeviri fonksiyonunu al
 }) {
   const style = getMethodStyle(item.method);
   const timeAgo = formatTimeAgo(item.timestamp);
@@ -494,7 +496,7 @@ const HistoryItem = React.memo(function HistoryItem({
                 onDeleteHistoryEntry(e, itemId);
               } else {
                 console.error("Cannot delete history item - no ID found");
-                toast.error("Cannot delete history item - ID is missing");
+                toast.error(t('collections.historyDeleteError', "Cannot delete history item - ID is missing"));
               }
             }}
           >

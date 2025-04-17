@@ -32,6 +32,7 @@ import SaveRequestModal from "@/components/SaveRequestModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import { useAuth } from "@/lib/auth-context";
 import { toast } from "sonner"; // Import toast for notifications
+import Image from "next/image";
 
 // Accept currentRequestData prop from ApiTester
 export default function Header({ darkMode, setDarkMode, currentRequestData, openSignupModal, openLoginModal }) {
@@ -136,7 +137,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               darkMode ? "text-white" : "text-gray-800"
             }`}
           >
-            API Testing Tool
+            PUTman
           </h1>
         </div>
         <div className="flex items-center space-x-4">
@@ -261,13 +262,16 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
         } border-b py-3 px-6 flex items-center justify-between`}
       >
         <div className="flex items-center space-x-2">
-          <h1
-            className={`text-xl font-semibold ${
-              darkMode ? "text-white" : "text-gray-800"
-            }`}
+          <div
+            className="flex gap-2 items-center cursor-pointer"
           >
-            API Testing Tool
-          </h1>          <div className="flex space-x-2 ml-6">
+            <Image src={'icon.svg'} width={30} height={30} alt="icon"/> 
+            <h1 className={`text-xl font-extrabold ${
+              darkMode
+               ? "text-white" : "text-gray-800"
+            }`} ><span className={`${darkMode ? "text-blue-500":"text-blue-500"}`}>PUT</span><span className={`${darkMode ? "text-white":"text-gray-500"}`}>man</span></h1>
+          </div>          
+          <div className="flex space-x-2 ml-6">
             <Button
               variant="ghost"
               size="sm"
