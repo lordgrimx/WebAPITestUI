@@ -269,7 +269,7 @@ namespace WebTestUI.Backend.Controllers
                             double.TryParse(durationStr, out durationSecondType);
                         }
                     }
-                    
+
                     _logger.LogInformation($"Test duration in seconds: {durationSecondType}");
 
                     // Parse metrics from the JSON file content and pass duration for RPS calculation
@@ -560,15 +560,13 @@ namespace WebTestUI.Backend.Controllers
                             if (metricsDto.Iterations.Trend == null)
                             {
                                 metricsDto.Iterations.Trend = new TrendStats();
-                            }
-
-                            // Update the trend with the actual duration values
-                            metricsDto.Iterations.Trend.Avg = values.Average();
-                            metricsDto.Iterations.Trend.Min = values.Min();
-                            metricsDto.Iterations.Trend.Max = values.Max();
-                            metricsDto.Iterations.Trend.Med = CalculateMedian(values);
-                            metricsDto.Iterations.Trend.P90 = CalculatePercentile(values, 90);
-                            metricsDto.Iterations.Trend.P95 = CalculatePercentile(values, 95);
+                            }                            // Update the trend with the actual duration values (convert from ms to seconds)
+                            metricsDto.Iterations.Trend.Avg = values.Average() / 1000;
+                            metricsDto.Iterations.Trend.Min = values.Min() / 1000;
+                            metricsDto.Iterations.Trend.Max = values.Max() / 1000;
+                            metricsDto.Iterations.Trend.Med = CalculateMedian(values) / 1000;
+                            metricsDto.Iterations.Trend.P90 = CalculatePercentile(values, 90) / 1000;
+                            metricsDto.Iterations.Trend.P95 = CalculatePercentile(values, 95) / 1000;
 
                             _logger.LogInformation($"Updated Iterations trend with duration data: Avg={metricsDto.Iterations.Trend.Avg}s, Min={metricsDto.Iterations.Trend.Min}s, Max={metricsDto.Iterations.Trend.Max}s");
                         }

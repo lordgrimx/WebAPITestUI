@@ -1,16 +1,15 @@
 "use client";
 
 import axios from 'axios';
-import Cookies from 'js-cookie';
 
 // Create an authenticated axios instance
 const createAuthenticatedAxios = () => {
     const instance = axios.create();
 
-    // Add auth token to all requests
+    // Add auth token to all requests from localStorage
     instance.interceptors.request.use(
         (config) => {
-            const token = Cookies.get('token');
+            const token = localStorage.getItem('token'); // Use localStorage
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
@@ -24,9 +23,9 @@ const createAuthenticatedAxios = () => {
     return instance;
 };
 
-// Create a fetch wrapper that adds auth headers
+// Create a fetch wrapper that adds auth headers from localStorage
 export const authenticatedFetch = async (url, options = {}) => {
-    const token = Cookies.get('token');
+    const token = localStorage.getItem('token'); // Use localStorage
 
     const headers = {
         ...options.headers,
