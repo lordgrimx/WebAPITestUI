@@ -13,12 +13,10 @@ using System.Linq; // Added for LINQ usage
 namespace WebTestUI.Backend.Controllers
 {
 
-    // Default path, can be overridden in configuration
-
-    [ApiController]
+    // Default path, can be overridden in configuration    [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class K6Controller : ControllerBase
+    public partial class K6Controller : ControllerBase
     {
 
         private readonly ILogger<K6Controller> _logger;
@@ -190,7 +188,7 @@ namespace WebTestUI.Backend.Controllers
                     {
                         jsonContent = await System.IO.File.ReadAllTextAsync(jsonOutputPath);
                         _logger.LogInformation($"Successfully read JSON output file: {jsonOutputPath}");
-                        _logger.LogInformation($"Raw K6 JSON Content:\n{jsonContent}"); // Log raw JSON content
+
 
                         // Clean up the temporary JSON file after reading
                         System.IO.File.Delete(jsonOutputPath);
@@ -209,12 +207,14 @@ namespace WebTestUI.Backend.Controllers
                     _logger.LogError($"K6 JSON output file not found: {jsonOutputPath}");
                     return StatusCode(500, new { error = "K6 JSON output file not found." });
                 }
-
-
                 try
                 {
                     // Parse metrics from the JSON file content
                     var metrics = ParseK6JsonOutput(jsonContent);
+
+                    // Log the metrics as JSON for debugging
+                    LogMetricsToConsole(metrics);
+
                     return Ok(new K6MetricsResponseDto
                     {
                         Status = "completed",
@@ -421,9 +421,7 @@ namespace WebTestUI.Backend.Controllers
                     }
 
                     return metricData;
-                }
-
-                // Populate metrics from the collected data
+                }                // Populate metrics from the collected data
                 if (metricPointsData.ContainsKey("checks"))
                     metricsDto.Checks = CreateMetricDataFromPoints("checks", metricPointsData["checks"]);
 
@@ -444,6 +442,26 @@ namespace WebTestUI.Backend.Controllers
 
                 if (metricPointsData.ContainsKey("vus_max"))
                     metricsDto.Vus_Max = CreateMetricDataFromPoints("vus_max", metricPointsData["vus_max"]);
+
+                // Add HTTP duration metrics which are critical for response time reporting
+                if (metricPointsData.ContainsKey("http_req_duration"))
+                    metricsDto.Http_Req_Duration = CreateMetricDataFromPoints("http_req_duration", metricPointsData["http_req_duration"]);
+
+                if (metricPointsData.ContainsKey("http_req_blocked"))
+                    metricsDto.Http_Req_Blocked = CreateMetricDataFromPoints("http_req_blocked", metricPointsData["http_req_blocked"]);
+
+                if (metricPointsData.ContainsKey("http_req_connecting"))
+                    metricsDto.Http_Req_Connecting = CreateMetricDataFromPoints("http_req_connecting", metricPointsData["http_req_connecting"]);
+
+                if (metricPointsData.ContainsKey("http_req_tls_handshaking"))
+                    metricsDto.Http_Req_Tls_Handshaking = CreateMetricDataFromPoints("http_req_tls_handshaking", metricPointsData["http_req_tls_handshaking"]);
+
+                if (metricPointsData.ContainsKey("http_req_sending"))
+                    metricsDto.Http_Req_Sending = CreateMetricDataFromPoints("http_req_sending", metricPointsData["http_req_sending"]);
+
+                if (metricPointsData.ContainsKey("http_req_waiting"))
+                    metricsDto.Http_Req_Waiting = CreateMetricDataFromPoints("http_req_waiting", metricPointsData["http_req_waiting"]); if (metricPointsData.ContainsKey("http_req_receiving"))
+                    metricsDto.Http_Req_Receiving = CreateMetricDataFromPoints("http_req_receiving", metricPointsData["http_req_receiving"]);
 
                 // Check if we actually managed to extract *any* meaningful metric data
                 if (metricsDto.Http_Reqs != null || metricsDto.Iterations != null || metricsDto.Vus != null || metricsDto.Data != null)

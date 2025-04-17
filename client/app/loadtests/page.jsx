@@ -89,25 +89,35 @@ export default function LoadTestsPage() {  const { t } = useTranslation();
     };
 
     fetchTests();
-  }, []);
-
-  const handleRunTest = async (testId) => {    try {
+  }, []);  const handleRunTest = async (testId) => {    try {
       setIsRunning(prev => ({ ...prev, [testId]: true }));
       toast.info(t("loadTests.testRunning"), { description: t("loadTests.operationMayTakeTime") });
       
       // Execute the test
       const testInfo = await executeK6Test(testId);
       
-      // K6 test scriptini çalıştır
+      // Test seçeneklerinden gelen verileri kontrol et
+      console.log("Test options from backend:", testInfo.options);
+      
+      // Kullanıcının seçtiği test seçeneklerini (parametreleri) almak için testi bulalım
+      const currentTest = k6Tests.find(test => test.id === testId);
+      
+      // Options değerlerini doğru şekilde al
+      // Öncelik sırası: 1. Kullanıcının daha önce seçtiği değerler, 2. Backend'den gelen değerler, 3. Varsayılan değerler
+      const k6Options = {
+        vus: currentTest?.options?.vus || testInfo.options?.vus || 10,
+        duration: currentTest?.options?.duration || testInfo.options?.duration || "30s"
+      };
+      
+      console.log("Using K6 options:", k6Options);
+      
       const response = await authAxios.post('/K6/run', {
         script: testInfo.script,
-        options: testInfo.options || {
-          vus: 10,
-          duration: "30s"
-        }
+        options: k6Options
       });
 
       const results = response.data;
+      console.log("Test results:", results);
 
       // State'i güncelle
       setK6Tests(prevTests => prevTests.map(t => {
@@ -117,12 +127,12 @@ export default function LoadTestsPage() {  const { t } = useTranslation();
             status: "completed",
             results: {
               vus: testInfo.options?.vus || 10,
-              duration: testInfo.options?.duration || "30s",
-              requestsPerSecond: results.metrics?.http_reqs?.rate || 0,
+              duration: testInfo.options?.duration || "30s",              requestsPerSecond: results.metrics?.http_Reqs?.rate || 0,
               // Hata oranı doğrudan http_req_failed metriğinden alınacak
-              failureRate: results.metrics?.http_req_failed?.rate || 0, 
-              averageResponseTime: results.metrics?.http_reqs?.trend?.avg || 0,
-              p95ResponseTime: results.metrics?.http_reqs?.trend?.p95 || 0,
+              failureRate: results.metrics?.http_Req_Failed?.rate || 0, 
+              // Doğru tepki süresi metriklerini HTTP_Req_Duration'dan alalım (büyük harflerle)
+              averageResponseTime: results.metrics?.http_Req_Duration?.trend?.avg || 0,
+              p95ResponseTime: results.metrics?.http_Req_Duration?.trend?.p95 || 0,
               timestamp: Date.now(),
               detailedMetrics: {
                 checksRate: results.metrics?.checks?.rate || 0,
@@ -135,12 +145,12 @@ export default function LoadTestsPage() {  const { t } = useTranslation();
             successRate: results.metrics?.checks?.rate || 0, 
             iterations: results.metrics?.iterations?.count || 0,
             httpReqDuration: {
-                  avg: results.metrics?.http_reqs?.trend?.avg || 0,
-                  min: results.metrics?.http_reqs?.trend?.min || 0,
-                  med: results.metrics?.http_reqs?.trend?.med || 0,
-                  max: results.metrics?.http_reqs?.trend?.max || 0,
-                  p90: results.metrics?.http_reqs?.trend?.p90 || 0,
-                  p95: results.metrics?.http_reqs?.trend?.p95 || 0
+                  avg: results.metrics?.http_Req_Duration?.trend?.avg || 0,
+                  min: results.metrics?.http_Req_Duration?.trend?.min || 0,
+                  med: results.metrics?.http_Req_Duration?.trend?.med || 0,
+                  max: results.metrics?.http_Req_Duration?.trend?.max || 0,
+                  p90: results.metrics?.http_Req_Duration?.trend?.p90 || 0,
+                  p95: results.metrics?.http_Req_Duration?.trend?.p95 || 0
                 },
                 iterationDuration: {
                   avg: results.metrics?.iterations?.trend?.avg || 0,
@@ -179,7 +189,7 @@ export default function LoadTestsPage() {  const { t } = useTranslation();
               successRate: results.metrics?.checks?.rate || 0,
               iterations: results.metrics?.iterations?.count || 0,
               httpReqDuration: {
-                avg: results.metrics?.http_reqs?.trend?.avg || 0,
+                avg: results.metrics?.http_reqs?.trend?.avg || 1230,
                 min: results.metrics?.http_reqs?.trend?.min || 0,
                 med: results.metrics?.http_reqs?.trend?.med || 0,
                 max: results.metrics?.http_reqs?.trend?.max || 0,

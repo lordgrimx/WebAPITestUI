@@ -84,7 +84,6 @@ namespace WebTestUI.Backend.Controllers
 
             return CreatedAtAction(nameof(GetAllK6Tests), new { id = test.Id }, test);
         }
-
         [HttpPost("{testId}/logs")]
         public async Task<ActionResult> AddLogEntry(Guid testId, AddLogEntryDTO logDto)
         {
@@ -96,6 +95,28 @@ namespace WebTestUI.Backend.Controllers
             catch (KeyNotFoundException)
             {
                 return NotFound();
+            }
+        }
+
+        [HttpPost("{testId}/execute")]
+        public async Task<ActionResult<object>> ExecuteK6Test(Guid testId)
+        {
+            try
+            {
+                var test = await _k6TestService.ExecuteK6TestAsync(testId);
+                if (test == null)
+                    return NotFound();
+
+                // Test seçeneklerini ve script'i döndür
+                return Ok(new
+                {
+                    script = test.Script,
+                    options = test.Options
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message });
             }
         }
 
@@ -112,23 +133,5 @@ namespace WebTestUI.Backend.Controllers
                 return NotFound();
             }
         }
-
-        [HttpPost("{testId}/execute")]
-        public async Task<ActionResult<K6TestDTO>> ExecuteK6Test(Guid testId)
-        {
-            try
-            {
-                var result = await _k6TestService.ExecuteK6TestAsync(testId);
-                return Ok(result);
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = ex.Message });
-            }
-        }
     }
-} 
+}
