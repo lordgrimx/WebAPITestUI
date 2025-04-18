@@ -160,31 +160,33 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
       <header className="container mx-auto px-6 py-4">
         <nav className="flex items-center justify-between">
           <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-white">API Testing Tool</h1>
+            {/* Light mode için text-gray-800, dark mode için text-white */}
+            <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>API Testing Tool</h1>
           </div>
 
           <div className="hidden md:flex items-center space-x-6">
+            {/* Light mode için text-gray-600, dark mode için text-white */}
             <a
               href="#features"
-              className="text-white hover:text-blue-200 transition-colors"
+              className={`${darkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
               {t('header.features', 'Features')}
             </a>
             <a
               href="#pricing"
-              className="text-white hover:text-blue-200 transition-colors"
+              className={`${darkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
               {t('header.pricing', 'Pricing')}
             </a>
             <a
               href="#docs"
-              className="text-white hover:text-blue-200 transition-colors"
+              className={`${darkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
               {t('header.documentation', 'Documentation')}
             </a>
             <a
               href="#about"
-              className="text-white hover:text-blue-200 transition-colors"
+              className={`${darkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
               {t('header.about', 'About')}
             </a>
@@ -195,7 +197,8 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               variant="ghost"
               size="icon"
               onClick={() => setDarkMode(!darkMode)}
-              className="text-white"
+              // Light mode için text-gray-600, dark mode için text-white
+              className={darkMode ? "text-white" : "text-gray-600"}
             >
               {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
@@ -267,15 +270,17 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
           >
             <Image src={'icon.svg'} width={30} height={30} alt="icon"/> 
             <h1 className={`text-xl font-extrabold ${
-              darkMode
-               ? "text-white" : "text-gray-800"
-            }`} ><span className={`${darkMode ? "text-blue-500":"text-blue-500"}`}>PUT</span><span className={`${darkMode ? "text-white":"text-gray-500"}`}>man</span></h1>
-          </div>          
+              darkMode ? "text-white" : "text-gray-800" // Ana başlık rengi zaten doğru
+            }`} >
+              <span className="text-blue-500">PUT</span> {/* PUT her zaman mavi */}
+              <span className={`${darkMode ? "text-white" : "text-gray-800"}`}>man</span> {/* man kısmı moda göre değişir, light modda daha koyu gri */}
+            </h1>
+          </div>
           <div className="flex space-x-2 ml-6">
             <Button
               variant="ghost"
               size="sm"
-              className="space-x-1"
+              className={`space-x-1 ${darkMode ? "":"text-gray-800"}`}
               onClick={() => setShowSaveRequest(true)}
             >
               <Save className="h-4 w-4" />
@@ -284,7 +289,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
             <Button
               variant="ghost"
               size="sm"
-              className="space-x-1"
+              className={`space-x-1 ${darkMode ? "":"text-gray-800"}`}
               onClick={() => setShowGenerateCode(true)}
             >
               <Code className="h-4 w-4" />
@@ -293,25 +298,30 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
             <Button
               variant="ghost"
               size="sm"
-              className="space-x-1"
+              className={`space-x-1 ${darkMode ? "":"text-gray-800"}`}
               onClick={() => setShowSettings(true)}
             >
               <Settings className="h-4 w-4" />
               <span>{t('header.settings')}</span>
-            </Button>
-            <Link 
-              href="/loadtests" 
-              className="inline-flex items-center px-2 py-1 text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-            >
-              <Activity className="h-4 w-4 mr-1" />
-              <span>{t('header.loadTests', 'Load Tests')}</span>
+            </Button>            <Link href="/loadtests">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`space-x-1 ${darkMode ? "text-gray-200 hover:bg-gray-700 hover:text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}
+              >
+                <Activity className="h-4 w-4 mr-1" />
+                <span>{t('header.loadTests', 'Load Tests')}</span>
+              </Button>
             </Link>
-            <Link 
-              href="/monitor" 
-              className="inline-flex items-center px-2 py-1 text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-            >
-              <Activity className="h-4 w-4 mr-1" />
-              <span>{t('header.monitoring')}</span>
+            <Link href="/monitor">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`space-x-1 ${darkMode ? "text-gray-200 hover:bg-gray-700 hover:text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}
+              >
+                <Activity className="h-4 w-4 mr-1" />
+                <span>{t('header.monitoring')}</span>
+              </Button>
             </Link>
           </div>
         </div>

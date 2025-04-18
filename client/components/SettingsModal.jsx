@@ -119,7 +119,8 @@ export default function SettingsModal({ open, setOpen }) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} className="w-full">      <DialogContent 
+    <Dialog open={open} onOpenChange={setOpen} className="w-full">      
+      <DialogContent 
         className="min-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
       >
         <DialogHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
