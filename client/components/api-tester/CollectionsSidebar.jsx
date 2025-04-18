@@ -29,14 +29,46 @@ import { toast } from "sonner"; // Add toast import
 
 // HTTP Method renkleri ve Badge variantları
 const methodStyles = {
-  GET:    { variant: "default", className: "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300" },
-  POST:   { variant: "default", className: "bg-green-100 text-green-800 hover:bg-green-200 border-green-300" },
-  PUT:    { variant: "default", className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300" },
-  DELETE: { variant: "destructive", className: "bg-red-100 text-red-800 hover:bg-red-200 border-red-300" },
-  PATCH:  { variant: "default", className: "bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-300" },
-  OPTIONS:{ variant: "secondary", className: "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300" },
-  HEAD:   { variant: "secondary", className: "bg-pink-100 text-pink-800 hover:bg-pink-200 border-pink-300" },
-  DEFAULT:{ variant: "secondary", className: "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300" },
+  GET:    { 
+    variant: "default", 
+    className: "bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-300",
+    darkClassName: "bg-blue-900 text-blue-100 hover:bg-blue-800 border-blue-700"
+  },
+  POST:   { 
+    variant: "default", 
+    className: "bg-green-100 text-green-800 hover:bg-green-200 border-green-300",
+    darkClassName: "bg-green-900 text-green-100 hover:bg-green-800 border-green-700"
+  },
+  PUT:    { 
+    variant: "default", 
+    className: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300",
+    darkClassName: "bg-yellow-900 text-yellow-100 hover:bg-yellow-800 border-yellow-700"
+  },
+  DELETE: { 
+    variant: "destructive", 
+    className: "bg-red-100 text-red-800 hover:bg-red-200 border-red-300",
+    darkClassName: "bg-red-900 text-red-100 hover:bg-red-800 border-red-700"
+  },
+  PATCH:  { 
+    variant: "default", 
+    className: "bg-purple-100 text-purple-800 hover:bg-purple-200 border-purple-300",
+    darkClassName: "bg-purple-900 text-purple-100 hover:bg-purple-800 border-purple-700"
+  },
+  OPTIONS:{ 
+    variant: "secondary", 
+    className: "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300",
+    darkClassName: "bg-gray-700 text-gray-100 hover:bg-gray-600 border-gray-500"
+  },
+  HEAD:   { 
+    variant: "secondary", 
+    className: "bg-pink-100 text-pink-800 hover:bg-pink-200 border-pink-300",
+    darkClassName: "bg-pink-900 text-pink-100 hover:bg-pink-800 border-pink-700"
+  },
+  DEFAULT:{ 
+    variant: "secondary", 
+    className: "bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-300",
+    darkClassName: "bg-gray-700 text-gray-100 hover:bg-gray-600 border-gray-500"
+  },
 };
 
 const getMethodStyle = (method) => methodStyles[method.toUpperCase()] || methodStyles.DEFAULT;
@@ -232,12 +264,11 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     setSearchTerm(e.target.value);
   }, []);
   if (hasError || !collections) {
-    return (
-      <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-950 border-gray-800 text-gray-300' : 'bg-white border-gray-200 text-gray-700'} p-4`}>
+    return (      <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'} p-4`}>
         <Input
           type="search"
           placeholder={t('collections.searchPlaceholder', "Search collections...")}
-          className={`w-full mb-2 ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
+          className={`w-full mb-2 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
           value={searchTerm}
           onChange={handleSearchChange}
         />
@@ -253,10 +284,9 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
         </div>
       </div>
     );
-  }
-  return (
-    <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-950 border-gray-800 text-gray-300' : 'bg-white border-gray-200 text-gray-700'}`}>
-      <div className={`p-4 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+  }  return (
+    <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'}`}>
+      <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         <Input
           type="search"
           placeholder={t('collections.searchPlaceholder', "Search collections...")}
@@ -406,16 +436,14 @@ const CollectionItem = React.memo(function CollectionItem({
         {!isLoading && (!requests || requests.length === 0) && (
           <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>{t('collections.noRequests', "No requests in this collection.")}</p>
         )}
-        {!isLoading && requests && requests.map((request) => {
-          const style = getMethodStyle(request.method);
-          // Adjust badge styles for dark mode
-          const badgeClassName = darkMode
-            ? style.className.replace('bg-', 'dark:bg-').replace('text-', 'dark:text-').replace('hover:bg-', 'dark:hover:bg-').replace('border-', 'dark:border-')
-            : style.className;
+        {!isLoading && requests && requests.map((request) => {          const style = getMethodStyle(request.method);
+          // Use the appropriate class based on dark mode
+          const badgeClassName = darkMode ? style.darkClassName : style.className;
+          
           return (
             <div
               key={request.id}
-              className={`flex items-center justify-between group ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} px-2 py-1.5 rounded cursor-pointer text-sm`}
+              className={`flex items-center justify-between group ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} px-2 py-1.5 rounded cursor-pointer text-sm`}
             >
               <div
                 className="flex items-center truncate flex-1 mr-2"
@@ -452,8 +480,7 @@ const HistoryItem = React.memo(function HistoryItem({
   onDeleteHistoryEntry,
   darkMode,
   t // Çeviri fonksiyonunu al
-}) {
-  const style = getMethodStyle(item.method);
+}) {  const style = getMethodStyle(item.method);
   const timeAgo = formatTimeAgo(item.timestamp);
   const displayPath = getPathFromUrl(item.url);
   
@@ -465,10 +492,8 @@ const HistoryItem = React.memo(function HistoryItem({
     console.warn("History item missing ID:", item);
   }
   
-  // Adjust badge styles for dark mode
-  const badgeClassName = darkMode
-    ? style.className.replace('bg-', 'dark:bg-').replace('text-', 'dark:text-').replace('hover:bg-', 'dark:hover:bg-').replace('border-', 'dark:border-')
-    : style.className;
+  // Use the appropriate class based on dark mode
+  const badgeClassName = darkMode ? style.darkClassName : style.className;
 
   return (
     <AccordionItem value={itemId || 'no-id'} className="border-b-0 mb-1">

@@ -121,16 +121,16 @@ export default function SettingsModal({ open, setOpen }) {
   return (
     <Dialog open={open} onOpenChange={setOpen} className="w-full">      
       <DialogContent 
-        className="min-w-3xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="min-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-white dark:bg-gray-800 dark:text-gray-100"
       >
         <DialogHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <DialogTitle className="text-xl font-semibold">{t('settings.titleApi')}</DialogTitle>
+          <DialogTitle className="text-xl font-semibold dark:text-white">{t('settings.titleApi')}</DialogTitle>
           <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             <X className="h-4 w-4" />
           </DialogClose>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 dark:text-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* General Settings */}
             <div className="space-y-4">
@@ -403,11 +403,11 @@ export default function SettingsModal({ open, setOpen }) {
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t border-gray-200">
-          <Button variant="outline" onClick={() => setOpen(false)}>
+        <DialogFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+          <Button variant="outline" onClick={() => setOpen(false)} className="dark:text-gray-200 dark:hover:bg-gray-700">
             {t('general.cancel', 'Cancel')}
           </Button>
-          <Button onClick={handleSaveChanges}>
+          <Button onClick={handleSaveChanges} className="dark:hover:bg-blue-600">
             {t('settings.saveChanges', 'Save Changes')}
           </Button>
         </DialogFooter>
