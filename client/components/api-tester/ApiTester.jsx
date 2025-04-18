@@ -9,6 +9,7 @@ import {
 import { authAxios } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings-context"; // Import the settings hook
+import { useTheme } from "next-themes"; // Import the theme hook
 // Proxy için https-proxy-agent gerekebilir, ancak bunu API rotasında kullanacağız.
 
 import CollectionsSidebar from "./CollectionsSidebar";
@@ -17,15 +18,15 @@ import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
 export default function ApiTester() {
   const { settings } = useSettings(); // Get settings from context (updateSetting kaldırıldı, kullanılmıyor)
-  
-  const [selectedRequestId, setSelectedRequestId] = useState(null);  
+    const [selectedRequestId, setSelectedRequestId] = useState(null);  
   const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
   const [error, setError] = useState(null); // General request error state
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
   const [currentRequestData, setCurrentRequestData] = useState(null); // State to hold current request builder data
   const [initialDataFromHistory, setInitialDataFromHistory] = useState(null); // State to hold data from selected history item
-  const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
+  const { theme, setTheme } = useTheme(); // Use the theme hook instead of local state
+  const isDarkMode = theme === 'dark'; // Derive dark mode from theme
   const [authToken, setAuthToken] = useState(''); // Initialize empty
   const [historyUpdated, setHistoryUpdated] = useState(0); // Add this new state
 
@@ -580,12 +581,9 @@ export default function ApiTester() {
       tests: { script: "", results: [] } // Reset tests
     });
   }, []);
-
   return (
     <>
       <Header
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
         currentRequestData={currentRequestData}
       />
       <div className="flex flex-col h-screen overflow-hidden"> {/* Use flex-col for vertical layout */}
@@ -593,18 +591,16 @@ export default function ApiTester() {
         {/* Rest of the layout */}
         <div className="flex-1 min-h-0"> {/* Add min-h-0 to allow proper flex shrinking */}
           <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]"> {/* Adjust height to account for header and monitor panel */}
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-              <CollectionsSidebar
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>              <CollectionsSidebar
                 setSelectedRequestId={handleRequestSelect} // For collection requests
                 onHistorySelect={handleHistorySelect}     // For history items
                 hasError={!!sidebarError}
                 onError={setSidebarError}
-                darkMode={darkMode} // Pass dark mode state
+                darkMode={isDarkMode} // Pass isDarkMode instead
                 historyUpdated={historyUpdated} // Add this prop
               />
             </ResizablePanel>
-            <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={30}>
-              <RequestBuilder
+            <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={30}>              <RequestBuilder
                 key={selectedRequestId || initialDataFromHistory?.url} // Add key to force re-render/reset on selection change
                 selectedRequestId={selectedRequestId}
                 initialData={initialDataFromHistory} // Pass history data
@@ -612,15 +608,13 @@ export default function ApiTester() {
                 onRequestDataChange={handleRequestDataChange}
                 authToken={authToken}
                 onUpdateAuthToken={updateAuthToken}
-                darkMode={darkMode} // Pass dark mode state
+                darkMode={isDarkMode} // Pass isDarkMode instead
                 apiKeys={settings.apiKeys || []} // Pass apiKeys from settings
                 testResults={responseData?.testResults} // Pass test results
               />
             </ResizablePanel>
-            <ResizableHandle withHandle />
-
-            <ResizablePanel defaultSize={40} minSize={25}>
-              <ResponseDisplay responseData={responseData} darkMode={darkMode} /> 
+            <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={25}>
+              <ResponseDisplay responseData={responseData} darkMode={isDarkMode} /> 
             </ResizablePanel>
           </ResizablePanelGroup>
         </div>
