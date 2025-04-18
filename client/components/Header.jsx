@@ -132,13 +132,13 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     return (
       <header
         className={`${
-          darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+          isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
         } border-b py-3 px-6 flex items-center justify-between`}
       >
         <div className="flex items-center space-x-2">
           <h1
             className={`text-xl font-semibold ${
-              darkMode ? "text-white" : "text-gray-800"
+              isDarkMode ? "text-white" : "text-gray-800"
             }`}
           >
             PUTman
@@ -148,10 +148,10 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setDarkMode(!darkMode)}
-            className={darkMode ? "text-gray-300" : "text-gray-600"}
+            onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
+            className={isDarkMode ? "text-gray-300" : "text-gray-600"}
           >
-            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
         </div>
       </header>
@@ -165,32 +165,32 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         <nav className="flex items-center justify-between">
           <div className="flex items-center">
             {/* Light mode için text-gray-800, dark mode için text-white */}
-            <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>API Testing Tool</h1>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>API Testing Tool</h1>
           </div>
 
           <div className="hidden md:flex items-center space-x-6">
             {/* Light mode için text-gray-600, dark mode için text-white */}
             <a
               href="#features"
-              className={`${darkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+              className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
               {t('header.features', 'Features')}
             </a>
             <a
               href="#pricing"
-              className={`${darkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+              className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
               {t('header.pricing', 'Pricing')}
             </a>
             <a
               href="#docs"
-              className={`${darkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+              className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
               {t('header.documentation', 'Documentation')}
             </a>
             <a
               href="#about"
-              className={`${darkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+              className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
               {t('header.about', 'About')}
             </a>
@@ -200,11 +200,11 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
               // Light mode için text-gray-600, dark mode için text-white
-              className={darkMode ? "text-white" : "text-gray-600"}
+              className={isDarkMode ? "text-white" : "text-gray-600"}
             >
-              {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
             <Button
               className="px-4 py-2 text-blue-600 bg-white rounded-lg font-medium hover:bg-gray-100 transition-colors"
