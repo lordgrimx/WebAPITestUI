@@ -84,15 +84,15 @@ namespace WebTestUI.Backend.Services
 
         public async Task<string> GenerateK6ScriptAsync(GenerateK6ScriptDTO generateDto)
         {
-            try 
+            try
             {
                 Console.WriteLine($"Received headers: {generateDto.RequestData.Headers}");
-                
+
                 var headers = !string.IsNullOrEmpty(generateDto.RequestData.Headers)
                     ? JsonSerializer.Deserialize<Dictionary<string, string>>(generateDto.RequestData.Headers)
                     : new Dictionary<string, string>();
 
-               
+
 
                 if (!string.IsNullOrEmpty(generateDto.RequestData.AuthToken) && !string.IsNullOrEmpty(generateDto.RequestData.AuthType))
                 {
@@ -106,7 +106,7 @@ namespace WebTestUI.Backend.Services
                             break;
                     }
                 }
-                 Console.WriteLine($"Deserialized headers: {JsonSerializer.Serialize(headers)}");
+                Console.WriteLine($"Deserialized headers: {JsonSerializer.Serialize(headers)}");
                 var script = $@"
 import http from 'k6/http';
 import {{ check, sleep }} from 'k6';
@@ -144,7 +144,7 @@ export default function() {{
     // Check response
     const success = check(response, {{
         'status is 2xx': (r) => r.status >= 200 && r.status < 300,
-        'response time < 500ms': (r) => r.timings.duration < 500
+        'response time < 600ms': (r) => r.timings.duration < 600
     }});
 
     successRate.add(success);
@@ -286,4 +286,4 @@ export default function() {{
             };
         }
     }
-} 
+}

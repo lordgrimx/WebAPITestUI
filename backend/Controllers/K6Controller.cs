@@ -8,7 +8,8 @@ using WebTestUI.Backend.DTOs;
 using WebTestUI.Backend.Services;
 using System.Text;
 using System.Text.Json;
-using System.Linq; // Added for LINQ usage
+using System.Linq;
+using Microsoft.VisualBasic; // Added for LINQ usage
 
 namespace WebTestUI.Backend.Controllers
 {
@@ -48,6 +49,7 @@ namespace WebTestUI.Backend.Controllers
                     Directory.CreateDirectory(tempDir);
                 }
                 _logger.LogInformation($"Temp directory path: {tempDir}");
+                var duration = request.Options?.Duration ?? "30s"; // Default duration if not provided
 
                 var scriptFileName = $"k6-script-{Guid.NewGuid()}.js";
                 var scriptPath = Path.Combine(tempDir, scriptFileName);
@@ -142,9 +144,21 @@ namespace WebTestUI.Backend.Controllers
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
 
-                await process.WaitForExitAsync();
+                await process.WaitForExitAsync(); var exitCode = process.ExitCode;
 
-                var exitCode = process.ExitCode;
+                // Capture process times before closing it
+                double processDuration = 0;
+                try
+                {
+                    // Try to get process time information
+                    processDuration = process.TotalProcessorTime.TotalSeconds;
+                    _logger.LogInformation($"Process CPU time: {processDuration:F2} seconds");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning($"Could not get process time: {ex.Message}");
+                }
+
                 process.Close(); // Close the process before accessing files
 
                 // Clean up the temporary script file
@@ -217,8 +231,49 @@ namespace WebTestUI.Backend.Controllers
                 }
                 try
                 {
-                    // Parse metrics from the JSON file content
-                    var metrics = ParseK6JsonOutput(jsonContent);
+                    // Calculate start and end times based on current time and test duration
+                    DateTime endTime = DateTime.UtcNow;
+                    DateTime startTime = endTime.AddSeconds(-processDuration);
+
+                    // Parse the duration string to get seconds
+                    double durationSecondType = 30; // Default 30 seconds
+                    if (!string.IsNullOrEmpty(request.Options?.Duration))
+                    {
+                        string durationStr = request.Options.Duration.Trim();
+                        if (durationStr.EndsWith("s"))
+                        {
+                            // Seconds format
+                            double.TryParse(durationStr.TrimEnd('s'), out durationSecondType);
+                        }
+                        else if (durationStr.EndsWith("m"))
+                        {
+                            // Minutes format - convert to seconds
+                            double minutes;
+                            if (double.TryParse(durationStr.TrimEnd('m'), out minutes))
+                            {
+                                durationSecondType = minutes * 60;
+                            }
+                        }
+                        else if (durationStr.EndsWith("h"))
+                        {
+                            // Hours format - convert to seconds
+                            double hours;
+                            if (double.TryParse(durationStr.TrimEnd('h'), out hours))
+                            {
+                                durationSecondType = hours * 3600;
+                            }
+                        }
+                        else
+                        {
+                            // No unit specified, assume seconds
+                            double.TryParse(durationStr, out durationSecondType);
+                        }
+                    }
+
+                    _logger.LogInformation($"Test duration in seconds: {durationSecondType}");
+
+                    // Parse metrics from the JSON file content and pass duration for RPS calculation
+                    var metrics = ParseK6JsonOutput(jsonContent, durationSecondType);
 
                     // Log the metrics as JSON for debugging
                     LogMetricsToConsole(metrics);
@@ -229,8 +284,8 @@ namespace WebTestUI.Backend.Controllers
                         Metrics = metrics,
                         RunId = testId,
                         TestId = testId,
-                        StartTime = DateTime.UtcNow, // Consider using process start time if available
-                        EndTime = DateTime.UtcNow // Consider using process end time if available
+                        StartTime = startTime,
+                        EndTime = endTime
                     });
                 }
                 catch (Exception ex)
@@ -293,7 +348,7 @@ namespace WebTestUI.Backend.Controllers
                 return StatusCode(500, new { error = $"Error stopping K6 test: {ex.Message}" });
             }
         }        // Parses K6 JSON Lines output to extract summary metrics.
-        private K6DetailedMetricsDto ParseK6JsonOutput(string jsonContent)
+        private K6DetailedMetricsDto ParseK6JsonOutput(string jsonContent, double durationInSeconds = 0)
         {
             if (string.IsNullOrWhiteSpace(jsonContent))
             {
@@ -410,7 +465,8 @@ namespace WebTestUI.Backend.Controllers
                         Count = IsCounterMetric(metricName) ? values.Sum() : values.Last(),
 
                         // For rate, use the average or last value depending on the metric type
-                        Rate = IsRateMetric(metricName) ? values.Average() : values.Last()
+                        // Multiply rate metrics by 100 to convert from 0-1 range to percentage (0-100)
+                        Rate = IsRateMetric(metricName) ? values.Average() * 100 : values.Last()
                     };
 
                     // Create trend statistics if we have multiple data points
@@ -434,24 +490,100 @@ namespace WebTestUI.Backend.Controllers
                     metricsDto.Checks = CreateMetricDataFromPoints("checks", metricPointsData["checks"]);
 
                 if (metricPointsData.ContainsKey("data_received"))
-                    metricsDto.Data = CreateMetricDataFromPoints("data_received", metricPointsData["data_received"]);
+                    metricsDto.Data = CreateMetricDataFromPoints("data_received", metricPointsData["data_received"]); if (metricPointsData.ContainsKey("http_reqs"))
+                {
+                    // Create the HTTP requests metric
+                    var httpReqsMetric = CreateMetricDataFromPoints("http_reqs", metricPointsData["http_reqs"]);
 
-                if (metricPointsData.ContainsKey("http_reqs"))
-                    metricsDto.Http_Reqs = CreateMetricDataFromPoints("http_reqs", metricPointsData["http_reqs"]);
+                    // Calculate requests per second based on actual test duration
+                    if (httpReqsMetric != null && durationInSeconds > 0)
+                    {
+                        // Override the rate with count / duration to get requests per second
+                        httpReqsMetric.Rate = httpReqsMetric.Count / durationInSeconds;
 
+                    }
+
+                    metricsDto.Http_Reqs = httpReqsMetric;
+                }
                 if (metricPointsData.ContainsKey("http_req_failed"))
                     metricsDto.Http_Req_Failed = CreateMetricDataFromPoints("http_req_failed", metricPointsData["http_req_failed"]);
 
+                // Calculate success_rate if http_req_failed exists (success_rate = 100 - failure_rate)
+                if (metricPointsData.ContainsKey("http_req_failed") && !metricPointsData.ContainsKey("success_rate"))
+                {
+                    // Create success_rate data points (100 - failure_rate for each point)
+                    var failurePoints = metricPointsData["http_req_failed"];
+                    var successRatePoints = failurePoints.Select(failureRate => 1 - failureRate).ToList();
+
+                    // Store the success rate points
+                    metricPointsData["success_rate"] = successRatePoints;
+                    metricTimestamps["success_rate"] = new List<DateTime>(metricTimestamps["http_req_failed"]);
+
+                    // Create the metric data for success rate
+                    metricsDto.Success_Rate = CreateMetricDataFromPoints("success_rate", successRatePoints);
+                    _logger.LogInformation($"Created success_rate metric from http_req_failed: {successRatePoints.Average() * 100:F2}%");
+                }
+                else if (metricPointsData.ContainsKey("success_rate"))
+                {
+                    metricsDto.Success_Rate = CreateMetricDataFromPoints("success_rate", metricPointsData["success_rate"]);
+                }
+
+                // Calculate success_rate if http_req_failed exists (success_rate = 100 - failure_rate)
+                if (metricPointsData.ContainsKey("http_req_failed") && !metricPointsData.ContainsKey("success_rate"))
+                {
+                    // Create success_rate data points (100 - failure_rate for each point)
+                    var successRatePoints = metricPointsData["http_req_failed"].Select(failureRate => 100 - (failureRate * 100)).ToList();
+                    metricPointsData["success_rate"] = successRatePoints;
+                    metricTimestamps["success_rate"] = new List<DateTime>(metricTimestamps["http_req_failed"]);
+                    metricsDto.Success_Rate = CreateMetricDataFromPoints("success_rate", successRatePoints);
+                    _logger.LogInformation($"Created success_rate metric from http_req_failed: {successRatePoints.Average():F2}%");
+                }
+                else if (metricPointsData.ContainsKey("success_rate"))
+                {
+                    metricsDto.Success_Rate = CreateMetricDataFromPoints("success_rate", metricPointsData["success_rate"]);
+                }
                 if (metricPointsData.ContainsKey("iterations"))
                     metricsDto.Iterations = CreateMetricDataFromPoints("iterations", metricPointsData["iterations"]);
+
+                // Handle iteration_duration correctly by updating the Iterations property with duration trend data
+                if (metricPointsData.ContainsKey("iteration_duration"))
+                {
+                    _logger.LogInformation($"Found iteration_duration metric with {metricPointsData["iteration_duration"].Count} data points. Values: {string.Join(", ", metricPointsData["iteration_duration"].Take(5))}");
+
+                    // If we have iterations property already, update its trend with duration data
+                    if (metricsDto.Iterations != null)
+                    {
+                        var values = metricPointsData["iteration_duration"];
+                        if (values.Count > 0)
+                        {
+                            // Make sure we have a Trend object
+                            if (metricsDto.Iterations.Trend == null)
+                            {
+                                metricsDto.Iterations.Trend = new TrendStats();
+                            }                            // Update the trend with the actual duration values (convert from ms to seconds)
+                            metricsDto.Iterations.Trend.Avg = values.Average() / 1000;
+                            metricsDto.Iterations.Trend.Min = values.Min() / 1000;
+                            metricsDto.Iterations.Trend.Max = values.Max() / 1000;
+                            metricsDto.Iterations.Trend.Med = CalculateMedian(values) / 1000;
+                            metricsDto.Iterations.Trend.P90 = CalculatePercentile(values, 90) / 1000;
+                            metricsDto.Iterations.Trend.P95 = CalculatePercentile(values, 95) / 1000;
+
+                            _logger.LogInformation($"Updated Iterations trend with duration data: Avg={metricsDto.Iterations.Trend.Avg}s, Min={metricsDto.Iterations.Trend.Min}s, Max={metricsDto.Iterations.Trend.Max}s");
+                        }
+                    }
+                    // If no iterations property yet, create one from the duration data
+                    else
+                    {
+                        _logger.LogInformation("Creating Iterations metric from iteration_duration data");
+                        metricsDto.Iterations = CreateMetricDataFromPoints("iteration_duration", metricPointsData["iteration_duration"]);
+                    }
+                }
 
                 if (metricPointsData.ContainsKey("vus"))
                     metricsDto.Vus = CreateMetricDataFromPoints("vus", metricPointsData["vus"]);
 
                 if (metricPointsData.ContainsKey("vus_max"))
-                    metricsDto.Vus_Max = CreateMetricDataFromPoints("vus_max", metricPointsData["vus_max"]);
-
-                // Add HTTP duration metrics which are critical for response time reporting
+                    metricsDto.Vus_Max = CreateMetricDataFromPoints("vus_max", metricPointsData["vus_max"]);                // Add HTTP duration metrics which are critical for response time reporting
                 if (metricPointsData.ContainsKey("http_req_duration"))
                     metricsDto.Http_Req_Duration = CreateMetricDataFromPoints("http_req_duration", metricPointsData["http_req_duration"]);
 
@@ -468,7 +600,8 @@ namespace WebTestUI.Backend.Controllers
                     metricsDto.Http_Req_Sending = CreateMetricDataFromPoints("http_req_sending", metricPointsData["http_req_sending"]);
 
                 if (metricPointsData.ContainsKey("http_req_waiting"))
-                    metricsDto.Http_Req_Waiting = CreateMetricDataFromPoints("http_req_waiting", metricPointsData["http_req_waiting"]); if (metricPointsData.ContainsKey("http_req_receiving"))
+                    metricsDto.Http_Req_Waiting = CreateMetricDataFromPoints("http_req_waiting", metricPointsData["http_req_waiting"]);
+                if (metricPointsData.ContainsKey("http_req_receiving"))
                     metricsDto.Http_Req_Receiving = CreateMetricDataFromPoints("http_req_receiving", metricPointsData["http_req_receiving"]);
 
                 // Check if we actually managed to extract *any* meaningful metric data
@@ -499,13 +632,12 @@ namespace WebTestUI.Backend.Controllers
                    metricName == "data_received" || metricName == "data_sent" ||
                    metricName == "checks";
         }
-
         private bool IsRateMetric(string metricName)
         {
             // Metrics that are typically represented as rates (should be averaged)
-            return metricName == "http_req_failed";
+            // Include success_rate and checks to convert to percentage (0-100) 
+            return metricName == "http_req_failed" || metricName == "success_rate" || metricName == "checks";
         }
-
         private bool IsDurationMetric(string metricName)
         {
             // Metrics that represent durations and should have trend stats

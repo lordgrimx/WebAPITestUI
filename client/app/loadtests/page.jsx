@@ -138,11 +138,11 @@ export default function LoadTestsPage() {  const { t } = useTranslation();
                 checksRate: results.metrics?.checks?.rate || 0,
             dataReceived: results.metrics?.data?.count || "N/A", // data_received metriği eklendi (varsa)
             dataSent: results.metrics?.data?.count || "N/A", // data_sent metriği eklendi (varsa) - K6 çıktısında ayrı ayrı yok, 'data' olarak var
-            httpReqRate: results.metrics?.http_reqs?.rate || 0,
+            httpReqRate: results.metrics?.http_reqs?.rate  || 0,
             // httpReqFailed metriği doğrudan kullanılacak
             httpReqFailed: results.metrics?.http_req_failed?.rate || 0, 
             // successRate, checks metriğine göre kalabilir veya 100 - failureRate olarak hesaplanabilir. Şimdilik checks kalsın.
-            successRate: results.metrics?.checks?.rate || 0, 
+            successRate: results.metrics?.success_Rate?.rate || 0, 
             iterations: results.metrics?.iterations?.count || 0,
             httpReqDuration: {
                   avg: results.metrics?.http_Req_Duration?.trend?.avg || 0,
@@ -185,7 +185,7 @@ export default function LoadTestsPage() {  const { t } = useTranslation();
               dataSent: results.metrics?.data?.count?.toString() || "0", 
               httpReqRate: results.metrics?.http_Reqs?.rate || 0,
               httpReqFailed: results.metrics?.http_Req_Failed?.rate || 0,
-              successRate: results.metrics?.checks?.rate || 0,
+              successRate: results.metrics?.success_Rate?.rate || 0,
               iterations: results.metrics?.iterations?.count || 0,
               httpReqDuration: {
                 avg: results.metrics?.http_Req_Duration?.trend?.avg || 0,

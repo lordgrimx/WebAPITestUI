@@ -6,6 +6,7 @@ namespace WebTestUI.Backend.DTOs
         public MetricData? Data { get; set; }
         public MetricData? Http_Reqs { get; set; }
         public MetricData? Http_Req_Failed { get; set; } // Eklendi
+        public MetricData? Success_Rate { get; set; } // Başarı oranı için eklendi
         public MetricData? Iterations { get; set; }
         public MetricData? Vus { get; set; }
         public MetricData? Vus_Max { get; set; }
@@ -45,5 +46,6 @@ namespace WebTestUI.Backend.DTOs
         public string TestId { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime? EndTime { get; set; }
+
     }
 }
