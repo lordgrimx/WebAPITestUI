@@ -117,6 +117,18 @@ const successRate = new Rate('success_rate');
 const failureRate = new Rate('failure_rate');
 const requestDuration = new Counter('request_duration');
 
+// Status code counters
+const status200 = new Counter('status_200');
+const status201 = new Counter('status_201');
+const status204 = new Counter('status_204');
+const status400 = new Counter('status_400');
+const status401 = new Counter('status_401');
+const status403 = new Counter('status_403');
+const status404 = new Counter('status_404');
+const status415 = new Counter('status_415');
+const status500 = new Counter('status_500');
+const statusOther = new Counter('status_other');
+
 export const options = {{
     vus: {generateDto.Options.Vus},
     duration: '{generateDto.Options.Duration}',
@@ -137,6 +149,20 @@ export default function() {{
     const response = http.{generateDto.RequestData.Method.ToLower()}('{generateDto.RequestData.Url}', 
         {(generateDto.RequestData.Method != "GET" ? "payload, " : "")}params);
     const endTime = new Date().getTime();
+
+    // Track status codes
+    switch(response.status) {{
+        case 200: status200.add(1); break;
+        case 201: status201.add(1); break;
+        case 204: status204.add(1); break;
+        case 400: status400.add(1); break;
+        case 401: status401.add(1); break;
+        case 403: status403.add(1); break;
+        case 404: status404.add(1); break;
+        case 415: status415.add(1); break;
+        case 500: status500.add(1); break;
+        default: statusOther.add(1);
+    }}
 
     // Record metrics
     requestDuration.add(endTime - startTime);

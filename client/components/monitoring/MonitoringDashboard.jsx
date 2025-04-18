@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { Button } from '../ui/button';
 import { toast } from 'react-toastify';
 import { authAxios, useAuth } from '@/lib/auth-context'; // Import useAuth
-import { useTranslation } from 'react-i18next';
+
 // Add this helper function at the top of the file
 const getPathFromUrl = (urlString) => {
   try {
@@ -84,7 +84,7 @@ const MonitoringDashboard = () => {
   const [endpointFilter, setEndpointFilter] = useState('All');
   const [selectedEndpoint, setSelectedEndpoint] = useState(null);
   const [timeRange, setTimeRange] = useState('24h');
-  const { t } = useTranslation(); // Initialize i18next
+  
 
   // Add chart refs
   const [charts, setCharts] = useState({
@@ -126,7 +126,7 @@ const MonitoringDashboard = () => {
         }
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast.error('Failed to fetch data: ' + (error.response?.data?.message || error.message));
+        toast.error('Veri alınamadı: ' + (error.response?.data?.message || error.message));
       } finally {
         setIsLoading(false);
       }
@@ -240,12 +240,12 @@ const MonitoringDashboard = () => {
       const { total, errors } = timeGroups[time];
       return total > 0 ? (errors / total) * 100 : 0;
     });
-    const respTimeText = t('monitoring.responseTime');
+
     // Set options for response time chart
     responseTimeChart.setOption({
       animation: false,
       title: {
-        text: respTimeText+' (ms)',
+        text: 'Yanıt Süresi (ms)',
         left: 'center',
         textStyle: { color: '#e2e8f0' }
       },
@@ -276,7 +276,7 @@ const MonitoringDashboard = () => {
     requestCountChart.setOption({
       animation: false,
       title: {
-        text: t('monitoring.requestCount'),
+        text: 'İstek Sayısı',
         left: "center",
         textStyle: { color: "#e2e8f0" }
       },
@@ -300,7 +300,7 @@ const MonitoringDashboard = () => {
     errorRateChart.setOption({
       animation: false,
       title: {
-        text: t('monitoring.errorRate'),
+        text: 'Hata Oranı',
         left: "center",
         textStyle: { color: "#e2e8f0" }
       },
@@ -335,7 +335,7 @@ const MonitoringDashboard = () => {
     statusDistributionChart.setOption({
       animation: false,
       title: {
-        text: t('monitoring.statusDistribution'),
+        text: 'Durum Dağılımı',
         left: "center",
         textStyle: { color: "#e2e8f0" }
       },
@@ -453,7 +453,7 @@ const MonitoringDashboard = () => {
                 value={selectedProject?.id || selectedProject?._id || ''}
                 onChange={(e) => handleProjectSelect(e.target.value)}
               >
-                <option value="">{t('monitoring.selectCollection')}</option>
+                <option value="">Koleksiyon Seçin</option>
                 {collections?.map(collection => (
                   <option key={collection.id || collection._id} value={collection.id || collection._id}>
                     {collection.name}
@@ -464,14 +464,14 @@ const MonitoringDashboard = () => {
             
             <div className="flex items-center bg-green-500 px-2 py-1 rounded-full text-xs">
               <i className="fas fa-circle text-xs mr-1"></i>
-              <span>{t('monitoring.connected')}</span>
+              <span>Bağlı</span>
             </div>
           </div>
           
           <div className="relative w-1/3">
             <input
               type="text"
-              placeholder={t('monitoring.searchEndpoint')}
+              placeholder="Endpoint Ara..."
               className="bg-gray-700 w-full rounded-md py-2 pl-10 pr-4 text-sm border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -482,7 +482,7 @@ const MonitoringDashboard = () => {
           <div className="flex items-center space-x-4">
             <div className="relative">
               <button className="flex items-center bg-gray-700 hover:bg-gray-600 rounded-md px-3 py-2 text-sm cursor-pointer !rounded-button whitespace-nowrap">
-                <span>{t('monitoring.refresh')}: {refreshRate}</span>
+                <span>Yenileme: {refreshRate}</span>
                 <i className="fas fa-chevron-down ml-2 text-xs"></i>
               </button>
             </div>
@@ -518,7 +518,7 @@ const MonitoringDashboard = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder={t('monitoring.searchEndpoint')}
+                placeholder="Endpoint Ara..."
                 className="bg-gray-700 w-full rounded-md py-2 pl-10 pr-4 text-sm border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -531,19 +531,19 @@ const MonitoringDashboard = () => {
                 onClick={() => setEndpointFilter('All')} 
                 className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'All' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
-                {t('monitoring.all')}
+                Tümü
               </button>
               <button 
                 onClick={() => setEndpointFilter('Active')} 
                 className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Active' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
-                {t('monitoring.active')}
+                Aktif
               </button>
               <button 
                 onClick={() => setEndpointFilter('Inactive')} 
                 className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Inactive' ? 'bg-blue-600' : 'bg-gray-700'}`}
               >
-                {t('monitoring.inactive')}
+                Pasif
               </button>
             </div>
           </div>
@@ -579,7 +579,7 @@ const MonitoringDashboard = () => {
               </div>
             ) : (
               <div className="px-4 py-2 text-gray-400">
-                {t('monitoring.selectCollectionToViewEndpoints')}
+                Endpoint'leri görüntülemek için koleksiyon seçin
               </div>
             )}
           </div>
@@ -615,12 +615,12 @@ const MonitoringDashboard = () => {
             <table className="w-full">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.timestamp')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.method')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.endpoint')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.status')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.responseTime')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">{t('monitoring.actions')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Zaman</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Metod</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Endpoint</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Durum</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Yanıt Süresi</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">İşlemler</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
@@ -662,14 +662,14 @@ const MonitoringDashboard = () => {
                             console.log('Response Data:', responseData);
                             console.log('Headers:', headers);
                             // You can add a modal/dialog here to show the data
-                            toast.info("Response Data", {
+                            toast.info("Yanıt Verisi", {
                               description: <pre className="max-h-60 overflow-auto">
                                 {JSON.stringify(responseData, null, 2)}
                               </pre>
                             });
                           } catch (error) {
                             console.error('Error parsing response:', error);
-                            toast.error("Error parsing response data");
+                            toast.error("Yanıt verisi ayrıştırılırken hata oluştu");
                           }
                         }}
                       >

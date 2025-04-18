@@ -9,21 +9,23 @@ import {
 import { authAxios } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings-context"; // Import the settings hook
+import { useRequest } from "@/lib/request-context"; // Import the request context
 // Proxy için https-proxy-agent gerekebilir, ancak bunu API rotasında kullanacağız.
-
+import axios from "axios"; // Axios for HTTP requests
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
-import Header from "../Header";
+
 export default function ApiTester() {
   const { settings } = useSettings(); // Get settings from context (updateSetting kaldırıldı, kullanılmıyor)
+  const { setCurrentRequestData } = useRequest(); // Get setCurrentRequestData from request context
   
   const [selectedRequestId, setSelectedRequestId] = useState(null);  
   const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
   const [error, setError] = useState(null); // General request error state
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
-  const [currentRequestData, setCurrentRequestData] = useState(null); // State to hold current request builder data
+  const [currentRequestData, setCurrentRequestDataLocal] = useState(null); // State to hold current request builder data
   const [initialDataFromHistory, setInitialDataFromHistory] = useState(null); // State to hold data from selected history item
   const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
   const [authToken, setAuthToken] = useState(''); // Initialize empty
@@ -188,9 +190,17 @@ export default function ApiTester() {
   // Memoize the request data handler - This function will be passed to RequestBuilder
   const handleRequestDataChange = useCallback((data) => {
     requestAnimationFrame(() => {
-      setCurrentRequestData(data); // Update the state in ApiTester
+      setCurrentRequestDataLocal(data); // Update the state in ApiTester
     });
   }, []);
+
+  // Update parent component with current request data
+  useEffect(() => {
+    if (handleRequestDataChange) {
+      handleRequestDataChange(currentRequestData);
+    }
+    setCurrentRequestData(currentRequestData); // Update global request context
+  }, [currentRequestData, handleRequestDataChange, setCurrentRequestData]);
 
   // Memoize the response handler
   const handleSendRequest = useCallback(async (requestData) => {
@@ -325,7 +335,9 @@ export default function ApiTester() {
 
       // Make the actual API request (either direct or via proxy)
       console.log("Final Axios Config:", axiosConfig);
-      const axiosResponse = await authAxios(axiosConfig);
+      const axiosResponse = await axios(axiosConfig);
+      console.log("Axios Response:", axiosResponse);
+      
 
       // Handle successful response (Proxy route should return the target API's response structure)
       console.log("Response received (potentially via proxy):", axiosResponse);
@@ -453,7 +465,7 @@ export default function ApiTester() {
         };
         
         // Update the current request data with test results
-        setCurrentRequestData({
+        setCurrentRequestDataLocal({
           ...currentRequestData,
           tests: updatedTests
         });
@@ -582,52 +594,41 @@ export default function ApiTester() {
   }, []);
 
   return (
-    <>
-      <Header
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-        currentRequestData={currentRequestData}
-      />
-      <div className="flex flex-col h-screen overflow-hidden"> {/* Use flex-col for vertical layout */}
-        
-        {/* Rest of the layout */}
-        <div className="flex-1 min-h-0"> {/* Add min-h-0 to allow proper flex shrinking */}
-          <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]"> {/* Adjust height to account for header and monitor panel */}
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-              <CollectionsSidebar
-                setSelectedRequestId={handleRequestSelect} // For collection requests
-                onHistorySelect={handleHistorySelect}     // For history items
-                hasError={!!sidebarError}
-                onError={setSidebarError}
-                darkMode={darkMode} // Pass dark mode state
-                historyUpdated={historyUpdated} // Add this prop
-              />
-            </ResizablePanel>
-            <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={30}>
-              <RequestBuilder
-                key={selectedRequestId || initialDataFromHistory?.url} // Add key to force re-render/reset on selection change
-                selectedRequestId={selectedRequestId}
-                initialData={initialDataFromHistory} // Pass history data
-                onSendRequest={handleSendRequest}
-                onRequestDataChange={handleRequestDataChange}
-                authToken={authToken}
-                onUpdateAuthToken={updateAuthToken}
-                darkMode={darkMode} // Pass dark mode state
-                apiKeys={settings.apiKeys || []} // Pass apiKeys from settings
-                testResults={responseData?.testResults} // Pass test results
-              />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
+    <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 min-h-0">
+        <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]">
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+            <CollectionsSidebar
+              setSelectedRequestId={handleRequestSelect} // For collection requests
+              onHistorySelect={handleHistorySelect}     // For history items
+              hasError={!!sidebarError}
+              onError={setSidebarError}
+              darkMode={darkMode} // Pass dark mode state
+              historyUpdated={historyUpdated} // Add this prop
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={40} minSize={30}>
+            <RequestBuilder
+              key={selectedRequestId || initialDataFromHistory?.url} // Add key to force re-render/reset on selection change
+              selectedRequestId={selectedRequestId}
+              initialData={initialDataFromHistory} // Pass history data
+              onSendRequest={handleSendRequest}
+              onRequestDataChange={handleRequestDataChange}
+              authToken={authToken}
+              onUpdateAuthToken={updateAuthToken}
+              darkMode={darkMode} // Pass dark mode state
+              apiKeys={settings.apiKeys || []} // Pass apiKeys from settings
+              testResults={responseData?.testResults} // Pass test results
+            />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
 
-            <ResizablePanel defaultSize={40} minSize={25}>
-              <ResponseDisplay responseData={responseData} darkMode={darkMode} /> 
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </div>
-        
-        {/* Fixed height for monitor panel */}
-        
+          <ResizablePanel defaultSize={40} minSize={25}>
+            <ResponseDisplay responseData={responseData} darkMode={darkMode} /> 
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
-    </>
+    </div>
   );
 }

@@ -19,6 +19,22 @@ namespace WebTestUI.Backend.DTOs
         public MetricData? Http_Req_Sending { get; set; }
         public MetricData? Http_Req_Waiting { get; set; }
         public MetricData? Http_Req_Receiving { get; set; }
+
+        public StatusCodeMetrics StatusCodes { get; set; } = new StatusCodeMetrics();
+    }
+
+    public class StatusCodeMetrics
+    {
+        public int Status200 { get; set; }
+        public int Status201 { get; set; }
+        public int Status204 { get; set; }
+        public int Status400 { get; set; }
+        public int Status401 { get; set; }
+        public int Status403 { get; set; }
+        public int Status404 { get; set; }
+        public int Status415 { get; set; }
+        public int Status500 { get; set; }
+        public int Other { get; set; }
     }
 
     public class MetricData
