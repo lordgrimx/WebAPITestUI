@@ -99,7 +99,7 @@ export default function SettingsModal({ open, setOpen }) {
     
     // Update global settings
     updateSettings({
-      // We don't update darkMode here as it's handled by next-themes
+      // Using the theme from useTheme hook instead of localStorage
       defaultHeaders: cleanedHeaders,
       apiKeys: cleanedApiKeys,
       proxyEnabled,

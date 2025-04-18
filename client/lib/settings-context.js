@@ -4,8 +4,6 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 // Initial default settings
 const defaultSettings = {
-    // Theme
-    darkMode: false,
 
     // Request Configuration
     requestTimeout: 30000,  // 30 seconds

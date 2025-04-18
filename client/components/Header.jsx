@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next"; // Çeviri hook'u eklendi
+import { useTheme } from "next-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,12 +36,15 @@ import { toast } from "sonner"; // Import toast for notifications
 import Image from "next/image";
 
 // Accept currentRequestData prop from ApiTester
-export default function Header({ darkMode, setDarkMode, currentRequestData, openSignupModal, openLoginModal }) {
+export default function Header({ currentRequestData, openSignupModal, openLoginModal }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
   const { user, isAuthenticated, login, logout, isLoading } = useAuth();
+  const { theme, setTheme } = useTheme();
   const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
+  
+  const isDarkMode = theme === 'dark';
 
   const handleSaveRequest = async (requestData) => {
     try {
@@ -222,17 +226,13 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
 
   // If user is authenticated, show the full app header
   return (
-    <>
-      <SettingsModal
+    <>      <SettingsModal
         open={showSettings}
         setOpen={setShowSettings}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-      />
-      <GenerateCodeModal
+      />      <GenerateCodeModal
         open={showGenerateCode}
         setOpen={setShowGenerateCode}
-        darkMode={darkMode}
+        darkMode={isDarkMode}
         // Pass data from currentRequestData to the modal
         selectedMethod={currentRequestData?.method || "GET"}
         url={currentRequestData?.url || ""}
@@ -251,17 +251,16 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               })()
             : [] // Default to empty array if params don't exist or aren't a string
         }
-      />
-      <SaveRequestModal
+      />      <SaveRequestModal
         open={showSaveRequest}
         setOpen={setShowSaveRequest}
-        darkMode={darkMode}
+        darkMode={isDarkMode}
         onSaveRequest={handleSaveRequest}
         initialData={currentRequestData}
       />
       <header
         className={`${
-          darkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+          isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
         } border-b py-3 px-6 flex items-center justify-between`}
       >
         <div className="flex items-center space-x-2">
@@ -270,17 +269,17 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
           >
             <Image src={'icon.svg'} width={30} height={30} alt="icon"/> 
             <h1 className={`text-xl font-extrabold ${
-              darkMode ? "text-white" : "text-gray-800" // Ana başlık rengi zaten doğru
+              isDarkMode ? "text-white" : "text-gray-800" // Ana başlık rengi zaten doğru
             }`} >
               <span className="text-blue-500">PUT</span> {/* PUT her zaman mavi */}
-              <span className={`${darkMode ? "text-white" : "text-gray-800"}`}>man</span> {/* man kısmı moda göre değişir, light modda daha koyu gri */}
+              <span className={`${isDarkMode ? "text-white" : "text-gray-800"}`}>man</span> {/* man kısmı moda göre değişir, light modda daha koyu gri */}
             </h1>
           </div>
           <div className="flex space-x-2 ml-6">
             <Button
               variant="ghost"
               size="sm"
-              className={`space-x-1 ${darkMode ? "":"text-gray-800"}`}
+              className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               onClick={() => setShowSaveRequest(true)}
             >
               <Save className="h-4 w-4" />
@@ -289,7 +288,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
             <Button
               variant="ghost"
               size="sm"
-              className={`space-x-1 ${darkMode ? "":"text-gray-800"}`}
+              className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               onClick={() => setShowGenerateCode(true)}
             >
               <Code className="h-4 w-4" />
@@ -298,16 +297,17 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
             <Button
               variant="ghost"
               size="sm"
-              className={`space-x-1 ${darkMode ? "":"text-gray-800"}`}
+              className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               onClick={() => setShowSettings(true)}
             >
               <Settings className="h-4 w-4" />
               <span>{t('header.settings')}</span>
-            </Button>            <Link href="/loadtests">
+            </Button>            
+            <Link href="/loadtests">
               <Button
                 variant="ghost"
                 size="sm"
-                className={`space-x-1 ${darkMode ? "text-gray-200 hover:bg-gray-700 hover:text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}
+                className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4 mr-1" />
                 <span>{t('header.loadTests', 'Load Tests')}</span>
@@ -317,7 +317,7 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               <Button
                 variant="ghost"
                 size="sm"
-                className={`space-x-1 ${darkMode ? "text-gray-200 hover:bg-gray-700 hover:text-white" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}
+                className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4 mr-1" />
                 <span>{t('header.monitoring')}</span>
@@ -325,10 +325,10 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
             </Link>
           </div>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4">          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="space-x-1">
+              <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`}>
                 <Globe className="h-4 w-4" />
                 <span>{t('header.environment')}</span>
                 <ChevronDown className="h-3 w-3 ml-1" />
@@ -358,11 +358,9 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
                 {t('header.environmentList.add', 'Add Environment')}
               </Button>
             </DropdownMenuContent>
-          </DropdownMenu>
-
-          <DropdownMenu>
+          </DropdownMenu>          <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="space-x-1">
+              <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`}>
                 <Share2 className="h-4 w-4" />
                 <span>{t('header.share', 'Share')}</span>
                 <ChevronDown className="h-3 w-3 ml-1" />
@@ -373,20 +371,18 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               <DropdownMenuItem onClick={handleShareToWorkspace}>{t('header.shareList.toWorkspace')}</DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportRequest}>{t('header.shareList.export')}</DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
-
+          </DropdownMenu>          
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setDarkMode(!darkMode)}
-            className={darkMode ? "text-gray-300" : "text-gray-600"}
+            onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
+            className={isDarkMode ? "text-gray-300" : "text-gray-600"}
           >
-            {darkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
-
+            {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>          
           <ProfileDropdown
-            darkMode={darkMode}
-            setDarkMode={setDarkMode}
+            darkMode={isDarkMode}
+            setDarkMode={() => setTheme(isDarkMode ? 'light' : 'dark')}
             user={user}
             onLogout={logout}
           />
