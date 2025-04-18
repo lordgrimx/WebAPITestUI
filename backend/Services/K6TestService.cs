@@ -9,10 +9,12 @@ namespace WebTestUI.Backend.Services
     public class K6TestService : IK6TestService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<K6TestService> _logger;
 
-        public K6TestService(ApplicationDbContext context)
+        public K6TestService(ApplicationDbContext context, ILogger<K6TestService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<List<K6TestDTO>> GetAllK6TestsAsync()
@@ -163,7 +165,7 @@ export default function() {{
         public async Task<K6TestDTO> GenerateAndSaveK6ScriptAsync(string name, string? description, int? requestId, RequestData requestData, K6TestOptions options)
         {
             var script = await GenerateK6ScriptAsync(new GenerateK6ScriptDTO { RequestData = requestData, Options = options });
-
+            _logger.LogInformation($"Options: {options.Duration}, {options.Vus}");
             var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var test = new K6Test
             {

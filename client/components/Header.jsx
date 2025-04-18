@@ -306,6 +306,13 @@ export default function Header({ darkMode, setDarkMode, currentRequestData, open
               <Activity className="h-4 w-4 mr-1" />
               <span>{t('header.monitoring')}</span>
             </Link>
+            <Link 
+              href="/loadtests" 
+              className="inline-flex items-center px-2 py-1 text-sm font-medium text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+            >
+              <Activity className="h-4 w-4 mr-1" />
+              <span>{t('header.loadTests')}</span>
+            </Link>
           </div>
         </div>
         <div className="flex items-center space-x-4">
