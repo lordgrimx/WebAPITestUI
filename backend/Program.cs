@@ -8,9 +8,17 @@ using WebTestUI.Backend.Data;
 using WebTestUI.Backend.Data.Entities; // Add this for ApplicationUser
 using WebTestUI.Backend.Services;
 using WebTestUI.Backend.Services.Interfaces;
+using dotenv.net; // Add dotenv support
 // Add Swashbuckle using directives if they are missing implicitly
 // using Swashbuckle.AspNetCore.SwaggerGen;
 // using Swashbuckle.AspNetCore.SwaggerUI;
+
+// Load environment variables from .env.local file
+DotEnv.Fluent()
+    .WithEnvFiles(".env.local")
+    .WithTrimValues()
+    .WithProbeForEnv(probeLevelsToSearch: 5)
+    .Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,6 +118,7 @@ builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IK6TestService, K6TestService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();
@@ -159,7 +168,7 @@ app.UseCors("AllowSpecificOrigin");
 app.UseCors();
 
 // Enable static file serving (for wwwroot)
-app.UseStaticFiles(); 
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();

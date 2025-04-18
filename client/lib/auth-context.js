@@ -70,9 +70,7 @@ export function AuthProvider({ children }) {
     const handleLogin = async (email, password) => {
         setIsLoading(true);
         try {
-            const response = await axios.post(`${API_BASE_URL}/Auth/login`, { email, password });
-
-            if (response.data && response.data.token) {
+            const response = await axios.post(`${API_BASE_URL}/Auth/login`, { email, password }); if (response.data && response.data.token) {
                 localStorage.setItem('token', response.data.token);
 
                 const userResponse = await authAxios.get('/User/me');
@@ -84,9 +82,14 @@ export function AuthProvider({ children }) {
                 } else {
                     throw new Error("Failed to fetch user data after login.");
                 }
-            } else if (response.data && response.data.requiresTwoFactor) {
+            } else if (response.data && response.data.twoFactorRequired) {
                 setIsLoading(false);
-                return { success: false, requires2FA: true, error: "Two-factor authentication required." };
+                return {
+                    success: false,
+                    requires2FA: true,
+                    userId: response.data.userId,
+                    message: response.data.message || "Two-factor authentication required."
+                };
             }
             else {
                 throw new Error(response.data?.message || "Invalid credentials");
@@ -123,11 +126,39 @@ export function AuthProvider({ children }) {
             setIsLoading(false);
             return { success: false, error: error.response?.data?.message || error.message || "Registration failed" };
         }
-    };
+    }; const handle2FAVerification = async (userId, code) => {
+        try {
+            setIsLoading(true);
+            const response = await axios.post(`${API_BASE_URL}/Auth/verify-2fa`, {
+                userId: userId,
+                code: code
+            });
 
-    const handle2FAVerification = async (userId, code) => {
-        console.warn("2FA verification not implemented yet for backend.");
-        return { success: false, error: "2FA not implemented" };
+            if (response.data && response.data.token) {
+                localStorage.setItem('token', response.data.token);
+
+                const userResponse = await authAxios.get('/User/me');
+                if (userResponse.data) {
+                    setCurrentUser(userResponse.data);
+                    setUserId(userResponse.data.id);
+                    setIsLoading(false);
+                    return { success: true };
+                }
+            }
+
+            setIsLoading(false);
+            return {
+                success: false,
+                error: response.data?.message || "Verification failed"
+            };
+        } catch (error) {
+            console.error("2FA verification error:", error);
+            setIsLoading(false);
+            return {
+                success: false,
+                error: error.response?.data?.message || error.message || "Verification failed"
+            };
+        }
     };
 
     const value = {

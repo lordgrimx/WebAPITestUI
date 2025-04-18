@@ -4,6 +4,9 @@ using WebTestUI.Backend.Data;
 using WebTestUI.Backend.Data.Entities;
 using WebTestUI.Backend.DTOs;
 using WebTestUI.Backend.Services.Interfaces;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace WebTestUI.Backend.Services
 {
@@ -12,6 +15,7 @@ namespace WebTestUI.Backend.Services
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ApplicationDbContext _dbContext;
         private readonly IJwtService _jwtService;
+        private readonly IEmailService _emailService;
         private readonly ILogger<AuthService> _logger;
 
         // 2FA kod geçerlilik süresi (5 dakika)
@@ -21,11 +25,13 @@ namespace WebTestUI.Backend.Services
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext dbContext,
             IJwtService jwtService,
+            IEmailService emailService,
             ILogger<AuthService> logger)
         {
             _userManager = userManager;
             _dbContext = dbContext;
             _jwtService = jwtService;
+            _emailService = emailService;
             _logger = logger;
         }
 
@@ -174,7 +180,6 @@ namespace WebTestUI.Backend.Services
                 User = await MapToUserDtoAsync(user) // Use await and async helper
             };
         }
-
         public async Task<bool> GenerateTwoFactorCodeAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
@@ -192,10 +197,23 @@ namespace WebTestUI.Backend.Services
             user.TwoFactorCodeExpiry = DateTime.UtcNow.AddMinutes(CODE_EXPIRY_MINUTES);
             await _userManager.UpdateAsync(user);
 
-            // Gerçek bir uygulamada, burada e-posta veya SMS ile kod gönderimi yapılır
-            // Şimdilik sadece logluyoruz
-            _logger.LogInformation($"SIMULATED: 2FA Code for user {userId}: {code}");
+            // Check if the user's email is available
+            if (string.IsNullOrEmpty(user.Email))
+            {
+                _logger.LogError("Cannot send 2FA code - user email is empty");
+                return false;
+            }
 
+            // Email ile 2FA kodunu gönder
+            bool emailSent = await _emailService.Send2FACodeAsync(user.Email, code);
+
+            if (!emailSent)
+            {
+                _logger.LogWarning($"Failed to send 2FA email to {user.Email}. Logging code for debug: {code}");
+                return false;
+            }
+
+            _logger.LogInformation($"2FA verification code sent to {user.Email}");
             return true;
         }
 
@@ -217,22 +235,22 @@ namespace WebTestUI.Backend.Services
                 UserId = user.Id,
                 User = await MapToUserDtoAsync(user)
             };
-        }
-
-        // Helper metot: ApplicationUser'ı UserDto'ya dönüştürür (Asenkron)
+        }        // Helper metot: ApplicationUser'ı UserDto'ya dönüştürür (Asenkron)
         private async Task<UserDto> MapToUserDtoAsync(ApplicationUser user)
         {
             var roles = await _userManager.GetRolesAsync(user);
+
+            // Create and return UserDto with null-safe assignments
             return new UserDto
             {
                 Id = user.Id,
-                Name = user.Name,
-                Email = user.Email, // Correct assignment
+                Name = user.Name ?? string.Empty,
+                Email = user.Email ?? string.Empty,
                 Role = roles.FirstOrDefault() ?? "User",
-                ProfileImageBase64 = user.ProfileImageBase64, // Use Base64 property
-                Phone = user.Phone, // Correct assignment
-                Address = user.Address, // Correct assignment
-                Website = user.Website, // Correct assignment
+                ProfileImageBase64 = user.ProfileImageBase64,
+                Phone = user.Phone ?? string.Empty,
+                Address = user.Address ?? string.Empty,
+                Website = user.Website ?? string.Empty,
                 TwoFactorEnabled = user.TwoFactorEnabled
             };
         }
