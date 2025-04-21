@@ -41,6 +41,8 @@ namespace WebTestUI.Backend.DTOs
         public string ResponseBody { get; set; }
 
         public int? RequestId { get; set; }
+
+        public int? EnvironmentId { get; set; } // Add EnvironmentId
     }
 
     // Environment DTOs

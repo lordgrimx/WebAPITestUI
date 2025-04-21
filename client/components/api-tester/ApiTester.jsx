@@ -165,7 +165,8 @@ export default function ApiTester() {
         responseHeaders: {}, // Initialize empty object
         requestBody: "",     // Initialize empty string
         responseBody: historyData.responseData,
-        requestId: historyData.requestId || null
+        requestId: historyData.requestId || null,
+        environmentId: currentEnvironment?.id || null // Add current environment ID
       };
 
       // Parse headers if they exist
@@ -604,7 +605,6 @@ export default function ApiTester() {
   }, []);  return (
     <>      <Header
         currentRequestData={currentRequestData}
-        currentEnvironment={currentEnvironment}
       />
       <div className="flex flex-col h-screen overflow-hidden"> {/* Use flex-col for vertical layout */}
         
@@ -626,13 +626,15 @@ export default function ApiTester() {
         {/* Rest of the layout */}
         <div className="flex-1 min-h-0"> {/* Add min-h-0 to allow proper flex shrinking */}
           <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]">{/* Adjust height to account for header and monitor panel */}
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>              <CollectionsSidebar
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+              <CollectionsSidebar
                 setSelectedRequestId={handleRequestSelect} // For collection requests
                 onHistorySelect={handleHistorySelect}     // For history items
                 hasError={!!sidebarError}
                 onError={setSidebarError}
                 darkMode={isDarkMode} // Pass isDarkMode instead
                 historyUpdated={historyUpdated} // Add this prop
+                currentEnvironment={currentEnvironment} // Pass the current environment from context
               />
             </ResizablePanel>
             <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={30}>              <RequestBuilder

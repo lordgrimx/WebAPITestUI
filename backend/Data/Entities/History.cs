@@ -8,7 +8,7 @@ namespace WebTestUI.Backend.Data.Entities
         public int Id { get; set; }
         public string? UserId { get; set; }
         public int? RequestId { get; set; }
-        public int? EnvironmentId { get; set; } = 1; // Default environment ID
+        public int? EnvironmentId { get; set; }
         public string? Method { get; set; }
         public string? Url { get; set; }
         public int? Status { get; set; }

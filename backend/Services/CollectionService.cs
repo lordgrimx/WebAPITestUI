@@ -19,12 +19,21 @@ namespace WebTestUI.Backend.Services
             _logger = logger;
         }
 
-        public async Task<IEnumerable<CollectionDto>> GetUserCollectionsAsync(string userId)
+        public async Task<IEnumerable<CollectionDto>> GetUserCollectionsAsync(string userId, string? currentEnvironmentId)
         {
             try
             {
-                var collections = await _dbContext.Collections
-                    .Where(c => c.UserId == userId)
+                var query = _dbContext.Collections
+                    .Where(c => c.UserId == userId);
+
+                if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
+                {
+                    // Koleksiyonların EnvironmentId alanı yok, bu yüzden koleksiyonları filtrelemek yerine
+                    // o environment'a ait istekleri olan koleksiyonları getireceğiz.
+                    query = query.Where(c => c.Requests.Any(r => r.EnvironmentId == envId));
+                }
+
+                var collections = await query
                     .OrderBy(c => c.Name)
                     .Select(c => new CollectionDto
                     {
@@ -33,6 +42,8 @@ namespace WebTestUI.Backend.Services
                         Description = c.Description,
                         CreatedAt = c.CreatedAt,
                         UpdatedAt = c.UpdatedAt,
+                        // İstek sayısını da EnvironmentId'ye göre filtreleyebiliriz, ancak bu mevcut DTO yapısını değiştirir.
+                        // Şimdilik toplam istek sayısını bırakıyorum. İhtiyaç olursa bu kısım güncellenebilir.
                         RequestCount = _dbContext.Requests.Count(r => r.CollectionId == c.Id)
                     })
                     .ToListAsync();

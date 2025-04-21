@@ -41,8 +41,8 @@ export const EnvironmentProvider = ({ children }) => {
         try {
             setIsEnvironmentLoading(true);
 
-            // Update in backend (if needed)
-            await authAxios.post(`/environments/current/${environmentId}`);
+            // Update in backend using the correct endpoint and method
+            await authAxios.put(`/environments/${environmentId}/activate`); // Changed from POST to PUT and updated URL
 
             // Update in frontend state
             setEnvironmentState(prevState => {

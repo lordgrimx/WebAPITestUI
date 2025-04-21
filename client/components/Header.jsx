@@ -35,6 +35,7 @@ import EnvironmentModal from "@/components/EnvironmentModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import { useAuth } from "@/lib/auth-context";
 import { useSettings } from "@/lib/settings-context"; // useSettings hook'unu import et
+import { useEnvironment } from "@/lib/environment-context"; // Import useEnvironment
 import { toast } from "sonner"; // Import toast for notifications
 import Image from "next/image";
 
@@ -45,91 +46,51 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   const [showSaveRequest, setShowSaveRequest] = useState(false);
   const [showEnvironmentModal, setShowEnvironmentModal] = useState(false);
   const [environmentToEdit, setEnvironmentToEdit] = useState(null);
-  const [environments, setEnvironments] = useState([]);
-  const [currentEnvironment, setCurrentEnvironment] = useState(null);
-  const { user, isAuthenticated, login, logout, isLoading } = useAuth();
+  // Remove local environment state - get from context instead
+  // const [environments, setEnvironments] = useState([]);
+  // const [currentEnvironment, setCurrentEnvironment] = useState(null);
+  const { user, isAuthenticated, login, logout, isLoading: isAuthLoading } = useAuth(); // Renamed isLoading to avoid conflict
   const { updateSettings } = useSettings(); // updateSettings'i context'ten al
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
-  
+  // Use the environment context
+  const {
+    environments,
+    currentEnvironment,
+    setCurrentEnvironmentById,
+    refreshEnvironments, // Use refreshEnvironments from context
+    isEnvironmentLoading // Use loading state from context
+  } = useEnvironment();
+
   const isDarkMode = theme === 'dark';
 
-  // Fetch environments from the API when user is authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchEnvironments();
-    }
-  }, [isAuthenticated]);
-  // Function to fetch environments from the API
-  const fetchEnvironments = async () => {
-    try {
-      // Using authAxios instead of fetch to include authentication token automatically
-      const response = await authAxios.get('/environments');
-      
-      // authAxios response data is directly available at response.data
-      const data = response.data;
-      setEnvironments(data);
-      
-      // Set the active environment if available
-      const activeEnv = data.find(env => env.isActive);
-      setCurrentEnvironment(activeEnv || null);
+  // Remove useEffect and fetchEnvironments - context handles loading
+  // useEffect(() => { ... });
+  // const fetchEnvironments = async () => { ... };
 
-      // Aktif environment varsa ayarları yükle
-      if (activeEnv && activeEnv.variables) {
-        try {
-          // Variables string ise parse et, değilse doğrudan kullan (eski kayıtlar için)
-          const settings = typeof activeEnv.variables === 'string' 
-            ? JSON.parse(activeEnv.variables) 
-            : activeEnv.variables;
-          updateSettings(settings); // Settings context'ini güncelle
-        } catch (e) {
-          console.error('Failed to parse environment settings:', e);
-          // Hata durumunda varsayılan ayarlara dönülebilir veya kullanıcı bilgilendirilebilir
-        }
-      } else {
-        // Aktif environment yoksa veya variables boşsa, context'i sıfırla veya varsayılan yap
-        // updateSettings(defaultSettings); // Gerekirse varsayılan ayarları yükle
-      }
-    } catch (error) {
-      console.error('Error fetching environments:', error);
-      toast.error('Failed to load environments', { 
-        description: 'Could not retrieve environment data from the server.' 
-      });
-    }
-  };
-  // Function to set an environment as active
+  // Modify activateEnvironment to use context function
   const activateEnvironment = async (environmentId) => {
-    try {
-      // Using authAxios for authenticated request
-      await authAxios.put(`/environments/${environmentId}/activate`);
-      
-      // Refresh environments after activation
-      fetchEnvironments();
-      toast.success('Environment activated successfully');
-    } catch (error) {
-      console.error('Error activating environment:', error);
-      toast.error('Failed to activate environment', {
-        description: 'Could not set the environment as active.'
-      });
-    }
+    // Call context function to set the environment
+    await setCurrentEnvironmentById(environmentId);
+    // No need to fetch manually, context handles updates
   };
-  
+
   // Function to open the environment modal for editing
   const openEditEnvironmentModal = (env, e) => {
     e.stopPropagation(); // Prevent triggering the parent onClick (activating the environment)
     setEnvironmentToEdit(env);
     setShowEnvironmentModal(true);
   };
-  
+
   // Function to open environment modal for creating a new environment
   const openCreateEnvironmentModal = () => {
     setEnvironmentToEdit(null); // Reset any previously selected environment
     setShowEnvironmentModal(true);
   };
-  
-  // Handle successful environment creation/update
+
+  // Modify handleEnvironmentSaved to use context refresh
   const handleEnvironmentSaved = () => {
-    fetchEnvironments(); // Refresh the list
+    refreshEnvironments(); // Refresh the list via context
   };
 
   const handleSaveRequest = async (requestData) => {
@@ -213,8 +174,8 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   };
 
 
-  // If the authentication process is still loading, show a minimal header
-  if (isLoading) {
+  // Use isAuthLoading for auth check
+  if (isAuthLoading) {
     return (
       <header
         className={`${
@@ -227,7 +188,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               isDarkMode ? "text-white" : "text-gray-800"
             }`}
           >
-            PUTman
+            PUTMAN
           </h1>
         </div>
         <div className="flex items-center space-x-4">
@@ -311,16 +272,20 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   }
 
   // If user is authenticated, show the full app header
-  return (    <>      <SettingsModal
+  return (
+    <>
+      <SettingsModal
         open={showSettings}
         setOpen={setShowSettings}
-        currentEnvironment={currentEnvironment} // currentEnvironment prop'unu ekle
-      />      <EnvironmentModal
+        currentEnvironment={currentEnvironment} // Pass environment from context
+      />
+      <EnvironmentModal
         open={showEnvironmentModal}
         setOpen={setShowEnvironmentModal}
         environment={environmentToEdit}
         onEnvironmentSaved={handleEnvironmentSaved}
-      />      <GenerateCodeModal
+      />
+      <GenerateCodeModal
         open={showGenerateCode}
         setOpen={setShowGenerateCode}
         darkMode={isDarkMode}
@@ -419,19 +384,23 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         <div className="flex items-center space-x-4">          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`}>
+              <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`} disabled={isEnvironmentLoading}> {/* Disable while loading */}
                 <Globe className="h-4 w-4" />
-                <span>{t('header.environment')}</span>
+                {/* Display current environment name or loading state */}
+                <span>{isEnvironmentLoading ? t('header.environmentLoading', 'Loading...') : currentEnvironment?.name || t('header.environmentList.none', 'No Environment')}</span>
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuLabel>{t('header.environments', 'Environments')}</DropdownMenuLabel>
-              <DropdownMenuSeparator />              {environments.length > 0 ? (
+              <DropdownMenuSeparator />
+              {/* Use environments from context */}
+              {environments.length > 0 ? (
                 environments.map(env => (
                   <DropdownMenuItem key={env.id} className="flex justify-between cursor-pointer" onClick={() => activateEnvironment(env.id)}>
                     <span className="flex items-center">
-                      <Check className={`h-4 w-4 ${env.isActive ? 'text-green-500' : 'text-transparent' } mr-2`} />
+                      {/* Check against currentEnvironment from context */}
+                      <Check className={`h-4 w-4 ${currentEnvironment?.id === env.id ? 'text-green-500' : 'text-transparent' } mr-2`} />
                       {env.name}
                     </span>
                     <span onClick={(e) => openEditEnvironmentModal(env, e)}>
@@ -445,9 +414,9 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 className="w-full justify-center"
                 onClick={openCreateEnvironmentModal}
               >

@@ -28,13 +28,20 @@ namespace WebTestUI.Backend.Services
             _logger = logger;
         }
 
-        public async Task<IEnumerable<RequestDto>> GetUserRequestsAsync(string userId)
+        public async Task<IEnumerable<RequestDto>> GetUserRequestsAsync(string userId, string? currentEnvironmentId)
         {
             try
             {
-                var requests = await _dbContext.Requests
+                var query = _dbContext.Requests
                     .Include(r => r.Collection)
-                    .Where(r => r.UserId == userId)
+                    .Where(r => r.UserId == userId);
+
+                if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
+                {
+                    query = query.Where(r => r.EnvironmentId == envId);
+                }
+
+                var requests = await query
                     .OrderByDescending(r => r.UpdatedAt)
                     .ToListAsync();
 
@@ -47,7 +54,7 @@ namespace WebTestUI.Backend.Services
             }
         }
 
-        public async Task<IEnumerable<RequestDto>> GetCollectionRequestsAsync(int collectionId, string userId)
+        public async Task<IEnumerable<RequestDto>> GetCollectionRequestsAsync(int collectionId, string userId, string? currentEnvironmentId)
         {
             try
             {
@@ -59,9 +66,16 @@ namespace WebTestUI.Backend.Services
                     return Enumerable.Empty<RequestDto>();
                 }
 
-                var requests = await _dbContext.Requests
+                var query = _dbContext.Requests
                     .Include(r => r.Collection)
-                    .Where(r => r.CollectionId == collectionId && r.UserId == userId)
+                    .Where(r => r.CollectionId == collectionId && r.UserId == userId);
+
+                if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
+                {
+                    query = query.Where(r => r.EnvironmentId == envId);
+                }
+
+                var requests = await query
                     .OrderBy(r => r.Name)
                     .ToListAsync();
 

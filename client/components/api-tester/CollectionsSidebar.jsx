@@ -117,7 +117,7 @@ const getPathFromUrl = (urlString) => {
 };
 
 // Update the component to accept historyUpdated prop
-export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError, historyUpdated }) {
+export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError, historyUpdated, currentEnvironment }) {
   const [newCollectionName, setNewCollectionName] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -126,14 +126,18 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
-
   // Fetch collections
   useEffect(() => {
     const fetchCollections = async () => {
       setIsLoading(true);
       try {
         // Using authAxios which automatically adds the token
-        const response = await authAxios.get('/collections');
+        const environmentId = currentEnvironment?.id;
+        const endpoint = environmentId 
+          ? `/collections?environmentId=${environmentId}` 
+          : '/collections';
+        
+        const response = await authAxios.get(endpoint);
         if (response.data) {
           setCollections(response.data);
         }
@@ -146,12 +150,16 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     };
     
     fetchCollections();
-  }, [onError]);
-  
-  // Memoize the fetch history function
+  }, [onError, currentEnvironment]);
+    // Memoize the fetch history function
   const fetchHistory = useCallback(async () => {
     try {
-      const response = await authAxios.get('/history');
+      const environmentId = currentEnvironment?.id;
+      const endpoint = environmentId 
+        ? `/history?environmentId=${environmentId}` 
+        : '/history';
+        
+      const response = await authAxios.get(endpoint);
       if (response.data) {
         console.log('History items received:', response.data);
         setHistoryItems(response.data);
@@ -159,23 +167,30 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     } catch (error) {
       console.error("Error fetching history:", error);
     }
-  }, []); // Empty dependency array since it doesn't depend on any props or state
+  }, [currentEnvironment]); // Add currentEnvironment as dependency
 
   // Update useEffect to use memoized fetchHistory function
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory, historyUpdated]); // Now includes both memoized function and historyUpdated
-
   const handleAddCollection = async () => {
     if (newCollectionName.trim()) {
       try {
-        const response = await authAxios.post('/collections', {
+        const payload = {
           name: newCollectionName.trim(),
-          description: ""
-        });
+          description: "",
+          environmentId: currentEnvironment?.id || null // Include environmentId if available
+        };
+        
+        const response = await authAxios.post('/collections', payload);
         
         if (response.data) {
-          const updatedCollections = await authAxios.get('/collections');
+          const environmentId = currentEnvironment?.id;
+          const endpoint = environmentId 
+            ? `/collections?environmentId=${environmentId}` 
+            : '/collections';
+          
+          const updatedCollections = await authAxios.get(endpoint);
           setCollections(updatedCollections.data);
           toast.success("Collection added successfully");
         }
@@ -337,8 +352,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
               )}
               {!isLoading && filteredCollections.length === 0 && !searchTerm && (
                 <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.empty', "No collections yet. Click \"+ New Collection\" to add one.")}</p>
-              )}
-              {!isLoading && filteredCollections.map((collection,index) => (
+              )}              {!isLoading && filteredCollections.map((collection,index) => (
                 <CollectionItem
                   key={index}
                   collection={collection}
@@ -347,6 +361,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
                   onDeleteRequest={handleDeleteRequest}
                   darkMode={darkMode} // Pass darkMode
                   t={t} // Çeviri fonksiyonunu CollectionItem'a aktarıyoruz
+                  currentEnvironment={currentEnvironment} // Environment değişkenini geçirelim
                 />
               ))}
             </Accordion>
@@ -378,13 +393,14 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   );
 }
 
-const CollectionItem = React.memo(function CollectionItem({
+const CollectionItem = function CollectionItem({
   collection,
   setSelectedRequestId,
   onDeleteCollection,
   onDeleteRequest,
   darkMode, // Receive darkMode
-  t // Çeviri fonksiyonunu al
+  t, // Çeviri fonksiyonunu al
+  currentEnvironment // Environment için yeni prop
 }) {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -394,9 +410,14 @@ const CollectionItem = React.memo(function CollectionItem({
     const fetchRequests = async () => {
       if (!collection?.id) return;
       
-      setIsLoading(true);
-      try {
-        const response = await authAxios.get(`/requests/collection/${collection.id}`);
+      setIsLoading(true);      try {
+        // Environment ID'sine göre filtreleme yapalım
+        const environmentId = currentEnvironment?.id;
+        const endpoint = environmentId 
+          ? `/requests/collection/${collection.id}?environmentId=${environmentId}` 
+          : `/requests/collection/${collection.id}`;
+          
+        const response = await authAxios.get(endpoint);
         if (response.data) {
           setRequests(response.data);
         }
@@ -408,7 +429,7 @@ const CollectionItem = React.memo(function CollectionItem({
     };
     
     fetchRequests();
-  }, [collection?.id]);
+  }, [collection?.id, currentEnvironment]); // Add currentEnvironment as dependency
 
   return (
     <AccordionItem value={collection.id} className="border-b-0 mb-1">
@@ -469,12 +490,10 @@ const CollectionItem = React.memo(function CollectionItem({
       </AccordionContent>
     </AccordionItem>
   );
-}, (prevProps, nextProps) => {
-  return prevProps.collection.id === nextProps.collection.id;
-});
+};
 
 // Accept onHistorySelect and darkMode props in HistoryItem
-const HistoryItem = React.memo(function HistoryItem({
+const HistoryItem = function HistoryItem({
   item,
   onHistorySelect,
   onDeleteHistoryEntry,
@@ -531,4 +550,4 @@ const HistoryItem = React.memo(function HistoryItem({
       </div>
     </AccordionItem>
   );
-});
+};
