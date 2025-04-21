@@ -63,7 +63,6 @@ namespace WebTestUI.Backend.Controllers
             }
         }
 
-        /*
         [HttpGet("active")]
         public async Task<IActionResult> GetActiveEnvironment()
         {
@@ -75,12 +74,21 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                // HATA: IEnvironmentService'de GetActiveEnvironmentAsync metodu yok.
-                // var environment = await _environmentService.GetActiveEnvironmentAsync(userId);
-                var environment = (EnvironmentDto)null; // Geçici olarak null döndür
+                // GetActiveEnvironmentAsync metodu artık EnvironmentService'de mevcut
+                var environment = await _environmentService.GetActiveEnvironmentAsync(userId);
+
                 if (environment == null)
                 {
-                    return NotFound(new { message = "Aktif ortam bulunamadı." });
+                    // Aktif ortam bulunamadıysa, varsayılan bir tane oluştur
+                    var defaultEnvironment = new CreateEnvironmentDto
+                    {
+                        Name = "Default",
+                        IsActive = true,
+                        Variables = new Dictionary<string, string>()
+                    };
+
+                    // Kullanıcı için varsayılan ortamı oluştur
+                    environment = await _environmentService.CreateEnvironmentAsync(defaultEnvironment, userId);
                 }
 
                 return Ok(environment);
@@ -91,7 +99,6 @@ namespace WebTestUI.Backend.Controllers
                 return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
             }
         }
-        */
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetEnvironmentById(int id)

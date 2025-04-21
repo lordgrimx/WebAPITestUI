@@ -3,6 +3,7 @@ import React, { useEffect } from 'react'
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import { AuthProvider } from "@/lib/auth-context"
 import { SettingsProvider } from "@/lib/settings-context"
+import { EnvironmentProvider } from "@/lib/environment-context"
 import LoadingWrapper from "@/components/LoadingWrapper"
 import { I18nextProvider } from "react-i18next"
 import i18n from "@/lib/i18n"
@@ -35,13 +36,15 @@ function Provider({ children }) {
         >
             <AuthProvider>
                 <SettingsProvider>
-                    <I18nextProvider i18n={i18n}>
-                        <LanguageWrapper>
-                            <LoadingWrapper>
-                                {children}
-                            </LoadingWrapper>
-                        </LanguageWrapper>
-                    </I18nextProvider>
+                    <EnvironmentProvider>
+                        <I18nextProvider i18n={i18n}>
+                            <LanguageWrapper>
+                                <LoadingWrapper>
+                                    {children}
+                                </LoadingWrapper>
+                            </LanguageWrapper>
+                        </I18nextProvider>
+                    </EnvironmentProvider>
                 </SettingsProvider>
             </AuthProvider>
         </NextThemesProvider>

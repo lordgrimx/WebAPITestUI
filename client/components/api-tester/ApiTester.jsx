@@ -10,6 +10,7 @@ import { authAxios } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings-context"; // Import the settings hook
 import { useTheme } from "next-themes"; // Import the theme hook
+import { useEnvironment } from "@/lib/environment-context"; // Import our new environment context
 // Proxy için https-proxy-agent gerekebilir, ancak bunu API rotasında kullanacağız.
 
 import CollectionsSidebar from "./CollectionsSidebar";
@@ -17,8 +18,9 @@ import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
 export default function ApiTester() {
-  const { settings } = useSettings(); // Get settings from context (updateSetting kaldırıldı, kullanılmıyor)
-    const [selectedRequestId, setSelectedRequestId] = useState(null);  
+  const { settings } = useSettings(); // Get settings from context
+  const { currentEnvironment, isEnvironmentLoading, triggerEnvironmentChange } = useEnvironment(); // Use our environment context
+  const [selectedRequestId, setSelectedRequestId] = useState(null);  
   const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
   const [error, setError] = useState(null); // General request error state
@@ -29,6 +31,25 @@ export default function ApiTester() {
   const isDarkMode = theme === 'dark'; // Derive dark mode from theme
   const [authToken, setAuthToken] = useState(''); // Initialize empty
   const [historyUpdated, setHistoryUpdated] = useState(0); // Add this new state
+
+  // Listen for history updates to refresh environment if needed
+  useEffect(() => {
+    // When history is updated, trigger an environment refresh
+    // This ensures environment is reloaded after any operations that might change it
+    triggerEnvironmentChange();
+  }, [historyUpdated, triggerEnvironmentChange]);
+  
+  // Listen for environment changes to update headers and other environment-dependent data
+  useEffect(() => {
+    if (currentEnvironment && currentRequestData) {
+      // When environment changes, update request data with environment-specific values
+      // This ensures headers and other settings are updated when environment changes
+      console.log("Environment changed, updating request data...");
+      
+      // We'll handle the specifics in the RequestBuilder component
+      // Just force a re-render here by setting key in the component
+    }
+  }, [currentEnvironment, currentRequestData]);
 
   // Test execution helper function
   const runTests = (testScript, environment) => {
@@ -580,17 +601,31 @@ export default function ApiTester() {
       auth: { type: "none" }, // Reset auth
       tests: { script: "", results: [] } // Reset tests
     });
-  }, []);
-  return (
-    <>
-      <Header
+  }, []);  return (
+    <>      <Header
         currentRequestData={currentRequestData}
+        currentEnvironment={currentEnvironment}
       />
       <div className="flex flex-col h-screen overflow-hidden"> {/* Use flex-col for vertical layout */}
         
+        {/* Environment Loading Overlay */}
+        {isEnvironmentLoading && (
+          <div className="absolute inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-lg max-w-md w-full">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <h3 className="text-xl font-medium mb-2">Ortam Yükleniyor</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-center">
+                  Seçili ortam ayarları yükleniyor, lütfen bekleyin...
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Rest of the layout */}
         <div className="flex-1 min-h-0"> {/* Add min-h-0 to allow proper flex shrinking */}
-          <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]"> {/* Adjust height to account for header and monitor panel */}
+          <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]">{/* Adjust height to account for header and monitor panel */}
             <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>              <CollectionsSidebar
                 setSelectedRequestId={handleRequestSelect} // For collection requests
                 onHistorySelect={handleHistorySelect}     // For history items

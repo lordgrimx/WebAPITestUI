@@ -5,6 +5,7 @@ namespace WebTestUI.Backend.Services.Interfaces
     public interface IEnvironmentService
     {
         Task<IEnumerable<EnvironmentDto>> GetUserEnvironmentsAsync(string userId);
+        Task<EnvironmentDto> GetActiveEnvironmentAsync(string userId);
         Task<EnvironmentDto> GetEnvironmentByIdAsync(int id, string userId);
         Task<EnvironmentDto> CreateEnvironmentAsync(CreateEnvironmentDto model, string userId);
         Task<EnvironmentDto> UpdateEnvironmentAsync(int id, UpdateEnvironmentDto model, string userId);
