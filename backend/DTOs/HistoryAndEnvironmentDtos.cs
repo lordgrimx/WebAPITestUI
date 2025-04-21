@@ -69,7 +69,8 @@ namespace WebTestUI.Backend.DTOs
     {
         public string Name { get; set; }
 
-        public Dictionary<string, string> Variables { get; set; }
+        // Change Variables type from Dictionary<string, string> to string
+        public string Variables { get; set; } 
 
         public bool? IsActive { get; set; }
     }

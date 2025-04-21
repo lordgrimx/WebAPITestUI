@@ -35,6 +35,25 @@ namespace WebTestUI.Backend.Controllers
                 }
 
                 var environments = await _environmentService.GetUserEnvironmentsAsync(userId);
+
+                // Eğer kullanıcının hiç ortamı yoksa, default bir tane oluştur
+                if (environments == null || !environments.Any())
+                {
+                    // Varsayılan ortamı oluştur
+                    var defaultEnvironment = new CreateEnvironmentDto
+                    {
+                        Name = "Default",
+                        IsActive = true,
+                        Variables = new Dictionary<string, string>()
+                    };
+
+                    // Kullanıcı için varsayılan ortamı oluştur (doğru parametre sırasıyla)
+                    var createdEnv = await _environmentService.CreateEnvironmentAsync(defaultEnvironment, userId);
+
+                    // Yeni oluşturulan ortamı listede göster
+                    environments = new List<EnvironmentDto> { createdEnv };
+                }
+
                 return Ok(environments);
             }
             catch (Exception ex)
@@ -173,8 +192,8 @@ namespace WebTestUI.Backend.Controllers
             }
         }
 
-        /*
-        [HttpPost("{id}/activate")]
+        // Yorum satırını kaldır
+        [HttpPut("{id}/activate")] // POST yerine PUT kullanmak daha uygun olabilir
         public async Task<IActionResult> ActivateEnvironment(int id)
         {
             try
@@ -185,9 +204,9 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                // HATA: IEnvironmentService'de ActivateEnvironmentAsync metodu yok.
-                // var result = await _environmentService.ActivateEnvironmentAsync(id, userId);
-                var result = false; // Geçici olarak false döndür
+                // Servis metodunu çağır
+                var result = await _environmentService.ActivateEnvironmentAsync(id, userId);
+                // var result = false; // Geçici olarak false döndür - Bu satırı kaldır
                 if (!result)
                 {
                     return NotFound(new { message = "Ortam bulunamadı veya bu işlem için yetkiniz yok." });
@@ -201,6 +220,6 @@ namespace WebTestUI.Backend.Controllers
                 return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
             }
         }
-        */
+        // Yorum satırını kaldır
     }
 }

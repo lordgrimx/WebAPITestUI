@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSettings } from "@/lib/settings-context";
 import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
+import { authAxios } from "@/lib/auth-context"; // authAxios import et
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/select";
 import { X, Plus, Trash2 } from "lucide-react";
 
-export default function SettingsModal({ open, setOpen }) {
+export default function SettingsModal({ open, setOpen, currentEnvironment }) { // currentEnvironment prop'unu ekle
   // Get global settings from context
   const { settings, updateSettings } = useSettings();
   const { theme, setTheme } = useTheme();
@@ -46,9 +47,64 @@ export default function SettingsModal({ open, setOpen }) {
   const [defaultResponseView, setDefaultResponseView] = useState(settings.defaultResponseView);
   const [wrapLines, setWrapLines] = useState(settings.wrapLines);
   const [highlightSyntax, setHighlightSyntax] = useState(settings.highlightSyntax);
-  // Sync local state with global settings when modal opens
+  // Sync local state with global settings or environment variables when modal opens
   useEffect(() => {
     if (open) {
+      // If we have a current environment, try to load settings from it
+      if (currentEnvironment && currentEnvironment.variables) {
+        try {
+          // Parse the variables string into an object if it's a string, otherwise use as is
+          const variables = typeof currentEnvironment.variables === 'string' 
+            ? JSON.parse(currentEnvironment.variables)
+            : currentEnvironment.variables;
+          
+          // Parse stored headers if they exist
+          let parsedHeaders = [];
+          if (variables.defaultHeaders) {
+            try {
+              parsedHeaders = typeof variables.defaultHeaders === 'string'
+                ? JSON.parse(variables.defaultHeaders)
+                : variables.defaultHeaders;
+            } catch (e) {
+              console.error("Failed to parse defaultHeaders:", e);
+              parsedHeaders = [];
+            }
+          }
+          
+          // Parse stored API keys if they exist
+          let parsedApiKeys = [];
+          if (variables.apiKeys) {
+            try {
+              parsedApiKeys = typeof variables.apiKeys === 'string'
+                ? JSON.parse(variables.apiKeys)
+                : variables.apiKeys;
+            } catch (e) {
+              console.error("Failed to parse apiKeys:", e);
+              parsedApiKeys = [];
+            }
+          }
+          
+          // Set state from environment variables
+          setDefaultHeaders([...parsedHeaders, { id: Date.now(), name: "", value: "" }]);
+          setApiKeys([...parsedApiKeys, { id: Date.now(), name: "", value: "" }]);
+          setProxyEnabled(variables.proxyEnabled === "true");
+          setProxyUrl(variables.proxyUrl || "");
+          setProxyUsername(variables.proxyUsername || "");
+          setProxyPassword(variables.proxyPassword || "");
+          setRequestTimeout(Number(variables.requestTimeout) || 30000);
+          setResponseSize(Number(variables.responseSize) || 50);
+          setJsonIndentation(variables.jsonIndentation || "2");
+          setDefaultResponseView(variables.defaultResponseView || "pretty");
+          setWrapLines(variables.wrapLines === "true");
+          setHighlightSyntax(variables.highlightSyntax === "true");
+          return;
+        } catch (error) {
+          console.error("Error loading settings from environment:", error);
+          // Fall back to default settings if environment loading fails
+        }
+      }
+      
+      // If no environment or loading failed, use global settings
       setDefaultHeaders([...settings.defaultHeaders, { id: Date.now(), name: "", value: "" }]);
       setApiKeys([...settings.apiKeys, { id: Date.now(), name: "", value: "" }]);
       setProxyEnabled(settings.proxyEnabled);
@@ -62,7 +118,7 @@ export default function SettingsModal({ open, setOpen }) {
       setWrapLines(settings.wrapLines);
       setHighlightSyntax(settings.highlightSyntax);
     }
-  }, [open, settings]);
+  }, [open, settings, currentEnvironment]);
 
   const addHeader = () => {
     setDefaultHeaders([...defaultHeaders, { id: Date.now(), name: "", value: "" }]);
@@ -92,27 +148,64 @@ export default function SettingsModal({ open, setOpen }) {
     ));
   };
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => { // async yap
     // Clean up empty entries before saving
     const cleanedHeaders = defaultHeaders.filter(header => header.name.trim() !== "" || header.value.trim() !== "");
     const cleanedApiKeys = apiKeys.filter(key => key.name.trim() !== "" || key.value.trim() !== "");
     
-    // Update global settings
-    updateSettings({
-      // Using the theme from useTheme hook instead of localStorage
+    // Mevcut ayarları topla
+    const settingsData = {
       defaultHeaders: cleanedHeaders,
       apiKeys: cleanedApiKeys,
-      proxyEnabled,
-      proxyUrl,
-      proxyUsername,
-      proxyPassword,
-      requestTimeout,
-      responseSize,
-      jsonIndentation,
-      defaultResponseView,
-      wrapLines,
-      highlightSyntax
-    });
+      proxy: { enabled: proxyEnabled, url: proxyUrl, username: proxyUsername, password: proxyPassword },
+      responseOptions: { 
+        timeout: requestTimeout,
+        size: responseSize,
+        jsonIndentation,
+        defaultResponseView,
+        wrapLines,
+        highlightSyntax
+      }
+    };
+
+    // Aktif environment'ı güncelle
+    if (currentEnvironment) {
+      try {
+        // Backend'in Dictionary<string, string> beklediğini biliyoruz
+        // Bu nedenle karmaşık objeleri string olarak serileştirip düz bir dictionary oluşturmalıyız
+        
+        // Karmaşık objeleri ayrı ayrı string'e çeviriyoruz
+        const flattenedVariables = {
+          "defaultHeaders": JSON.stringify(cleanedHeaders),
+          "apiKeys": JSON.stringify(cleanedApiKeys),
+          "proxyEnabled": proxyEnabled.toString(),
+          "proxyUrl": proxyUrl || "",
+          "proxyUsername": proxyUsername || "",
+          "proxyPassword": proxyPassword || "",
+          "requestTimeout": requestTimeout.toString(),
+          "responseSize": responseSize.toString(),
+          "jsonIndentation": jsonIndentation.toString(),
+          "defaultResponseView": defaultResponseView,
+          "wrapLines": wrapLines.toString(),
+          "highlightSyntax": highlightSyntax.toString()
+        };
+        
+        const payload = {
+          name: currentEnvironment.name,
+          isActive: currentEnvironment.isActive,
+          variables: JSON.stringify(flattenedVariables)
+        };
+        
+        await authAxios.put(`/environments/${currentEnvironment.id}`, payload);
+
+      } catch (error) {
+        console.error('Failed to save settings to environment:', error);
+        // Hata durumunda kullanıcıya bilgi verilebilir
+      }
+    }
+    
+    // Local context'i güncelle
+    updateSettings(settingsData);
     
     // Close the modal
     setOpen(false);

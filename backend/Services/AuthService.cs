@@ -248,7 +248,7 @@ namespace WebTestUI.Backend.Services
                 Email = user.Email ?? string.Empty,
                 Role = roles.FirstOrDefault() ?? "User",
                 ProfileImageBase64 = user.ProfileImageBase64,
-                Phone = user.Phone ?? string.Empty,
+                Phone = user.PhoneNumber ?? string.Empty, // Using PhoneNumber instead of Phone
                 Address = user.Address ?? string.Empty,
                 Website = user.Website ?? string.Empty,
                 TwoFactorEnabled = user.TwoFactorEnabled

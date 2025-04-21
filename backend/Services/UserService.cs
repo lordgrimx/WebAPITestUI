@@ -1,35 +1,32 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Configuration; // Keep for potential future use, but not strictly needed for Base64
+using Microsoft.Extensions.Configuration;
 using WebTestUI.Backend.Data.Entities;
 using WebTestUI.Backend.DTOs;
 using WebTestUI.Backend.Services.Interfaces;
-using System; // Add for Convert
-using System.IO; // Keep for potential future use, but not strictly needed for Base64
-using System.Linq; // Keep for potential future use
-using System.Threading.Tasks; // Keep for async methods
+using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace WebTestUI.Backend.Services
 {
     public class UserService : IUserService
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        // private readonly IFileStorageService _fileStorageService; // Removed dependency
-        private readonly IConfiguration _configuration; // Keep for potential future use
+        private readonly IConfiguration _configuration;
         private readonly ILogger<UserService> _logger;
 
         public UserService(
             UserManager<ApplicationUser> userManager,
-            // IFileStorageService fileStorageService, // Removed dependency
             IConfiguration configuration,
             ILogger<UserService> logger)
         {
             _userManager = userManager;
-            // _fileStorageService = fileStorageService; // Removed dependency
-            _configuration = configuration; // Keep for potential future use
+            _configuration = configuration;
             _logger = logger;
         }
 
-        public async Task<UserDto> GetUserProfileAsync(string userId)
+        public async Task<UserDto?> GetUserProfileAsync(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
@@ -40,7 +37,7 @@ namespace WebTestUI.Backend.Services
             return await MapToUserDtoAsync(user);
         }
 
-        public async Task<UserDto> UpdateUserProfileAsync(string userId, UpdateProfileDto model)
+        public async Task<UserDto?> UpdateUserProfileAsync(string userId, UpdateProfileDto model)
         {
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
@@ -54,9 +51,10 @@ namespace WebTestUI.Backend.Services
                 user.Name = model.Name;
             }
 
+            // Use PhoneNumber instead of Phone (standard property from IdentityUser)
             if (model.Phone != null)
             {
-                user.Phone = model.Phone;
+                user.PhoneNumber = model.Phone;
             }
 
             if (model.Address != null)
@@ -82,7 +80,7 @@ namespace WebTestUI.Backend.Services
             }
 
             // Update Language if provided
-            if (model.Language != null) // Check for null instead of empty string for nullable fields
+            if (model.Language != null)
             {
                 user.Language = model.Language;
             }
@@ -98,7 +96,6 @@ namespace WebTestUI.Backend.Services
             if (model.UsageAnalyticsEnabled.HasValue) user.UsageAnalyticsEnabled = model.UsageAnalyticsEnabled.Value;
             if (model.CrashReportsEnabled.HasValue) user.CrashReportsEnabled = model.CrashReportsEnabled.Value;
             if (model.MarketingEmailsEnabled.HasValue) user.MarketingEmailsEnabled = model.MarketingEmailsEnabled.Value;
-
 
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
@@ -158,23 +155,20 @@ namespace WebTestUI.Backend.Services
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
             {
-                 _logger.LogWarning("UploadProfileImageAsync: User not found with ID {UserId}", userId);
+                _logger.LogWarning("UploadProfileImageAsync: User not found with ID {UserId}", userId);
                 return null;
             }
 
             try
             {
-                 // Basic validation for Base64 string (optional but recommended)
-                 if (string.IsNullOrWhiteSpace(imageBase64) || !imageBase64.Contains(","))
-                 {
-                     _logger.LogWarning("UploadProfileImageAsync: Invalid Base64 string format for user {UserId}", userId);
-                     return null; // Or throw an exception
-                 }
+                // Basic validation for Base64 string (optional but recommended)
+                if (string.IsNullOrWhiteSpace(imageBase64) || !imageBase64.Contains(","))
+                {
+                    _logger.LogWarning("UploadProfileImageAsync: Invalid Base64 string format for user {UserId}", userId);
+                    return null; // Or throw an exception
+                }
 
                 // Update user profile with Base64 string
-                // The Base64 string usually includes the data URI scheme (e.g., "data:image/png;base64,...")
-                // Store it directly or strip the prefix if needed, depending on how you'll use it on the frontend.
-                // Storing with the prefix is generally easier for direct use in <img> src.
                 user.ProfileImageBase64 = imageBase64;
 
                 var result = await _userManager.UpdateAsync(user);
@@ -187,7 +181,6 @@ namespace WebTestUI.Backend.Services
                 }
 
                 _logger.LogInformation("UploadProfileImageAsync: Successfully updated profile image for user {UserId}", userId);
-                // Return the Base64 string itself or just a success indicator/URL if applicable
                 return user.ProfileImageBase64;
             }
             catch (Exception ex)
@@ -208,13 +201,12 @@ namespace WebTestUI.Backend.Services
                 Name = user.Name,
                 Email = user.Email,
                 Role = roles.FirstOrDefault() ?? "User",
-                // ProfileImage = user.ProfileImage, // Removed old property
-                ProfileImageBase64 = user.ProfileImageBase64, // Added Base64 property
-                Phone = user.Phone,
+                ProfileImageBase64 = user.ProfileImageBase64,
+                Phone = user.PhoneNumber, // Using PhoneNumber instead of Phone
                 Address = user.Address,
                 Website = user.Website,
                 TwoFactorEnabled = user.TwoFactorEnabled,
-                Language = user.Language, // Add Language
+                Language = user.Language,
 
                 // Map other settings
                 Timezone = user.Timezone,

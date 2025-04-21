@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next"; // Çeviri hook'u eklendi
 import { useTheme } from "next-themes";
+import { authAxios } from "@/lib/auth-context"; // Import authAxios for authenticated requests
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,8 +31,10 @@ import {
 import SettingsModal from "@/components/SettingsModal";
 import GenerateCodeModal from "@/components/GenerateCodeModal";
 import SaveRequestModal from "@/components/SaveRequestModal";
+import EnvironmentModal from "@/components/EnvironmentModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import { useAuth } from "@/lib/auth-context";
+import { useSettings } from "@/lib/settings-context"; // useSettings hook'unu import et
 import { toast } from "sonner"; // Import toast for notifications
 import Image from "next/image";
 
@@ -40,11 +43,94 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
+  const [showEnvironmentModal, setShowEnvironmentModal] = useState(false);
+  const [environmentToEdit, setEnvironmentToEdit] = useState(null);
+  const [environments, setEnvironments] = useState([]);
+  const [currentEnvironment, setCurrentEnvironment] = useState(null);
   const { user, isAuthenticated, login, logout, isLoading } = useAuth();
+  const { updateSettings } = useSettings(); // updateSettings'i context'ten al
   const { theme, setTheme } = useTheme();
   const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
   
   const isDarkMode = theme === 'dark';
+
+  // Fetch environments from the API when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchEnvironments();
+    }
+  }, [isAuthenticated]);
+  // Function to fetch environments from the API
+  const fetchEnvironments = async () => {
+    try {
+      // Using authAxios instead of fetch to include authentication token automatically
+      const response = await authAxios.get('/environments');
+      
+      // authAxios response data is directly available at response.data
+      const data = response.data;
+      setEnvironments(data);
+      
+      // Set the active environment if available
+      const activeEnv = data.find(env => env.isActive);
+      setCurrentEnvironment(activeEnv || null);
+
+      // Aktif environment varsa ayarları yükle
+      if (activeEnv && activeEnv.variables) {
+        try {
+          // Variables string ise parse et, değilse doğrudan kullan (eski kayıtlar için)
+          const settings = typeof activeEnv.variables === 'string' 
+            ? JSON.parse(activeEnv.variables) 
+            : activeEnv.variables;
+          updateSettings(settings); // Settings context'ini güncelle
+        } catch (e) {
+          console.error('Failed to parse environment settings:', e);
+          // Hata durumunda varsayılan ayarlara dönülebilir veya kullanıcı bilgilendirilebilir
+        }
+      } else {
+        // Aktif environment yoksa veya variables boşsa, context'i sıfırla veya varsayılan yap
+        // updateSettings(defaultSettings); // Gerekirse varsayılan ayarları yükle
+      }
+    } catch (error) {
+      console.error('Error fetching environments:', error);
+      toast.error('Failed to load environments', { 
+        description: 'Could not retrieve environment data from the server.' 
+      });
+    }
+  };
+  // Function to set an environment as active
+  const activateEnvironment = async (environmentId) => {
+    try {
+      // Using authAxios for authenticated request
+      await authAxios.put(`/environments/${environmentId}/activate`);
+      
+      // Refresh environments after activation
+      fetchEnvironments();
+      toast.success('Environment activated successfully');
+    } catch (error) {
+      console.error('Error activating environment:', error);
+      toast.error('Failed to activate environment', {
+        description: 'Could not set the environment as active.'
+      });
+    }
+  };
+  
+  // Function to open the environment modal for editing
+  const openEditEnvironmentModal = (env, e) => {
+    e.stopPropagation(); // Prevent triggering the parent onClick (activating the environment)
+    setEnvironmentToEdit(env);
+    setShowEnvironmentModal(true);
+  };
+  
+  // Function to open environment modal for creating a new environment
+  const openCreateEnvironmentModal = () => {
+    setEnvironmentToEdit(null); // Reset any previously selected environment
+    setShowEnvironmentModal(true);
+  };
+  
+  // Handle successful environment creation/update
+  const handleEnvironmentSaved = () => {
+    fetchEnvironments(); // Refresh the list
+  };
 
   const handleSaveRequest = async (requestData) => {
     try {
@@ -225,10 +311,15 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   }
 
   // If user is authenticated, show the full app header
-  return (
-    <>      <SettingsModal
+  return (    <>      <SettingsModal
         open={showSettings}
         setOpen={setShowSettings}
+        currentEnvironment={currentEnvironment} // currentEnvironment prop'unu ekle
+      />      <EnvironmentModal
+        open={showEnvironmentModal}
+        setOpen={setShowEnvironmentModal}
+        environment={environmentToEdit}
+        onEnvironmentSaved={handleEnvironmentSaved}
       />      <GenerateCodeModal
         open={showGenerateCode}
         setOpen={setShowGenerateCode}
@@ -336,24 +427,30 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuLabel>{t('header.environments', 'Environments')}</DropdownMenuLabel>
+              <DropdownMenuSeparator />              {environments.length > 0 ? (
+                environments.map(env => (
+                  <DropdownMenuItem key={env.id} className="flex justify-between cursor-pointer" onClick={() => activateEnvironment(env.id)}>
+                    <span className="flex items-center">
+                      <Check className={`h-4 w-4 ${env.isActive ? 'text-green-500' : 'text-transparent' } mr-2`} />
+                      {env.name}
+                    </span>
+                    <span onClick={(e) => openEditEnvironmentModal(env, e)}>
+                      <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                    </span>
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled>
+                  {t('header.environmentList.none', 'No environments found')}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex justify-between cursor-pointer">
-                <span className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-2" />
-                  {t('header.environmentList.development', 'Development')}
-                </span>
-                <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex justify-between cursor-pointer">
-                <span>{t('header.environmentList.staging', 'Staging')}</span>
-                <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex justify-between cursor-pointer">
-                <span>{t('header.environmentList.production', 'Production')}</span>
-                <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <Button variant="ghost" size="sm" className="w-full justify-center">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="w-full justify-center"
+                onClick={openCreateEnvironmentModal}
+              >
                 <Plus className="h-4 w-4 mr-1" />
                 {t('header.environmentList.add', 'Add Environment')}
               </Button>

@@ -175,11 +175,39 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Seed roles
+// Seed roles and default environment
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(); // Optional: If you need UserManager too
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    // Ensure database is created and migrations are applied
+    try
+    {
+        dbContext.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating the database.");
+    }
+
+    // Check for default environment
+    if (!dbContext.Environments.Any())
+    {
+        logger.LogInformation("Creating default environment...");
+        dbContext.Environments.Add(new EnvironmentConfig
+        {
+            Name = "Default",
+            IsActive = true,
+            Variables = "{}",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        dbContext.SaveChanges();
+    }
+
     string[] roleNames = { "ADMIN", "USER" };
     IdentityResult roleResult;
 
