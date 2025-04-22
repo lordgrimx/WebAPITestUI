@@ -31,6 +31,7 @@ export default function SaveRequestModal({
   setOpen, 
   darkMode, 
   onSaveRequest, 
+  onRequestSaved, // Callback'i ekledik
   selectedCollection,
   initialData,
   currentEnvironment
@@ -153,13 +154,17 @@ export default function SaveRequestModal({
       console.log("Request payload being sent:", requestPayload);
 
       const response = await authAxios.post('/Requests', requestPayload);
-      console.log("Response from save request:", response);
-
-      if (response.data) {
+      console.log("Response from save request:", response);      if (response.data) {
         toast.success(t('saveRequest.requestSaved'));
         if (onSaveRequest) {
           onSaveRequest(response.data);
         }
+        
+        // Request başarıyla kaydedildiğinde sidebar'ı güncellemek için callback'i çağır
+        if (onRequestSaved) {
+          onRequestSaved();
+        }
+        
         setOpen(false);
         resetForm();
       }

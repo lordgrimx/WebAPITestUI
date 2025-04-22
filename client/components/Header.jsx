@@ -39,7 +39,7 @@ import { toast } from "sonner"; // Import toast for notifications
 import Image from "next/image";
 
 // Accept currentRequestData prop from ApiTester
-export default function Header({ currentRequestData, openSignupModal, openLoginModal }) {
+export default function Header({ currentRequestData, openSignupModal, openLoginModal, onRequestSaved }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
@@ -311,6 +311,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         setOpen={setShowSaveRequest}
         darkMode={isDarkMode}
         onSaveRequest={handleSaveRequest}
+        onRequestSaved={onRequestSaved} // ApiTester'dan gelen callback'i ilet
         initialData={currentRequestData}
         currentEnvironment={currentEnvironment}
       />

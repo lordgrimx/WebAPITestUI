@@ -609,9 +609,16 @@ export default function ApiTester() {
       auth: { type: "none" }, // Reset auth
       tests: { script: "", results: [] } // Reset tests
     });
-  }, []);  return (
+  }, []);  // Callback to update UI when a request is saved
+  const handleRequestSaved = useCallback(() => {
+    // Update historyUpdated state to trigger a refresh of the collections sidebar
+    setHistoryUpdated(prev => prev + 1);
+  }, []);
+
+  return (
     <>      <Header
         currentRequestData={currentRequestData}
+        onRequestSaved={handleRequestSaved}
       />
       <div className="flex flex-col h-screen overflow-hidden"> {/* Use flex-col for vertical layout */}
         
