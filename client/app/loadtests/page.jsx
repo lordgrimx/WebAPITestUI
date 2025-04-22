@@ -63,6 +63,18 @@ const deleteK6Test = async (testId) => {
   return response.data;
 };
 
+// Add fetchLogs function
+const fetchLogs = async (testId) => {
+  try {
+    const response = await authAxios.get(`/k6test/${testId}/logs`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching logs:', error);
+    toast.error('Failed to fetch test logs');
+    return [];
+  }
+};
+
 export default function LoadTestsPage() {
   const [k6Tests, setK6Tests] = useState([]);
   const [selectedTest, setSelectedTest] = useState(null);
@@ -144,6 +156,20 @@ export default function LoadTestsPage() {
 
       const results = response.data;
       console.log("Test results:", results);
+
+      // Fetch logs periodically during test execution
+      const logInterval = setInterval(async () => {
+        const logs = await fetchLogs(testId);
+        setK6Tests(prevTests => prevTests.map(t => {
+          if (t.id === testId) {
+            return { ...t, logs };
+          }
+          return t;
+        }));
+      }, 2000);
+
+      // Clean up interval after test completion
+      setTimeout(() => clearInterval(logInterval), 5000);
 
       // State'i güncelle
       setK6Tests(prevTests => prevTests.map(t => {

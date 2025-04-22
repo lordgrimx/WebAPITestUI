@@ -7,6 +7,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { authAxios } from '@/lib/auth-context';
 import { toast } from "react-toastify";
 import { useRouter } from 'next/navigation';
+import { Dialog as ModalDialog } from "@/components/ui/dialog"; // Rename to avoid conflict
 
 export default function LoadTestDialog({ 
     open, 
@@ -18,14 +19,49 @@ export default function LoadTestDialog({
     const [vus, setVus] = useState(1);
     const [duration, setDuration] = useState("30s");
     const [authType, setAuthType] = useState("");
-    const [authToken, setAuthToken] = useState("");    const [isGenerating, setIsGenerating] = useState(false);
+    const [authToken, setAuthToken] = useState("");
+    const [idList, setIdList] = useState(""); // Yeni alan
+    const [parameters, setParameters] = useState(""); // Yeni alan
+    const [isGenerating, setIsGenerating] = useState(false);
     const [isExecuting, setIsExecuting] = useState(false);
+    const [isParameterModalOpen, setIsParameterModalOpen] = useState(false);
+    const [tempParameters, setTempParameters] = useState("");
     const router = useRouter();
+
+    const handleParametersSave = () => {
+        try {
+            // Validate and format JSON
+            const parsed = JSON.parse(tempParameters);
+            const formatted = JSON.stringify(parsed, null, 2);
+            setParameters(formatted);
+            setIsParameterModalOpen(false);
+        } catch (error) {
+            toast.error("Invalid JSON format");
+        }
+    };
 
     // Backend API'yi kullanarak k6 test scripti oluşturma
     const handleCreateTest = async () => {
         try {
             setIsGenerating(true);
+
+            // Validate and parse parameters
+            let parsedParameters = {};
+            if (parameters) {
+                try {
+                    parsedParameters = JSON.parse(parameters);
+                    // Validate that each parameter is an array
+                    for (const [key, value] of Object.entries(parsedParameters)) {
+                        if (!Array.isArray(value)) {
+                            toast.error(`Parameter "${key}" must be an array of values`);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    toast.error("Invalid JSON parameters format");
+                    return;
+                }
+            }
             
             const requestBody = {
                 requestData: {
@@ -35,7 +71,9 @@ export default function LoadTestDialog({
                     body: requestData.body || "",
                     params: requestData.params || "",
                     authType: authType || "",
-                    authToken: authToken || ""
+                    authToken: authToken || "",
+                    id: idList || "", // ID listesini ekle
+                    parameters: JSON.stringify(parsedParameters) // Add parameters to request
                 },
                 options: {
                     vus: parseInt(vus),
@@ -160,6 +198,33 @@ export default function LoadTestDialog({
                             Format: 30s, 1m, 1h, etc.
                         </p>
                     </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="parameters">Dynamic Parameters</Label>
+                        <div className="flex gap-2">
+                            <Input
+                                id="parameters"
+                                value={parameters}
+                                readOnly
+                                placeholder='Click "Edit Parameters" to add dynamic values'
+                                className="flex-1"
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setTempParameters(parameters || "");
+                                    setIsParameterModalOpen(true);
+                                }}
+                            >
+                                Edit Parameters
+                            </Button>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                            Provide parameters as JSON. Use {"{{paramName}}"} in URL or body to replace values.
+                            Example: /api/users/{"{{id}}"} with {"{\"ids\": [\"1\", \"2\", \"3\"]}"} will test with each ID.
+                        </p>
+                    </div>
                 </div>
 
                 <DialogFooter>
@@ -177,6 +242,38 @@ export default function LoadTestDialog({
                     </Button>
                 </DialogFooter>
             </DialogContent>
+
+            {/* Add Parameter Edit Modal */}
+            <ModalDialog open={isParameterModalOpen} onOpenChange={setIsParameterModalOpen}>
+                <DialogContent className="sm:max-w-[600px]">
+                    <DialogHeader>
+                        <DialogTitle>Edit Dynamic Parameters</DialogTitle>
+                        <DialogDescription>
+                            Enter your parameters in JSON format. Each parameter should be an array of values.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <textarea
+                            value={tempParameters}
+                            onChange={(e) => setTempParameters(e.target.value)}
+                            className="w-full h-[300px] font-mono text-sm p-4 rounded-md border"
+                            placeholder={`{
+  "id": ["1", "2", "3"],
+  "status": ["active", "pending"],
+  "department": ["IT", "HR", "Sales"]
+}`}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsParameterModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleParametersSave}>
+                            Save Parameters
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </ModalDialog>
         </Dialog>
     );
 }

@@ -3,6 +3,7 @@ using WebTestUI.Backend.Data;
 using WebTestUI.Backend.DTOs;
 using WebTestUI.Backend.Data.Entities;
 using System.Text.Json;
+using System.Text;
 
 namespace WebTestUI.Backend.Services
 {
@@ -87,13 +88,19 @@ namespace WebTestUI.Backend.Services
             try
             {
                 Console.WriteLine($"Received headers: {generateDto.RequestData.Headers}");
-
                 var headers = !string.IsNullOrEmpty(generateDto.RequestData.Headers)
                     ? JsonSerializer.Deserialize<Dictionary<string, string>>(generateDto.RequestData.Headers)
                     : new Dictionary<string, string>();
 
+                // Parse dynamic parameters
+                var parameters = !string.IsNullOrEmpty(generateDto.RequestData.Parameters)
+                    ? JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(generateDto.RequestData.Parameters)
+                    : new Dictionary<string, JsonElement>();
 
+                // Build parameter data array string for script
+                var paramDataArrays = BuildParameterDataArrays(parameters);
 
+                // Add auth headers if needed
                 if (!string.IsNullOrEmpty(generateDto.RequestData.AuthToken) && !string.IsNullOrEmpty(generateDto.RequestData.AuthType))
                 {
                     switch (generateDto.RequestData.AuthType.ToLower())
@@ -106,11 +113,27 @@ namespace WebTestUI.Backend.Services
                             break;
                     }
                 }
-                Console.WriteLine($"Deserialized headers: {JsonSerializer.Serialize(headers)}");
+
                 var script = $@"
 import http from 'k6/http';
 import {{ check, sleep }} from 'k6';
 import {{ Counter, Rate }} from 'k6/metrics';
+import {{ SharedArray }} from 'k6/data';
+
+// Define parameters data
+{paramDataArrays}
+
+// Function to get random item from array
+function getRandomItem(arr) {{
+    return arr[Math.floor(Math.random() * arr.length)];
+}}
+
+// Function to replace parameters in URL and body
+function replaceParameters(str, paramValues) {{
+    return str.replace(/\{{([^}}]+)\}}/g, (match, param) => {{
+        return paramValues[param] || match;
+    }});
+}}
 
 // Custom metrics
 const successRate = new Rate('success_rate');
@@ -139,15 +162,21 @@ export const options = {{
 }};
 
 export default function() {{
+    // Get random values for each parameter
+    const paramValues = {{}}
+    {BuildParameterRandomization(parameters)}
+
+    // Replace parameters in URL and body
+    const url = replaceParameters('{generateDto.RequestData.Url}', paramValues);
+    {(generateDto.RequestData.Method != "GET" ? $"const body = replaceParameters({JsonSerializer.Serialize(generateDto.RequestData.Body)}, paramValues);" : "")}
+
     const params = {{
         headers: {JsonSerializer.Serialize(headers)}
     }};
-
-    {(generateDto.RequestData.Method != "GET" ? $"const payload = {JsonSerializer.Serialize(generateDto.RequestData.Body)}" : "")}
-    
+    console.log(url);
     const startTime = new Date().getTime();
-    const response = http.{generateDto.RequestData.Method.ToLower()}('{generateDto.RequestData.Url}', 
-        {(generateDto.RequestData.Method != "GET" ? "payload, " : "")}params);
+    const response = http.{generateDto.RequestData.Method.ToLower()}(url, 
+        {(generateDto.RequestData.Method != "GET" ? "body, " : "")}params);
     const endTime = new Date().getTime();
 
     // Track status codes
@@ -186,6 +215,32 @@ export default function() {{
                 Console.WriteLine($"Error generating K6 script: {ex.Message}");
                 throw;
             }
+        }
+
+        private string BuildParameterDataArrays(Dictionary<string, JsonElement> parameters)
+        {
+            var arrays = new StringBuilder();
+            foreach (var param in parameters)
+            {
+                if (param.Value.ValueKind == JsonValueKind.Array)
+                {
+                    arrays.AppendLine($"const {param.Key}Data = {param.Value.GetRawText()};");
+                }
+            }
+            return arrays.ToString();
+        }
+
+        private string BuildParameterRandomization(Dictionary<string, JsonElement> parameters)
+        {
+            var sb = new StringBuilder();
+            foreach (var param in parameters)
+            {
+                if (param.Value.ValueKind == JsonValueKind.Array)
+                {
+                    sb.AppendLine($"    paramValues['{param.Key}'] = getRandomItem({param.Key}Data);");
+                }
+            }
+            return sb.ToString();
         }
 
         public async Task<K6TestDTO> GenerateAndSaveK6ScriptAsync(string name, string? description, int? requestId, RequestData requestData, K6TestOptions options)
