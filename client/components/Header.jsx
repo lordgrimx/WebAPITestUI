@@ -109,17 +109,60 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
       console.error('Failed to save request:', error);
     }
   };
-
   const handleCopyLink = () => {
-    const currentUrl = window.location.href;
-    navigator.clipboard.writeText(currentUrl)
-      .then(() => {
-        toast.success("Link Copied!", { description: "Current URL copied to clipboard." });
-      })
-      .catch(err => {
-        console.error('Failed to copy link: ', err);
-        toast.error("Copy Failed", { description: "Could not copy the link to the clipboard." });
+    try {
+      // Gerekli verileri toplayalım
+      const exportData = {
+        // Request verileri
+        request: {
+          method: currentRequestData?.method || 'GET',
+          url: currentRequestData?.url || '',
+          headers: currentRequestData?.headers && typeof currentRequestData.headers === 'string'
+            ? JSON.parse(currentRequestData.headers)
+            : (currentRequestData.headers || {}),
+          params: currentRequestData?.params && typeof currentRequestData.params === 'string'
+            ? JSON.parse(currentRequestData.params)
+            : (currentRequestData.params || {}),
+          body: currentRequestData?.body || '',
+          auth: currentRequestData?.auth || { type: 'none' },
+          tests: currentRequestData?.tests || { script: '', results: [] },
+        },
+        // Environment bilgileri
+        environment: currentEnvironment ? {
+          id: currentEnvironment.id,
+          name: currentEnvironment.name,
+          variables: currentEnvironment.variables,
+          description: currentEnvironment.description,
+        } : null,
+      };
+
+      // Veriyi base64 formatına çevirelim
+      const jsonString = JSON.stringify(exportData);
+      const encodedData = btoa(encodeURIComponent(jsonString));
+      
+      // URL oluşturma
+      const baseUrl = window.location.origin + window.location.pathname;
+      const shareUrl = `${baseUrl}?importData=${encodedData}`;
+      
+      // URL'i kopyalama
+      navigator.clipboard.writeText(shareUrl)
+        .then(() => {
+          toast.success("Link Copied!", { 
+            description: "Shareable link with request details copied to clipboard." 
+          });
+        })
+        .catch(err => {
+          console.error('Failed to copy link: ', err);
+          toast.error("Copy Failed", { 
+            description: "Could not copy the link to the clipboard." 
+          });
+        });
+    } catch (error) {
+      console.error('Failed to generate shareable link:', error);
+      toast.error("Generation Failed", { 
+        description: "Could not generate a shareable link." 
       });
+    }
   };
 
   const handleShareToWorkspace = () => {

@@ -11,15 +11,17 @@ import { toast } from "sonner";
 import { useSettings } from "@/lib/settings-context"; // Import the settings hook
 import { useTheme } from "next-themes"; // Import the theme hook
 import { useEnvironment } from "@/lib/environment-context"; // Import our new environment context
+import { useRouter, useSearchParams } from 'next/navigation'; // URL parametreleri için
 // Proxy için https-proxy-agent gerekebilir, ancak bunu API rotasında kullanacağız.
 
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
+import ImportDataModal from "../ImportDataModal";
 export default function ApiTester() {
   const { settings } = useSettings(); // Get settings from context
-  const { currentEnvironment, isEnvironmentLoading, triggerEnvironmentChange } = useEnvironment(); // Use our environment context
+  const { currentEnvironment, environments, isEnvironmentLoading, triggerEnvironmentChange, setCurrentEnvironmentById } = useEnvironment(); // Use our environment context with all needed variables
   const [selectedRequestId, setSelectedRequestId] = useState(null);  
   const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
@@ -28,10 +30,16 @@ export default function ApiTester() {
   const [currentRequestData, setCurrentRequestData] = useState(null); // State to hold current request builder data
   const [initialDataFromHistory, setInitialDataFromHistory] = useState(null); // State to hold data from selected history item
   const { theme, setTheme } = useTheme(); // Use the theme hook instead of local state
-  const isDarkMode = theme === 'dark'; // Derive dark mode from theme
-  const [authToken, setAuthToken] = useState(''); // Initialize empty
+  const isDarkMode = theme === 'dark'; // Derive dark mode from theme 
+  const [authToken, setAuthToken] = useState('');
   const [historyUpdated, setHistoryUpdated] = useState(0); // Add this new state
   const [environmentChangedTimestamp, setEnvironmentChangedTimestamp] = useState(Date.now()); // Add state for environment changes
+  
+  // Import modalı için state'ler
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Listen for history updates to refresh environment if needed
   useEffect(() => {
@@ -39,7 +47,36 @@ export default function ApiTester() {
     // This ensures environment is reloaded after any operations that might change it
     triggerEnvironmentChange();
   }, [historyUpdated, triggerEnvironmentChange]);
-  
+    // URL'den paylaşılan verileri alıp analiz eden useEffect
+  useEffect(() => {
+    const importDataParam = searchParams.get('importData');
+    
+    if (importDataParam) {
+      try {
+        // URL'den veriyi çözümle (decode)
+        const jsonString = decodeURIComponent(atob(importDataParam));
+        const parsedData = JSON.parse(jsonString);
+        
+        console.log("Found import data in URL:", parsedData);
+        
+        // Import verisini ve modalı göster
+        setImportData(parsedData);
+        setShowImportModal(true);
+        
+        // URL'den import parametresini temizle (sayfa yenilendiğinde tekrar gösterilmemesi için)
+        // Bu URL'yi temizler ama modal açık kalır
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('importData');
+          router.replace(url.pathname + url.search);
+        }
+      } catch (error) {
+        console.error("Failed to parse import data:", error);
+        toast.error("Invalid import data", { description: "The shared link contains invalid data." });
+      }
+    }
+  }, [searchParams, router]);
+
   // Listen for environment changes to update headers and other environment-dependent data
   useEffect(() => {
     if (currentEnvironment && currentRequestData) {
@@ -561,19 +598,18 @@ export default function ApiTester() {
         responseHeaders: JSON.stringify(errorHeaders),
         isTruncated: false,
         // Backend will get userId from session
-      });
-
-      // Update the response display with error details
+      });      // Update the response display with error details
       setResponseData({
         status: status,
         data: errorData,
         headers: errorHeaders,
         size: "0 KB",
-        timeTaken: `${duration} ms`,        isError: true, // Add an error flag
+        timeTaken: `${duration} ms`,        
+        isError: true, // Add an error flag
         viaProxy: settings.proxyEnabled && settings.proxyUrl && status !== 0 // Indicate proxy if it wasn't a network error before proxy
       });
     }
-  }, [selectedRequestId, currentUserID, settings]); // Updated dependencies, removed recordHistory
+  }, [selectedRequestId,authToken, settings, updateAuthToken]); // Removed currentUserID and authToken, kept only necessary dependencies
 
   // Handler for selecting a request from a collection
   const handleRequestSelect = useCallback((requestId) => {
@@ -614,11 +650,65 @@ export default function ApiTester() {
     // Update historyUpdated state to trigger a refresh of the collections sidebar
     setHistoryUpdated(prev => prev + 1);
   }, []);
-
+  
+  // Paylaşılan verileri içe aktarma işlemini gerçekleştiren fonksiyon
+  const handleImportConfirm = useCallback((data) => {
+    try {
+      // Request verilerini aktarma
+      if (data.request) {
+        const requestData = {
+          method: data.request.method || 'GET',
+          url: data.request.url || '',
+          headers: data.request.headers || {},
+          params: data.request.params || {},
+          body: data.request.body || '',
+          auth: data.request.auth || { type: 'none' },
+          tests: data.request.tests || { script: '', results: [] },
+        };
+        
+        console.log("Importing request data:", requestData);
+        setCurrentRequestData(requestData);
+        
+        // Environment verilerini aktarma
+        if (data.environment) {
+          // Environment context üzerinden mevcut environment'ı kontrol et
+          const existingEnv = environments.find(env => 
+            env.name === data.environment.name || env.id === data.environment.id
+          );
+          
+          if (existingEnv) {
+            // Eğer environment zaten varsa, onu aktif et
+            setCurrentEnvironmentById(existingEnv.id);
+          } else {
+            // Eğer environment yoksa ve API üzerinden yeni environment oluşturma yapılacaksa
+            // burada o kodu ekleyebiliriz (şimdilik yalnızca bir uyarı gösteriyoruz)
+            toast.info("Environment not found", { 
+              description: "The shared environment could not be found in your workspace." 
+            });
+          }
+        }
+        
+        toast.success("Data imported successfully", { 
+          description: "The shared request data has been imported." 
+        });
+      }
+    } catch (error) {
+      console.error("Failed to import data:", error);
+      toast.error("Import failed", { description: error.message });
+    }
+  }, [environments, setCurrentEnvironmentById]);
   return (
     <>      <Header
         currentRequestData={currentRequestData}
         onRequestSaved={handleRequestSaved}
+      />
+      
+      <ImportDataModal
+        open={showImportModal}
+        setOpen={setShowImportModal}
+        importData={importData}
+        onImportConfirm={handleImportConfirm}
+        darkMode={isDarkMode}
       />
       <div className="flex flex-col h-screen overflow-hidden"> {/* Use flex-col for vertical layout */}
         
