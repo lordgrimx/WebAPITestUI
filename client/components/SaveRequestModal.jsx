@@ -32,7 +32,8 @@ export default function SaveRequestModal({
   darkMode, 
   onSaveRequest, 
   selectedCollection,
-  initialData
+  initialData,
+  currentEnvironment
 }) {
   const { t } = useTranslation();
   const [requestName, setRequestName] = useState(initialData?.name || "");
@@ -43,12 +44,17 @@ export default function SaveRequestModal({
   const [selectedCollectionState, setSelectedCollectionState] = useState(selectedCollection || initialData?.collectionId || "");
   const [collections, setCollections] = useState([]);
   const [isLoadingCollections, setIsLoadingCollections] = useState(true);
-
   useEffect(() => {
     const fetchCollections = async () => {
       setIsLoadingCollections(true);
       try {
-        const response = await authAxios.get('/collections');
+        // Environment ID'ye göre koleksiyonları filtrele
+        const environmentId = currentEnvironment?.id;
+        console.log("Fetching collections for environment ID:", environmentId);
+        // Use currentEnvironmentId parameter name to match backend controller parameter
+        const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
+        const response = await authAxios.get(endpoint);
+        console.log("Collections response:", response);
         
         if (response.data) {
           setCollections(response.data);
@@ -77,13 +83,12 @@ export default function SaveRequestModal({
 
   const handleSaveRequest = async () => {
     try {
-      let collectionIdToSave = selectedCollectionState;
-
-      if (showNewCollectionInput && newCollectionName.trim()) {
+      let collectionIdToSave = selectedCollectionState;      if (showNewCollectionInput && newCollectionName.trim()) {
         const newCollectionResponse = await authAxios.post('/collections', 
           { 
             name: newCollectionName.trim(),
-            description: "" 
+            description: "",
+            environmentId: currentEnvironment?.id // Environment ID'yi ekleyelim
           }
         );
         
@@ -129,9 +134,7 @@ export default function SaveRequestModal({
       }
 
       // CollectionId'yi integer'a dönüştür
-      const parsedCollectionId = collectionIdToSave ? parseInt(collectionIdToSave, 10) : null;
-
-      const requestPayload = {
+      const parsedCollectionId = collectionIdToSave ? parseInt(collectionIdToSave, 10) : null;      const requestPayload = {
         collectionId: parsedCollectionId,
         name: requestName,
         description: description,
@@ -143,7 +146,8 @@ export default function SaveRequestModal({
         isFavorite: addToFavorites,
         authType: initialData?.authType || 'none',
         authConfig: initialData?.authConfig || '',
-        tests: formattedTests
+        tests: formattedTests,
+        environmentId: currentEnvironment?.id // Environment ID'yi ekleyelim
       };
 
       console.log("Request payload being sent:", requestPayload);

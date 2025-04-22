@@ -15,7 +15,7 @@ namespace WebTestUI.Backend.Data.Entities
         public int Id { get; set; }
         public string? UserId { get; set; }
         public int? CollectionId { get; set; }
-        public int? EnvironmentId { get; set; } = 1; // Default environment ID
+        public int? EnvironmentId { get; set; } // Varsayılan değeri kaldırıyoruz
         public string? Name { get; set; }
         public string? Description { get; set; }
         public string? Method { get; set; } // GET, POST, PUT, DELETE, etc.

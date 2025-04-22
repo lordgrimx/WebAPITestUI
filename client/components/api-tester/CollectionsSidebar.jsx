@@ -26,6 +26,7 @@ import {
 import { Plus, Folder, Trash2, History } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner"; // Add toast import
+import { env } from "process";
 
 // HTTP Method renkleri ve Badge variantları
 const methodStyles = {
@@ -116,8 +117,8 @@ const getPathFromUrl = (urlString) => {
   }
 };
 
-// Update the component to accept historyUpdated prop
-export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError, historyUpdated, currentEnvironment }) {
+// Update the component to accept historyUpdated and environmentChangedTimestamp props
+export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError, historyUpdated, currentEnvironment, environmentChangedTimestamp }) {
   const [newCollectionName, setNewCollectionName] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -125,19 +126,17 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   const [collections, setCollections] = useState([]);
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
-  // Fetch collections
+  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz  // Fetch collections
   useEffect(() => {
     const fetchCollections = async () => {
       setIsLoading(true);
       try {
         // Using authAxios which automatically adds the token
         const environmentId = currentEnvironment?.id;
-        const endpoint = environmentId 
-          ? `/collections?environmentId=${environmentId}` 
-          : '/collections';
-        
+        // Use currentEnvironmentId parameter name to match backend controller parameter
+        const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
         const response = await authAxios.get(endpoint);
+        console.log("Collections response:", response); // Log the response data
         if (response.data) {
           setCollections(response.data);
         }
@@ -148,20 +147,19 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
         setIsLoading(false);
       }
     };
-    
     fetchCollections();
-  }, [onError, currentEnvironment]);
-    // Memoize the fetch history function
+  }, [onError, currentEnvironment, environmentChangedTimestamp]); // Add environmentChangedTimestamp
+  
+  // Memoize the fetch history function
   const fetchHistory = useCallback(async () => {
     try {
       const environmentId = currentEnvironment?.id;
-      const endpoint = environmentId 
-        ? `/history?environmentId=${environmentId}` 
-        : '/history';
-        
+      console.log("Fetching history for environment ID:", environmentId); // Log the environment ID
+      // Use currentEnvironmentId parameter name to match backend controller parameter
+      const endpoint = '/history' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
       const response = await authAxios.get(endpoint);
+      console.log("History response:", response.data); // Log the response data
       if (response.data) {
-        console.log('History items received:', response.data);
         setHistoryItems(response.data);
       }
     } catch (error) {
@@ -172,25 +170,22 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   // Update useEffect to use memoized fetchHistory function
   useEffect(() => {
     fetchHistory();
-  }, [fetchHistory, historyUpdated]); // Now includes both memoized function and historyUpdated
-  const handleAddCollection = async () => {
-    if (newCollectionName.trim()) {
+  }, [fetchHistory, historyUpdated, environmentChangedTimestamp]); // Add environmentChangedTimestamp  
+    const handleAddCollection = async () => {    if (newCollectionName.trim()) {
       try {
+        // Collection modeli için tüm gerekli alanları gönderelim
         const payload = {
           name: newCollectionName.trim(),
           description: "",
-          environmentId: currentEnvironment?.id || null // Include environmentId if available
+          environmentId: currentEnvironment?.id // Environment ID'yi ekleyelim
         };
-        
         const response = await authAxios.post('/collections', payload);
-        
         if (response.data) {
           const environmentId = currentEnvironment?.id;
-          const endpoint = environmentId 
-            ? `/collections?environmentId=${environmentId}` 
-            : '/collections';
-          
+          // Tutarlı şekilde currentEnvironmentId parametresi kullanılıyor
+          const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
           const updatedCollections = await authAxios.get(endpoint);
+          console.log("Updated collections:", updatedCollections.data); // Log the updated collections
           setCollections(updatedCollections.data);
           toast.success("Collection added successfully");
         }
@@ -203,28 +198,30 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     } else {
       toast.warning("Please enter a collection name");
     }
-  };
-  const handleDeleteCollection = async (e, collectionId) => {
+  };  const handleDeleteCollection = async (e, collectionId) => {
     e.stopPropagation();
     if (window.confirm(t('collections.confirmDelete', "Bu koleksiyonu silmek istediğinizden emin misiniz? İçindeki tüm istekler de silinebilir."))) {
       try {
         await authAxios.delete(`/collections/${collectionId}`);
-        // Koleksiyonları güncellemek için yeniden çağır
-        const updatedCollections = await authAxios.get('/collections');
+        // Always send currentEnvironmentId as a query param
+        const environmentId = currentEnvironment?.id;
+        const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
+        const updatedCollections = await authAxios.get(endpoint);
         setCollections(updatedCollections.data);
       } catch (err) {
         console.error("Failed to delete collection:", err);
         toast.error(t('collections.deleteError', "Failed to delete collection: ") + (err.response?.data?.message || err.message || "Unknown error"));
       }
     }
-  };
-  const handleDeleteRequest = async (e, requestId) => {
+  };  const handleDeleteRequest = async (e, requestId) => {
     e.stopPropagation();
     if (window.confirm(t('collections.confirmDeleteRequest', "Bu isteği silmek istediğinizden emin misiniz?"))) {
       try {
         await authAxios.delete(`/requests/${requestId}`);
-        // Koleksiyonları güncellemek için yeniden çağır (içinde istekler de olacak)
-        const updatedCollections = await authAxios.get('/collections');
+        // Always send currentEnvironmentId as a query param
+        const environmentId = currentEnvironment?.id;
+        const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
+        const updatedCollections = await authAxios.get(endpoint);
         setCollections(updatedCollections.data);
       } catch (err) {
         console.error("Failed to delete request:", err);
@@ -235,29 +232,23 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
   
   const handleDeleteHistoryEntry = async (e, historyId) => {
     e.stopPropagation();
-    
     // Check if historyId is defined
     if (!historyId) {
       console.error("Cannot delete history entry: ID is undefined");
       toast.error("Failed to delete history entry: ID is missing");
       return;
     }
-    
     try {
-      console.log(`Attempting to delete history with ID: ${historyId}`);
-      
-      // Make the API call to the correct endpoint format
       await authAxios.delete(`/history/${historyId}`);
-      
-      // Refresh history - authAxios automatically adds the token
-      const updatedHistory = await authAxios.get('/history');
+      // Always send environmentId as a query param
+      const environmentId = currentEnvironment?.id;
+      const endpoint = '/history' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
+      const updatedHistory = await authAxios.get(endpoint);
+      console.log("Updated history:", updatedHistory.data); // Log the updated history
       setHistoryItems(updatedHistory.data);
       toast.success("History entry deleted successfully");
     } catch (err) {
       console.error("Failed to delete history entry:", err);
-      console.error("Error details:", err.response?.data);
-      
-      // If we get a 405 error, it might be a routing issue with Next.js
       if (err.response?.status === 405) {
         toast.error("Server doesn't allow deletion through this route. Please check API configuration.");
       } else {
@@ -364,6 +355,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
                   currentEnvironment={currentEnvironment} // Environment değişkenini geçirelim
                 />
               ))}
+
             </Accordion>
 
             <h3 className={`mt-4 px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.history', "History")}</h3>
@@ -410,11 +402,10 @@ const CollectionItem = function CollectionItem({
     const fetchRequests = async () => {
       if (!collection?.id) return;
       
-      setIsLoading(true);      try {
-        // Environment ID'sine göre filtreleme yapalım
+      setIsLoading(true);      try {        // Environment ID'sine göre filtreleme yapalım
         const environmentId = currentEnvironment?.id;
         const endpoint = environmentId 
-          ? `/requests/collection/${collection.id}?environmentId=${environmentId}` 
+          ? `/requests/collection/${collection.id}?currentEnvironmentId=${environmentId}` 
           : `/requests/collection/${collection.id}`;
           
         const response = await authAxios.get(endpoint);
@@ -476,7 +467,7 @@ const CollectionItem = function CollectionItem({
                 <span className="truncate">{request.name}</span>
               </div>
               <div
-                className={`h-6 w-6 opacity-0 group-hover:opacity-100 ${darkMode ? 'hover:text-red-400' : 'hover:text-red-500'} flex items-center justify-center cursor-pointer`}
+                className={`h-6 w-6 opacity-0 group-hover:opacity-100 ${darkMode ? 'hover:text-red-400' : 'hover:text-red-500'}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onDeleteRequest(e, request.id);

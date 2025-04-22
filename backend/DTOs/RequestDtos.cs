@@ -52,6 +52,8 @@ namespace WebTestUI.Backend.DTOs
         public bool IsFavorite { get; set; }
 
         public int? CollectionId { get; set; }
+
+        public int? EnvironmentId { get; set; } // Environment ID eklendi
     }
 
     public class UpdateRequestDto

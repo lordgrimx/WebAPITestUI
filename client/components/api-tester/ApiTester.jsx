@@ -31,6 +31,7 @@ export default function ApiTester() {
   const isDarkMode = theme === 'dark'; // Derive dark mode from theme
   const [authToken, setAuthToken] = useState(''); // Initialize empty
   const [historyUpdated, setHistoryUpdated] = useState(0); // Add this new state
+  const [environmentChangedTimestamp, setEnvironmentChangedTimestamp] = useState(Date.now()); // Add state for environment changes
 
   // Listen for history updates to refresh environment if needed
   useEffect(() => {
@@ -50,6 +51,12 @@ export default function ApiTester() {
       // Just force a re-render here by setting key in the component
     }
   }, [currentEnvironment, currentRequestData]);
+
+  // Listen for environment changes to trigger sidebar refresh
+  useEffect(() => {
+    console.log("Environment context changed in ApiTester, updating timestamp.");
+    setEnvironmentChangedTimestamp(Date.now()); // Update timestamp when environment changes
+  }, [currentEnvironment]); // Depend only on currentEnvironment
 
   // Test execution helper function
   const runTests = (testScript, environment) => {
@@ -635,6 +642,7 @@ export default function ApiTester() {
                 darkMode={isDarkMode} // Pass isDarkMode instead
                 historyUpdated={historyUpdated} // Add this prop
                 currentEnvironment={currentEnvironment} // Pass the current environment from context
+                environmentChangedTimestamp={environmentChangedTimestamp} // Pass the timestamp
               />
             </ResizablePanel>
             <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={30}>              <RequestBuilder

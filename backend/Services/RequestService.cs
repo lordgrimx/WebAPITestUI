@@ -130,6 +130,7 @@ namespace WebTestUI.Backend.Services
                 {
                     UserId = userId,
                     CollectionId = model.CollectionId,
+                    EnvironmentId = model.EnvironmentId, // Environment ID'yi dto'dan alalım
                     Name = model.Name,
                     Description = model.Description ?? "",
                     Method = model.Method,

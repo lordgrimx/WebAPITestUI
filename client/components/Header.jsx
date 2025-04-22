@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next"; // Çeviri hook'u eklendi
 import { useTheme } from "next-themes";
-import { authAxios } from "@/lib/auth-context"; // Import authAxios for authenticated requests
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -313,6 +312,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         darkMode={isDarkMode}
         onSaveRequest={handleSaveRequest}
         initialData={currentRequestData}
+        currentEnvironment={currentEnvironment}
       />
       <header
         className={`${

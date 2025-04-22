@@ -16,7 +16,7 @@ namespace WebTestUI.Backend.Data.Entities
         public string? UserId { get; set; }
         public string? Name { get; set; }
         public string? Description { get; set; }
-        public int? EnvironmentId { get; set; } = 1; // Default environment ID
+        public int? EnvironmentId { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

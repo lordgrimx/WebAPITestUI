@@ -28,9 +28,8 @@ namespace WebTestUI.Backend.Services
 
                 if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
                 {
-                    // Koleksiyonların EnvironmentId alanı yok, bu yüzden koleksiyonları filtrelemek yerine
-                    // o environment'a ait istekleri olan koleksiyonları getireceğiz.
-                    query = query.Where(c => c.Requests.Any(r => r.EnvironmentId == envId));
+                    // Koleksiyonları doğrudan EnvironmentId'ye göre filtrele
+                    query = query.Where(c => c.EnvironmentId == envId);
                 }
 
                 var collections = await query
@@ -42,8 +41,9 @@ namespace WebTestUI.Backend.Services
                         Description = c.Description,
                         CreatedAt = c.CreatedAt,
                         UpdatedAt = c.UpdatedAt,
+                        EnvironmentId = c.EnvironmentId, // EnvironmentId alanını da DTO'ya ekleyelim
                         // İstek sayısını da EnvironmentId'ye göre filtreleyebiliriz, ancak bu mevcut DTO yapısını değiştirir.
-                        // Şimdilik toplam istek sayısını bırakıyorum. İhtiyaç olursa bu kısım güncellenebilir.
+                        // İhtiyaç olursa bu kısım güncellenebilir.
                         RequestCount = _dbContext.Requests.Count(r => r.CollectionId == c.Id)
                     })
                     .ToListAsync();
@@ -70,11 +70,12 @@ namespace WebTestUI.Backend.Services
                         Description = c.Description,
                         CreatedAt = c.CreatedAt,
                         UpdatedAt = c.UpdatedAt,
+                        EnvironmentId = c.EnvironmentId,
                         RequestCount = _dbContext.Requests.Count(r => r.CollectionId == c.Id)
                     })
                     .FirstOrDefaultAsync();
 
-                return collection;
+                return collection!; // Interfaz uyumluluğu için null! kullanıyoruz
             }
             catch (Exception ex)
             {
@@ -92,6 +93,7 @@ namespace WebTestUI.Backend.Services
                     Name = model.Name,
                     Description = model.Description,
                     UserId = userId,
+                    EnvironmentId = model.EnvironmentId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -106,6 +108,7 @@ namespace WebTestUI.Backend.Services
                     Description = collection.Description,
                     CreatedAt = collection.CreatedAt,
                     UpdatedAt = collection.UpdatedAt,
+                    EnvironmentId = collection.EnvironmentId,
                     RequestCount = 0
                 };
             }
@@ -125,7 +128,7 @@ namespace WebTestUI.Backend.Services
 
                 if (collection == null)
                 {
-                    return null;
+                    return null!; // Interfaz uyumluluğu için null! kullanıyoruz
                 }
 
                 if (!string.IsNullOrEmpty(model.Name))
@@ -149,6 +152,7 @@ namespace WebTestUI.Backend.Services
                     Description = collection.Description,
                     CreatedAt = collection.CreatedAt,
                     UpdatedAt = collection.UpdatedAt,
+                    EnvironmentId = collection.EnvironmentId,
                     RequestCount = await _dbContext.Requests.CountAsync(r => r.CollectionId == id)
                 };
             }
