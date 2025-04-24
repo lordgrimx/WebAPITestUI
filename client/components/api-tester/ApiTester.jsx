@@ -12,8 +12,9 @@ import { useSettings } from "@/lib/settings-context"; // Import the settings hoo
 import { useTheme } from "next-themes"; // Import the theme hook
 import { useEnvironment } from "@/lib/environment-context"; // Import our new environment context
 import { useRouter, useSearchParams } from 'next/navigation'; // URL parametreleri için
+import { useRequest } from "@/lib/request-context"; // Import the request context
 // Proxy için https-proxy-agent gerekebilir, ancak bunu API rotasında kullanacağız.
-
+import axios from "axios"; // Axios for HTTP requests
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
@@ -23,11 +24,12 @@ export default function ApiTester() {
   const { settings } = useSettings(); // Get settings from context
   const { currentEnvironment, environments, isEnvironmentLoading, triggerEnvironmentChange, setCurrentEnvironmentById } = useEnvironment(); // Use our environment context with all needed variables
   const [selectedRequestId, setSelectedRequestId] = useState(null);  
+  const { setCurrentRequestData } = useRequest(); 
   const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
   const [error, setError] = useState(null); // General request error state
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
-  const [currentRequestData, setCurrentRequestData] = useState(null); // State to hold current request builder data
+  const [currentRequestData, setCurrentRequestDataLocal] = useState(null); // State to hold current request builder data
   const [initialDataFromHistory, setInitialDataFromHistory] = useState(null); // State to hold data from selected history item
   const { theme, setTheme } = useTheme(); // Use the theme hook instead of local state
   const isDarkMode = theme === 'dark'; // Derive dark mode from theme 
@@ -255,9 +257,17 @@ export default function ApiTester() {
   // Memoize the request data handler - This function will be passed to RequestBuilder
   const handleRequestDataChange = useCallback((data) => {
     requestAnimationFrame(() => {
-      setCurrentRequestData(data); // Update the state in ApiTester
+      setCurrentRequestDataLocal(data); // Update the state in ApiTester
     });
   }, []);
+
+  // Update parent component with current request data
+  useEffect(() => {
+    if (handleRequestDataChange) {
+      handleRequestDataChange(currentRequestData);
+    }
+    setCurrentRequestData(currentRequestData); // Update global request context
+  }, [currentRequestData, handleRequestDataChange, setCurrentRequestData]);
 
   // Memoize the response handler
   const handleSendRequest = useCallback(async (requestData) => {
@@ -392,7 +402,9 @@ export default function ApiTester() {
 
       // Make the actual API request (either direct or via proxy)
       console.log("Final Axios Config:", axiosConfig);
-      const axiosResponse = await authAxios(axiosConfig);
+      const axiosResponse = await axios(axiosConfig);
+      console.log("Axios Response:", axiosResponse);
+      
 
       // Handle successful response (Proxy route should return the target API's response structure)
       console.log("Response received (potentially via proxy):", axiosResponse);
@@ -520,7 +532,7 @@ export default function ApiTester() {
         };
         
         // Update the current request data with test results
-        setCurrentRequestData({
+        setCurrentRequestDataLocal({
           ...currentRequestData,
           tests: updatedTests
         });
@@ -698,7 +710,8 @@ export default function ApiTester() {
     }
   }, [environments, setCurrentEnvironmentById]);
   return (
-    <>      <Header
+    <>      
+    <Header
         currentRequestData={currentRequestData}
         onRequestSaved={handleRequestSaved}
       />
@@ -764,6 +777,6 @@ export default function ApiTester() {
         {/* Fixed height for monitor panel */}
         
       </div>
-    </>
+    </div>
   );
 }

@@ -1,7 +1,10 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Provider from "./provider";
-import { Toaster } from "@/components/ui/sonner"; // Sonner Toaster import edildi
+import { Toaster } from "@/components/ui/sonner";
+import Header from "@/components/Header"; // Header'ı ekleyelim
+import { redirect } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,7 +34,7 @@ export default function RootLayout({ children }) {
       >
         <Provider>
           {children}
-          <Toaster /> {/* Toaster bileşeni eklendi */}
+          <Toaster />
         </Provider>
       </body>
     </html>

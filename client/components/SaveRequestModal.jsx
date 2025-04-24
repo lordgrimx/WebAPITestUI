@@ -134,6 +134,37 @@ export default function SaveRequestModal({
         }
       }
 
+      // Auth bilgilerini formatla
+      let formattedAuth = {
+        type: initialData?.auth?.type || 'none',
+        config: {}
+      };
+
+      // Auth tipine göre config'i hazırla
+      if (initialData?.auth) {
+        switch (initialData.auth.type) {
+          case 'bearer':
+            formattedAuth.config = {
+              token: initialData.auth.token
+            };
+            break;
+          case 'basic':
+            formattedAuth.config = {
+              username: initialData.auth.username,
+              password: initialData.auth.password
+            };
+            break;
+          case 'apiKey':
+            formattedAuth.config = {
+              key: initialData.auth.apiKeyName,
+              value: initialData.auth.apiKeyValue,
+              in: initialData.auth.apiKeyLocation
+            };
+            break;
+          // Diğer auth tipleri için case'ler eklenebilir
+        }
+      }
+
       // CollectionId'yi integer'a dönüştür
       const parsedCollectionId = collectionIdToSave ? parseInt(collectionIdToSave, 10) : null;      const requestPayload = {
         collectionId: parsedCollectionId,
@@ -145,11 +176,16 @@ export default function SaveRequestModal({
         params: initialData?.params || {},
         body: initialData?.body || '',
         isFavorite: addToFavorites,
-        authType: initialData?.authType || 'none',
-        authConfig: initialData?.authConfig || '',
+        authType: formattedAuth.type || 'none',
+        authConfig: JSON.stringify(formattedAuth.config) || '',
         tests: formattedTests,
         environmentId: currentEnvironment?.id // Environment ID'yi ekleyelim
       };
+
+      console.log("Auth data being saved:", { 
+        authType: formattedAuth.type, 
+        authConfig: formattedAuth.config 
+      });
 
       console.log("Request payload being sent:", requestPayload);
 

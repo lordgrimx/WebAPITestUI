@@ -438,6 +438,32 @@ namespace WebTestUI.Backend.Controllers
                             }
                         }
                     }
+
+                    if (root.TryGetProperty("metric", out var metricNameElementStatus))
+                    {
+                        var metricName = metricNameElementStatus.GetString();
+                        if (metricName != null && metricName.StartsWith("status_"))
+                        {
+                            if (root.TryGetProperty("data", out var dataElementStatus) &&
+                                dataElementStatus.TryGetProperty("value", out var valueElementStatus))
+                            {
+                                var statusValue = valueElementStatus.GetDouble();
+                                switch (metricName)
+                                {
+                                    case "status_200": metricsDto.StatusCodes.Status200 += (int)statusValue; break;
+                                    case "status_201": metricsDto.StatusCodes.Status201 += (int)statusValue; break;
+                                    case "status_204": metricsDto.StatusCodes.Status204 += (int)statusValue; break;
+                                    case "status_400": metricsDto.StatusCodes.Status400 += (int)statusValue; break;
+                                    case "status_401": metricsDto.StatusCodes.Status401 += (int)statusValue; break;
+                                    case "status_403": metricsDto.StatusCodes.Status403 += (int)statusValue; break;
+                                    case "status_404": metricsDto.StatusCodes.Status404 += (int)statusValue; break;
+                                    case "status_415": metricsDto.StatusCodes.Status415 += (int)statusValue; break;
+                                    case "status_500": metricsDto.StatusCodes.Status500 += (int)statusValue; break;
+                                    case "status_other": metricsDto.StatusCodes.Other += (int)statusValue; break;
+                                }
+                            }
+                        }
+                    }
                 }
                 catch (JsonException jsonEx)
                 {

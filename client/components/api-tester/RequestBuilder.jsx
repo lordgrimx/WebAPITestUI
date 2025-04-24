@@ -262,17 +262,37 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
   const handleAuthTypeChange = (type) => {
     // Reset specific fields when changing type
     const newAuth = { type };
-    // Clear fields not relevant to the new type
-    if (type !== 'basic') { newAuth.username = undefined; newAuth.password = undefined; }
-    if (type !== 'bearer') { newAuth.token = undefined; setTokenInput(''); }
-    if (type !== 'apiKey') { newAuth.apiKeyName = undefined; newAuth.apiKeyValue = undefined; newAuth.apiKeyLocation = undefined; }
-    if (type !== 'managedApiKey') { newAuth.managedKeyId = undefined; setSelectedManagedKeyId(''); } // Clear managed key selection
+    
+    // Preserve bearer token if switching to bearer type and token exists
+    if (type === 'bearer' && authToken) {
+      newAuth.token = authToken;
+    }
+    
+    // Clear fields based on type
+    if (type !== 'basic') {
+      newAuth.username = undefined;
+      newAuth.password = undefined;
+    }
+    if (type !== 'bearer') {
+      newAuth.token = undefined;
+      setTokenInput('');
+    }
+    if (type !== 'apiKey') {
+      newAuth.apiKeyName = undefined;
+      newAuth.apiKeyValue = undefined;
+      newAuth.apiKeyLocation = undefined;
+    }
+    if (type !== 'managedApiKey') {
+      newAuth.managedKeyId = undefined;
+      setSelectedManagedKeyId('');
+    }
     if (type !== 'oauth2') {
-       newAuth.accessTokenUrl = undefined;
-       newAuth.clientId = undefined;
-       newAuth.clientSecret = undefined;
-       newAuth.scope = undefined;
-     }
+      newAuth.accessTokenUrl = undefined;
+      newAuth.clientId = undefined;
+      newAuth.clientSecret = undefined;
+      newAuth.scope = undefined;
+    }
+    
     setAuth(newAuth);
   };
 
@@ -280,14 +300,16 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
     const newToken = e.target.value;
     setTokenInput(newToken);
     setAuth({ ...auth, token: newToken });
-    // Optionally call parent update if needed immediately
-    // onUpdateAuthToken?.(newToken);
+    // Update parent component's token if needed
+    if (onUpdateAuthToken) {
+      onUpdateAuthToken(newToken);
+    }
   };
 
-   // Handle changes for other auth fields
-   const handleAuthFieldChange = (field, value) => {
-     setAuth(prevAuth => ({ ...prevAuth, [field]: value }));
-   };
+  // Handle changes for other auth fields
+  const handleAuthFieldChange = (field, value) => {
+    setAuth(prevAuth => ({ ...prevAuth, [field]: value }));
+  };
 
   // Handler for selecting a managed API key
   const handleManagedKeySelect = (keyId) => {
@@ -389,7 +411,7 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
       )}
 
       {auth?.type === "bearer" && (
-        <div>
+        <div className="space-y-2">
           <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
             {t('requests.bearerToken')}
           </label>
@@ -996,16 +1018,31 @@ export default function RequestBuilder({
     // 2. Prepare Manual Headers (already memoized as enabledHeaders)
 
     // 3. Merge Headers: Manual headers override default headers
-    const finalHeaders = {
+    let finalHeaders = {
       ...defaultHeadersFromSettings,
       ...enabledHeaders, // enabledHeaders is already a key-value object
     };
 
-    // Debugging logs
-    console.log('[RequestBuilder] Default Headers from Settings:', defaultHeadersFromSettings);
-    console.log('[RequestBuilder] Manual Headers (enabledHeaders):', enabledHeaders);
-    console.log('[RequestBuilder] Final Merged Headers (to be passed):', finalHeaders); // Log the final merged headers
+    // Add Bearer token to headers if auth type is bearer and token exists
+    if (auth?.type === 'bearer' && auth?.token) {
+      console.log('Adding bearer token:', auth.token); // Debug log
+      finalHeaders = {
+        ...finalHeaders,
+        'Authorization': `Bearer ${auth.token.trim()}` // Trim ekleyerek boşlukları temizle
+      };
+    }
 
+    // API Key auth type kontrolü ekle
+    if (auth?.type === 'apiKey' && auth?.apiKeyName && auth?.apiKeyValue) {
+      if (auth.apiKeyLocation === 'header') {
+        finalHeaders[auth.apiKeyName] = auth.apiKeyValue;
+      }
+      // Query params için ayrı kontrol yapılabilir
+    }
+
+    // Debug logları ekle
+    console.log('Auth configuration:', auth);
+    console.log('Final headers before request:', finalHeaders);
 
     // If using a managed API key, derive the actual key details here
     let finalAuth = { ...auth }; // Start with current auth state
@@ -1057,7 +1094,7 @@ export default function RequestBuilder({
       setDialogOpen(false); // Close dialog regardless of success/failure
     }
 
-  }, [method, url, urlError, enabledParams, enabledHeaders, body, auth, tests, onSendRequest]);
+  }, [method, url, urlError, enabledParams, enabledHeaders, body, auth, tests, onSendRequest, settings, apiKeys]);
 
 
   return (

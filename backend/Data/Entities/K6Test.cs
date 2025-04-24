@@ -82,6 +82,9 @@ namespace WebTestUI.Backend.Data.Entities
 
         [JsonPropertyName("detailedMetrics")]
         public K6TestDetailedMetrics? DetailedMetrics { get; set; }
+
+        [JsonPropertyName("statusCodes")]
+        public StatusCodeMetrics StatusCodes { get; set; } = new();
     }
     [Owned]
     public class K6TestDetailedMetrics
@@ -154,5 +157,38 @@ namespace WebTestUI.Backend.Data.Entities
 
         [JsonPropertyName("p95")]
         public double P95 { get; set; }
+    }
+    [Owned]
+    public class StatusCodeMetrics
+    {
+        [JsonPropertyName("status_200")]
+        public int Status200 { get; set; }
+
+        [JsonPropertyName("status_201")]
+        public int Status201 { get; set; }
+
+        [JsonPropertyName("status_204")]
+        public int Status204 { get; set; }
+
+        [JsonPropertyName("status_400")]
+        public int Status400 { get; set; }
+
+        [JsonPropertyName("status_401")]
+        public int Status401 { get; set; }
+
+        [JsonPropertyName("status_403")]
+        public int Status403 { get; set; }
+
+        [JsonPropertyName("status_404")]
+        public int Status404 { get; set; }
+
+        [JsonPropertyName("status_415")]
+        public int Status415 { get; set; }
+
+        [JsonPropertyName("status_500")]
+        public int Status500 { get; set; }
+
+        [JsonPropertyName("other")]
+        public int Other { get; set; }
     }
 }

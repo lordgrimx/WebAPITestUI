@@ -49,6 +49,7 @@ namespace WebTestUI.Backend.DTOs
         public string? Body { get; set; }
         public string? Params { get; set; }
         public string? Id { get; set; }
+        public string? Parameters { get; set; } // Add this property
     }
 
     public class AddLogEntryDTO

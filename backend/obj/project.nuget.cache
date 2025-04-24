@@ -2,7 +2,7 @@
   "version": 2,
   "dgSpecHash": "l9etFwfTgT8=",
   "success": true,
-  "projectFilePath": "D:\\Projects\\WebAPITestUI-semih.net1\\backend\\WebTestUI.Backend.csproj",
+  "projectFilePath": "C:\\Users\\semih\\Desktop\\testprojesii\\backend\\WebTestUI.Backend.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\sabri\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\sabri\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",

@@ -2,6 +2,7 @@ namespace WebTestUI.Backend.DTOs
 {
     public class K6RunRequestDto
     {
+        public Guid TestId { get; set; }
         public string Script { get; set; }
         public K6Options Options { get; set; }
         public string? OutputFormat { get; set; } = "json";
@@ -20,4 +21,4 @@ namespace WebTestUI.Backend.DTOs
         public Dictionary<string, object>? Thresholds { get; set; }
         public Dictionary<string, object>? Scenarios { get; set; }
     }
-} 
+}

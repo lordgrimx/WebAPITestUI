@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebTestUI.Backend.Data;
 
@@ -11,9 +12,11 @@ using WebTestUI.Backend.Data;
 namespace WebTestUI.Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250418120057_UpdateStatusCodesStructure")]
+    partial class UpdateStatusCodesStructure
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -208,6 +211,7 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NormalizedEmail")
@@ -219,6 +223,9 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("PasswordHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
@@ -289,30 +296,28 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("EnvironmentId")
-                        .HasColumnType("int");
 
                     b.Property<string>("Name")
-                        .HasColumnType("nvarchar(max)");
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EnvironmentId");
-
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "Name");
 
                     b.ToTable("Collections");
                 });
 
-            modelBuilder.Entity("WebTestUI.Backend.Data.Entities.EnvironmentConfig", b =>
+            modelBuilder.Entity("WebTestUI.Backend.Data.Entities.EnvironmentVariable", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -327,20 +332,23 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Variables")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "IsActive");
 
                     b.ToTable("Environments");
                 });
@@ -356,16 +364,15 @@ namespace WebTestUI.Backend.Migrations
                     b.Property<int?>("Duration")
                         .HasColumnType("int");
 
-                    b.Property<int?>("EnvironmentId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Method")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("RequestId")
                         .HasColumnType("int");
 
                     b.Property<string>("Response")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("ResponseSize")
@@ -378,16 +385,18 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Url")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EnvironmentId");
-
                     b.HasIndex("RequestId");
+
+                    b.HasIndex("Timestamp");
 
                     b.HasIndex("UserId");
 
@@ -425,12 +434,18 @@ namespace WebTestUI.Backend.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<long>("UpdatedAt")
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RequestId")
+                        .HasDatabaseName("IX_K6Tests_RequestId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_K6Tests_Status");
 
                     b.ToTable("K6Tests");
                 });
@@ -444,12 +459,15 @@ namespace WebTestUI.Backend.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("AuthConfig")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("AuthType")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Body")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("CollectionId")
@@ -459,43 +477,46 @@ namespace WebTestUI.Backend.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("EnvironmentId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Headers")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsFavorite")
                         .HasColumnType("bit");
 
                     b.Property<string>("Method")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Params")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Tests")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Url")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
+                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("CollectionId");
-
-                    b.HasIndex("EnvironmentId");
 
                     b.HasIndex("UserId");
 
@@ -555,38 +576,28 @@ namespace WebTestUI.Backend.Migrations
 
             modelBuilder.Entity("WebTestUI.Backend.Data.Entities.Collection", b =>
                 {
-                    b.HasOne("WebTestUI.Backend.Data.Entities.EnvironmentConfig", "Environment")
-                        .WithMany("Collections")
-                        .HasForeignKey("EnvironmentId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
                     b.HasOne("WebTestUI.Backend.Data.Entities.ApplicationUser", "User")
                         .WithMany("Collections")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.Navigation("Environment");
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("WebTestUI.Backend.Data.Entities.EnvironmentConfig", b =>
+            modelBuilder.Entity("WebTestUI.Backend.Data.Entities.EnvironmentVariable", b =>
                 {
                     b.HasOne("WebTestUI.Backend.Data.Entities.ApplicationUser", "User")
                         .WithMany("Environments")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
 
             modelBuilder.Entity("WebTestUI.Backend.Data.Entities.History", b =>
                 {
-                    b.HasOne("WebTestUI.Backend.Data.Entities.EnvironmentConfig", "Environment")
-                        .WithMany("HistoryEntries")
-                        .HasForeignKey("EnvironmentId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
                     b.HasOne("WebTestUI.Backend.Data.Entities.Request", "Request")
                         .WithMany("HistoryEntries")
                         .HasForeignKey("RequestId")
@@ -595,9 +606,8 @@ namespace WebTestUI.Backend.Migrations
                     b.HasOne("WebTestUI.Backend.Data.Entities.ApplicationUser", "User")
                         .WithMany("HistoryEntries")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Environment");
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
 
                     b.Navigation("Request");
 
@@ -962,22 +972,15 @@ namespace WebTestUI.Backend.Migrations
                 {
                     b.HasOne("WebTestUI.Backend.Data.Entities.Collection", "Collection")
                         .WithMany("Requests")
-                        .HasForeignKey("CollectionId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("WebTestUI.Backend.Data.Entities.EnvironmentConfig", "Environment")
-                        .WithMany("Requests")
-                        .HasForeignKey("EnvironmentId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .HasForeignKey("CollectionId");
 
                     b.HasOne("WebTestUI.Backend.Data.Entities.ApplicationUser", "User")
                         .WithMany("Requests")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Collection");
-
-                    b.Navigation("Environment");
 
                     b.Navigation("User");
                 });
@@ -995,15 +998,6 @@ namespace WebTestUI.Backend.Migrations
 
             modelBuilder.Entity("WebTestUI.Backend.Data.Entities.Collection", b =>
                 {
-                    b.Navigation("Requests");
-                });
-
-            modelBuilder.Entity("WebTestUI.Backend.Data.Entities.EnvironmentConfig", b =>
-                {
-                    b.Navigation("Collections");
-
-                    b.Navigation("HistoryEntries");
-
                     b.Navigation("Requests");
                 });
 

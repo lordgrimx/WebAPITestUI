@@ -26,6 +26,7 @@ import {
   Pencil,
   ChevronDown,
   Activity,
+  Home,
 } from "lucide-react";
 import SettingsModal from "@/components/SettingsModal";
 import GenerateCodeModal from "@/components/GenerateCodeModal";
@@ -37,6 +38,8 @@ import { useSettings } from "@/lib/settings-context"; // useSettings hook'unu im
 import { useEnvironment } from "@/lib/environment-context"; // Import useEnvironment
 import { toast } from "sonner"; // Import toast for notifications
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useRequest } from "@/lib/request-context";
 
 // Accept currentRequestData prop from ApiTester
 export default function Header({ currentRequestData, openSignupModal, openLoginModal, onRequestSaved }) {
@@ -96,17 +99,20 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     try {
       const fullRequestData = {
         ...requestData,
-        method: currentRequestData?.method || 'GET',
-        url: currentRequestData?.url || '',
-        headers: currentRequestData?.headers ? JSON.stringify(currentRequestData.headers) : undefined,
-        params: currentRequestData?.params ? JSON.stringify(currentRequestData.params) : undefined,
+        method: currentRequestData?.method || "GET",
+        url: currentRequestData?.url || "",
+        headers: currentRequestData?.headers
+          ? JSON.stringify(currentRequestData.headers)
+          : undefined,
+        params: currentRequestData?.params
+          ? JSON.stringify(currentRequestData.params)
+          : undefined,
         body: currentRequestData?.body,
       };
 
-      // Call the API to save the request
-      console.log('Saving request:', fullRequestData);
+      console.log("Saving request:", fullRequestData);
     } catch (error) {
-      console.error('Failed to save request:', error);
+      console.error("Failed to save request:", error);
     }
   };
   const handleCopyLink = () => {
@@ -166,52 +172,60 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   };
 
   const handleShareToWorkspace = () => {
-    // Placeholder: Implement actual workspace sharing logic here
     console.log("Sharing to workspace (placeholder)...", currentRequestData);
-    toast.info("Share to Workspace", { description: "This feature is not yet fully implemented." });
-    // Example: You might open a modal to select users/teams,
-    // then send the currentRequestData to a backend endpoint.
+    toast.info("Share to Workspace", {
+      description: "This feature is not yet fully implemented.",
+    });
   };
 
   const handleExportRequest = () => {
     if (!currentRequestData) {
-      toast.error("Export Failed", { description: "No request data available to export." });
+      toast.error("Export Failed", {
+        description: "No request data available to export.",
+      });
       return;
     }
 
     try {
-      // Prepare data for export, ensuring headers/params are objects if they are strings
       const exportData = {
-        method: currentRequestData.method || 'GET',
-        url: currentRequestData.url || '',
-        headers: currentRequestData.headers && typeof currentRequestData.headers === 'string'
-          ? JSON.parse(currentRequestData.headers)
-          : (currentRequestData.headers || {}),
-        params: currentRequestData.params && typeof currentRequestData.params === 'string'
-          ? JSON.parse(currentRequestData.params)
-          : (currentRequestData.params || {}),
-        body: currentRequestData.body || '',
-        auth: currentRequestData.auth || { type: 'none' },
-        tests: currentRequestData.tests || { script: '', results: [] },
-        // Add any other relevant fields you want to export
+        method: currentRequestData.method || "GET",
+        url: currentRequestData.url || "",
+        headers:
+          currentRequestData.headers &&
+          typeof currentRequestData.headers === "string"
+            ? JSON.parse(currentRequestData.headers)
+            : currentRequestData.headers || {},
+        params:
+          currentRequestData.params &&
+          typeof currentRequestData.params === "string"
+            ? JSON.parse(currentRequestData.params)
+            : currentRequestData.params || {},
+        body: currentRequestData.body || "",
+        auth: currentRequestData.auth || { type: "none" },
+        tests: currentRequestData.tests || { script: "", results: [] },
       };
 
-      const jsonString = JSON.stringify(exportData, null, 2); // Pretty print JSON
+      const jsonString = JSON.stringify(exportData, null, 2);
       const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      // Suggest a filename based on the request URL or a default
-      const filename = `request-export-${exportData.url?.split('/').pop() || 'data'}.json`;
+      const filename = `request-export-${
+        exportData.url?.split("/").pop() || "data"
+      }.json`;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success("Request Exported", { description: `Request data saved as ${filename}` });
+      toast.success("Request Exported", {
+        description: `Request data saved as ${filename}`,
+      });
     } catch (error) {
-      console.error('Failed to export request:', error);
-      toast.error("Export Failed", { description: "Could not export the request data." });
+      console.error("Failed to export request:", error);
+      toast.error("Export Failed", {
+        description: "Could not export the request data.",
+      });
     }
   };
 
@@ -247,7 +261,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     );
   }
 
-  // If no user is authenticated, show the landing page header from the mock
   if (!isAuthenticated) {
     return (
       <header className="container mx-auto px-6 py-4">
@@ -263,25 +276,25 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               href="#features"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
-              {t('header.features', 'Features')}
+              Özellikler
             </a>
             <a
               href="#pricing"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
-              {t('header.pricing', 'Pricing')}
+              Fiyatlandırma
             </a>
             <a
               href="#docs"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
-              {t('header.documentation', 'Documentation')}
+              Dokümantasyon
             </a>
             <a
               href="#about"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
-              {t('header.about', 'About')}
+              Hakkında
             </a>
           </div>
 
@@ -299,13 +312,13 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               className="px-4 py-2 text-blue-600 bg-white rounded-lg font-medium hover:bg-gray-100 transition-colors"
               onClick={openLoginModal}
             >
-              {t('auth.login')}
+              Giriş Yap
             </Button>
             <Button
               className="px-4 py-2 text-white bg-blue-600 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               onClick={openSignupModal}
             >
-              {t('auth.register')}
+              Kayıt Ol
             </Button>
           </div>
         </nav>
@@ -313,7 +326,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     );
   }
 
-  // If user is authenticated, show the full app header
   return (
     <>
       <SettingsModal
@@ -334,20 +346,22 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         // Pass data from currentRequestData to the modal
         selectedMethod={currentRequestData?.method || "GET"}
         url={currentRequestData?.url || ""}
-        // Attempt to parse params if they exist and are a string, otherwise pass empty array
         parameterRows={
-          currentRequestData?.params && typeof currentRequestData.params === 'string'
+          currentRequestData?.params &&
+          typeof currentRequestData.params === "string"
             ? (() => {
                 try {
                   const parsed = JSON.parse(currentRequestData.params);
-                  // Ensure it's an array before passing
                   return Array.isArray(parsed) ? parsed : [];
                 } catch (e) {
-                  console.error("Error parsing params for GenerateCodeModal:", e);
-                  return []; // Return empty array on parsing error
+                  console.error(
+                    "Error parsing params for GenerateCodeModal:",
+                    e
+                  );
+                  return [];
                 }
               })()
-            : [] // Default to empty array if params don't exist or aren't a string
+            : []
         }
       />      <SaveRequestModal
         open={showSaveRequest}
@@ -436,7 +450,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>{t('header.environments', 'Environments')}</DropdownMenuLabel>
+              <DropdownMenuLabel>Ortamlar</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {/* Use environments from context */}
               {environments.length > 0 ? (
@@ -465,21 +479,27 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 onClick={openCreateEnvironmentModal}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                {t('header.environmentList.add', 'Add Environment')}
+                Ortam Ekle
               </Button>
             </DropdownMenuContent>
           </DropdownMenu>          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`}>
                 <Share2 className="h-4 w-4" />
-                <span>{t('header.share', 'Share')}</span>
+                <span>Paylaş</span>
                 <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleCopyLink}>{t('header.shareList.copyLink', 'Copy Link')}</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleShareToWorkspace}>{t('header.shareList.toWorkspace')}</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportRequest}>{t('header.shareList.export')}</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCopyLink}>
+                Bağlantıyı Kopyala
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareToWorkspace}>
+                Çalışma Alanına Paylaş
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportRequest}>
+                Dışa Aktar
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>          
           <Button
