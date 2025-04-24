@@ -777,6 +777,6 @@ export default function ApiTester() {
         {/* Fixed height for monitor panel */}
         
       </div>
-    </div>
+    </>
   );
 }
