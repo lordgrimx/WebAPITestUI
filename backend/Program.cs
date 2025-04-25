@@ -9,6 +9,8 @@ using WebTestUI.Backend.Data.Entities; // Add this for ApplicationUser
 using WebTestUI.Backend.Services;
 using WebTestUI.Backend.Services.Interfaces;
 using dotenv.net; // Add dotenv support
+// PostgreSQL için gerekli using direktifi
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 // Add Swashbuckle using directives if they are missing implicitly
 // using Swashbuckle.AspNetCore.SwaggerGen;
 // using Swashbuckle.AspNetCore.SwaggerUI;
@@ -25,13 +27,27 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 
-// Add DbContext
+// Add DbContext with conditional database provider
+var usePostgres = builder.Configuration.GetValue<bool>("UsePostgreSQL");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        b => b.MigrationsAssembly("WebTestUI.Backend")
-    )
-);
+{
+    if (usePostgres)
+    {
+        // Use PostgreSQL in production environment
+        options.UseNpgsql(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            b => b.MigrationsAssembly("WebTestUI.Backend")
+        );
+    }
+    else
+    {
+        // Use SQL Server in development environment
+        options.UseSqlServer(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            b => b.MigrationsAssembly("WebTestUI.Backend")
+        );
+    }
+});
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
