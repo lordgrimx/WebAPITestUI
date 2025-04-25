@@ -71,3 +71,4 @@ out/
 *.pem
 *.tsbuildinfo
 *.cache
+database

@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: webtestui-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: ConnectionStrings__DefaultConnection
+        fromService:
+          type: pserv
+          name: webtestui-db
+          envVarKey: EXTERNAL_CONNECTION_STRING
+
+  - type: pserv
+    name: webtestui-db
+    env: docker
+    dockerfilePath: ./db/Dockerfile
+    disk:
+      name: database-data
+      mountPath: /var/opt/mssql
+      sizeGB: 10
+    envVars:
+      - key: ACCEPT_EULA
+        value: Y
+      - key: SA_PASSWORD
+        value: asker123
+      - key: EXTERNAL_CONNECTION_STRING
+        value: Server=localhost;Database=WebTestUIDb;User ID=sa;Password=asker123;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=true
