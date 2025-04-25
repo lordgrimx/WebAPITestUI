@@ -66,6 +66,7 @@ client/coverage/
 dist/
 build/
 out/
+Migrations/
 
 # Misc
 *.pem
