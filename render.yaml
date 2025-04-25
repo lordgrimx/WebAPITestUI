@@ -9,11 +9,10 @@ services:
           type: pserv
           name: webtestui-db
           envVarKey: EXTERNAL_CONNECTION_STRING
-
   - type: pserv
     name: webtestui-db
     env: docker
-    dockerfilePath: ./db/Dockerfile
+    dockerfilePath: ./db/Dockerfile-render
     disk:
       name: database-data
       mountPath: /var/opt/mssql
