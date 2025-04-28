@@ -6,7 +6,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { authAxios } from "@/lib/auth-context";
+import { authAxios, useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings-context"; // Import the settings hook
 import { useTheme } from "next-themes"; // Import the theme hook
@@ -20,11 +20,14 @@ import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
 import ImportDataModal from "../ImportDataModal";
+
+
 export default function ApiTester() {
+  const { isAuthenticated } = useAuth(); // Get authentication status
   const { settings } = useSettings(); // Get settings from context
   const { currentEnvironment, environments, isEnvironmentLoading, triggerEnvironmentChange, setCurrentEnvironmentById } = useEnvironment(); // Use our environment context with all needed variables
-  const [selectedRequestId, setSelectedRequestId] = useState(null);  
-  const { setCurrentRequestData } = useRequest(); 
+  const [selectedRequestId, setSelectedRequestId] = useState(null);
+  const { setCurrentRequestData } = useRequest();
   const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
   const [error, setError] = useState(null); // General request error state
@@ -36,6 +39,10 @@ export default function ApiTester() {
   const [authToken, setAuthToken] = useState('');
   const [historyUpdated, setHistoryUpdated] = useState(0); // Add this new state
   const [environmentChangedTimestamp, setEnvironmentChangedTimestamp] = useState(Date.now()); // Add state for environment changes
+  const [collections, setCollections] = useState([]); // State for collections
+  const [history, setHistory] = useState([]); // State for history
+  const [isLoadingCollections, setIsLoadingCollections] = useState(true); // Loading state for collections
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true); // Loading state for history
   
   // Import modalı için state'ler
   const [showImportModal, setShowImportModal] = useState(false);
@@ -78,6 +85,54 @@ export default function ApiTester() {
       }
     }
   }, [searchParams, router]);
+
+  // Fetch collections on component mount
+  // Fetch collections on component mount and when authentication status changes
+  useEffect(() => {
+    const fetchCollections = async () => {
+      if (!isAuthenticated) {
+        setIsLoadingCollections(false);
+        setCollections([]); // Clear collections if not authenticated
+        return;
+      }
+      try {
+        setIsLoadingCollections(true);
+        const response = await authAxios.get('/collections');
+        setCollections(response.data);
+      } catch (error) {
+        console.error("Failed to fetch collections:", error);
+        setSidebarError("Failed to load collections."); // Use existing sidebar error state
+        toast.error("Failed to load collections", { description: error.message });
+      } finally {
+        setIsLoadingCollections(false);
+      }
+    };
+    fetchCollections();
+  }, [isAuthenticated]); // Depend on isAuthenticated
+
+  // Fetch history on component mount and when historyUpdated changes
+  // Fetch history on component mount, when historyUpdated changes, and when authentication status changes
+  useEffect(() => {
+    const fetchHistory = async () => {
+       if (!isAuthenticated) {
+        setIsLoadingHistory(false);
+        setHistory([]); // Clear history if not authenticated
+        return;
+      }
+      try {
+        setIsLoadingHistory(true);
+        const response = await authAxios.get('/history');
+        setHistory(response.data);
+      } catch (error) {
+        console.error("Failed to fetch history:", error);
+        // Decide if you want a separate error state for history or use the general one
+        toast.error("Failed to load history", { description: error.message });
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+    fetchHistory();
+  }, [historyUpdated, isAuthenticated]); // Depend on historyUpdated and isAuthenticated
 
   // Listen for environment changes to update headers and other environment-dependent data
   useEffect(() => {
@@ -708,12 +763,14 @@ export default function ApiTester() {
       console.error("Failed to import data:", error);
       toast.error("Import failed", { description: error.message });
     }
-  }, [environments, setCurrentEnvironmentById]);
+  }, [environments, setCurrentEnvironmentById, setCurrentRequestData, setCollections, setHistory]); // Add dependencies for state updates
   return (
-    <>      
+    <>
     <Header
         currentRequestData={currentRequestData}
         onRequestSaved={handleRequestSaved}
+        collections={collections} // Pass collections data
+        history={history} // Pass history data
       />
       
       <ImportDataModal

@@ -9,8 +9,6 @@ using WebTestUI.Backend.Data.Entities; // Add this for ApplicationUser
 using WebTestUI.Backend.Services;
 using WebTestUI.Backend.Services.Interfaces;
 using dotenv.net; // Add dotenv support
-// PostgreSQL için gerekli using direktifi
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 // Add Swashbuckle using directives if they are missing implicitly
 // using Swashbuckle.AspNetCore.SwaggerGen;
 // using Swashbuckle.AspNetCore.SwaggerUI;
@@ -27,27 +25,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 
-// Add DbContext with conditional database provider
-var usePostgres = builder.Configuration.GetValue<bool>("UsePostgreSQL");
+// Add DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    if (usePostgres)
-    {
-        // Use PostgreSQL in production environment
-        options.UseNpgsql(
-            builder.Configuration.GetConnectionString("DefaultConnection"),
-            b => b.MigrationsAssembly("WebTestUI.Backend")
-        );
-    }
-    else
-    {
-        // Use SQL Server in development environment
-        options.UseSqlServer(
-            builder.Configuration.GetConnectionString("DefaultConnection"),
-            b => b.MigrationsAssembly("WebTestUI.Backend")
-        );
-    }
-});
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        b => b.MigrationsAssembly("WebTestUI.Backend")
+    )
+);
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -135,6 +119,7 @@ builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IK6TestService, K6TestService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ISharedDataService, SharedDataService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();

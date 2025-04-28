@@ -25,6 +25,10 @@ export default function ImportDataModal({
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("request");
 
+  console.log("ImportDataModal received importData:", importData);
+  console.log("ImportDataModal received collections:", importData?.collections);
+  console.log("ImportDataModal received history:", importData?.history);
+
   const handleConfirmImport = () => {
     try {
       onImportConfirm(importData);
@@ -60,11 +64,21 @@ export default function ImportDataModal({
         <Tabs defaultValue="request" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="w-full">
             <TabsTrigger value="request" className="flex-1">
-              {t("import.request", "Request")} 
+              {t("import.request", "Request")}
             </TabsTrigger>
             {importData?.environment && (
               <TabsTrigger value="environment" className="flex-1">
                 {t("import.environment", "Environment")}
+              </TabsTrigger>
+            )}
+            {importData?.collections && importData.collections.length > 0 && (
+              <TabsTrigger value="collections" className="flex-1">
+                {t("import.collections", "Collections")}
+              </TabsTrigger>
+            )}
+            {importData?.history && importData.history.length > 0 && (
+              <TabsTrigger value="history" className="flex-1">
+                {t("import.history", "History")}
               </TabsTrigger>
             )}
           </TabsList>
@@ -159,10 +173,32 @@ export default function ImportDataModal({
                 )}
               </div>
             </TabsContent>
-          )}
-        </Tabs>
+         )}
 
-        <DialogFooter>
+         {importData?.collections && importData.collections.length > 0 && (
+           <TabsContent value="collections" className="border rounded-md p-4 mt-4 max-h-[400px] overflow-y-auto">
+             <div>
+               <h3 className="text-base font-semibold mb-2">{t("import.collections", "Collections")}</h3>
+               <pre className={`text-xs p-3 rounded overflow-x-auto ${darkMode ? "bg-gray-900" : "bg-gray-100"}`}>
+                 {formatJson(importData.collections)}
+               </pre>
+             </div>
+           </TabsContent>
+         )}
+
+         {importData?.history && importData.history.length > 0 && (
+           <TabsContent value="history" className="border rounded-md p-4 mt-4 max-h-[400px] overflow-y-auto">
+             <div>
+               <h3 className="text-base font-semibold mb-2">{t("import.history", "History")}</h3>
+               <pre className={`text-xs p-3 rounded overflow-x-auto ${darkMode ? "bg-gray-900" : "bg-gray-100"}`}>
+                 {formatJson(importData.history)}
+               </pre>
+             </div>
+           </TabsContent>
+         )}
+       </Tabs>
+
+       <DialogFooter>
           <Button
             variant="outline"
             onClick={() => setOpen(false)}

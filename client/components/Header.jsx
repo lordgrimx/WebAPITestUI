@@ -1,5 +1,5 @@
-"use client";
-
+"use client"
+import { authAxios } from "@/lib/auth-context";
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,7 @@ import { useRouter } from "next/navigation";
 import { useRequest } from "@/lib/request-context";
 
 // Accept currentRequestData prop from ApiTester
-export default function Header({ currentRequestData, openSignupModal, openLoginModal, onRequestSaved }) {
+export default function Header({ currentRequestData, openSignupModal, openLoginModal, onRequestSaved, collections, history }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
@@ -114,59 +114,170 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     } catch (error) {
       console.error("Failed to save request:", error);
     }
-  };
-  const handleCopyLink = () => {
+  };  const handleCopyLink = async () => { // Make the function async
     try {
-      // Gerekli verileri toplayalım
+      // Format data according to SwaggerUI example - using lowercase property names
       const exportData = {
-        // Request verileri
+        // Request property must match RequestDto structure with lowercase first letter
         request: {
+          id: currentRequestData?.id || 0,
+          userId: currentRequestData?.userId || "string",
+          collectionId: currentRequestData?.collectionId || 0,
+          collectionName: currentRequestData?.collectionName || "string",
+          name: currentRequestData?.name || 'Shared Request',
+          description: currentRequestData?.description || "string",
           method: currentRequestData?.method || 'GET',
-          url: currentRequestData?.url || '',
-          headers: currentRequestData?.headers && typeof currentRequestData.headers === 'string'
-            ? JSON.parse(currentRequestData.headers)
-            : (currentRequestData.headers || {}),
-          params: currentRequestData?.params && typeof currentRequestData.params === 'string'
-            ? JSON.parse(currentRequestData.params)
-            : (currentRequestData.params || {}),
-          body: currentRequestData?.body || '',
-          auth: currentRequestData?.auth || { type: 'none' },
-          tests: currentRequestData?.tests || { script: '', results: [] },
-        },
-        // Environment bilgileri
+          url: currentRequestData?.url || 'string',          // Convert headers array to Dictionary<string, string> format as expected by the backend
+          headers: currentRequestData?.headers
+            ? (() => {
+                // Convert from array of {id, key, value, enabled} to key-value pairs
+                let headersDict = {};
+                const headersArray = typeof currentRequestData.headers === 'string' 
+                  ? JSON.parse(currentRequestData.headers) 
+                  : currentRequestData.headers;
+                
+                if (Array.isArray(headersArray)) {
+                  headersArray.forEach(header => {
+                    if (header.enabled !== false) { // Only include enabled headers or those without the 'enabled' property
+                      headersDict[header.key] = header.value;
+                    }
+                  });
+                  return headersDict;
+                } else {
+                  // If already in object format, return as is
+                  return headersArray;
+                }
+              })()
+            : {},
+          authType: currentRequestData?.auth?.type || 'none',
+          // authConfig should be a string according to the Swagger example
+          authConfig: currentRequestData?.auth?.type === 'none'
+            ? null // Set authConfig to null when authType is 'none'
+            : (currentRequestData?.auth?.config
+                ? (typeof currentRequestData.auth.config === 'string'
+                    ? currentRequestData.auth.config
+                    : JSON.stringify(currentRequestData.auth.config))
+                : null), // Also set to null if authConfig is missing and authType is not 'none'
+          // Convert params to Dictionary<string, string> if it's an array
+          params: currentRequestData?.params
+            ? (() => {
+                const paramsData = typeof currentRequestData.params === 'string' 
+                  ? JSON.parse(currentRequestData.params) 
+                  : currentRequestData.params;
+                
+                // If it's an array, convert it to a dictionary
+                if (Array.isArray(paramsData)) {
+                  let paramsDict = {};
+                  paramsData.forEach(param => {
+                    if (param.enabled !== false) {
+                      paramsDict[param.key] = param.value;
+                    }
+                  });
+                  return paramsDict;
+                } else {
+                  // If already in object format, return as is
+                  return paramsData;
+                }
+              })()
+            : {},
+          body: currentRequestData?.body || "string",
+          // Tests should be a string
+          tests: currentRequestData?.tests 
+            ? (typeof currentRequestData.tests === 'string' 
+                ? currentRequestData.tests 
+                : JSON.stringify(currentRequestData.tests)) 
+            : '{}',
+          isFavorite: currentRequestData?.isFavorite || false,
+          createdAt: currentRequestData?.createdAt || new Date().toISOString(),
+          updatedAt: currentRequestData?.updatedAt || new Date().toISOString(),
+        },          // Environment must match EnvironmentDto structure with lowercase first letter
         environment: currentEnvironment ? {
           id: currentEnvironment.id,
           name: currentEnvironment.name,
-          variables: currentEnvironment.variables,
-          description: currentEnvironment.description,
+          isActive: currentEnvironment.isActive || true,
+          // Ensure variables is a Dictionary<string, string>
+          variables: (() => {
+            // Handle different formats of variables
+            if (currentEnvironment.variables) {
+              // If variables is already an object and not an array, use it
+              if (typeof currentEnvironment.variables === 'object' && !Array.isArray(currentEnvironment.variables)) {
+                return currentEnvironment.variables;
+              } 
+              // If it's a string, try parsing it
+              else if (typeof currentEnvironment.variables === 'string') {
+                try {
+                  return JSON.parse(currentEnvironment.variables);
+                } catch (e) {
+                  console.error('Error parsing environment variables:', e);
+                  return {};
+                }
+              }
+              // If it's an array, convert it to dictionary
+              else if (Array.isArray(currentEnvironment.variables)) {
+                const varDict = {};
+                currentEnvironment.variables.forEach(v => {
+                  varDict[v.key || v.name] = v.value;
+                });
+                return varDict;
+              }
+            }
+            return {};
+          })(),
+          createdAt: currentEnvironment.createdAt || new Date().toISOString(),
+          updatedAt: currentEnvironment.updatedAt || new Date().toISOString()
         } : null,
+        // Match the expected structure with uppercase property names and include all properties
+        Request: null, // Assuming Request is not needed for this export, set to null
+        Environment: null, // Assuming Environment is not needed for this export, set to null
+        Collections: collections || [],
+        History: history ? history.map(item => ({
+          Method: item.method,
+          Url: item.url,
+          RequestName: item.requestName || '', // Provide empty string as default
+          RequestHeaders: item.requestHeaders,
+          RequestBody: item.requestBody,
+        })) : []
       };
+      console.log('Sending data to backend:', JSON.stringify(exportData));
+        // For debugging - to see exactly what we're sending to the backend
+      console.log('Sending data to backend (formatted):', JSON.stringify(exportData));
+      
+      let shareId;
 
-      // Veriyi base64 formatına çevirelim
-      const jsonString = JSON.stringify(exportData);
-      const encodedData = btoa(encodeURIComponent(jsonString));
+      try {
+        // Send data to backend and get shareId
+        const response = await authAxios.post('/SharedData', exportData);
+        shareId = response.data.shareId;
+
+        if (!shareId) {
+          throw new Error("Backend did not return a share ID.");
+        }
+      } catch (error) {
+        console.error('Error details:', error.response?.data);
+        throw error;
+      }
       
-      // URL oluşturma
+      // Create shareable URL
       const baseUrl = window.location.origin + window.location.pathname;
-      const shareUrl = `${baseUrl}?importData=${encodedData}`;
+      const shareUrl = `${baseUrl}?shareId=${shareId}`;
       
-      // URL'i kopyalama
+      // Copy URL to clipboard
       navigator.clipboard.writeText(shareUrl)
         .then(() => {
-          toast.success("Link Copied!", { 
-            description: "Shareable link with request details copied to clipboard." 
+          toast.success("Share Link Generated!", {
+            description: "Shareable link copied to clipboard."
           });
         })
         .catch(err => {
           console.error('Failed to copy link: ', err);
-          toast.error("Copy Failed", { 
-            description: "Could not copy the link to the clipboard." 
+          toast.error("Copy Failed", {
+            description: "Could not copy the share link to the clipboard."
           });
         });
     } catch (error) {
       console.error('Failed to generate shareable link:', error);
-      toast.error("Generation Failed", { 
-        description: "Could not generate a shareable link." 
+      toast.error("Generation Failed", {
+        description: "Could not generate a shareable link. " + (error.response?.data?.message || error.message)
       });
     }
   };
