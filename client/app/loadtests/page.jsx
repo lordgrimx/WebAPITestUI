@@ -35,7 +35,8 @@ import {
   XCircleIcon,
   HelpCircleIcon,
   CheckCheckIcon,
-  ActivityIcon
+  ActivityIcon,
+  Square
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Progress } from "@/components/ui/progress";
@@ -55,6 +56,14 @@ function MetricItem({ label, value }) {
 
 const executeK6Test = async (testId) => {
   const response = await authAxios.post(`/K6Test/${testId}/execute`);
+  return response.data;
+};
+
+const stopK6Test = async (runId) => {
+  console.log("Stopping test with runId:", runId);
+  const response = await authAxios.post(`/K6/stop/${runId}`);
+  console.log("Stop test response:", response.data);
+  
   return response.data;
 };
 
@@ -79,6 +88,7 @@ export default function LoadTestsPage() {
   const [k6Tests, setK6Tests] = useState([]);
   const [selectedTest, setSelectedTest] = useState(null);
   const [isRunning, setIsRunning] = useState({});
+  const [isStopping, setIsStopping] = useState({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // Translation map güncelleme
@@ -87,7 +97,8 @@ export default function LoadTestsPage() {
     pending: "Beklemede",
     running: "Çalışıyor",
     completed: "Tamamlandı",
-    failed: "Başarısız"
+    failed: "Başarısız",
+    stopping: "Durduruluyor"
   };
 
   // Testleri backend'den çekme
@@ -124,6 +135,11 @@ export default function LoadTestsPage() {
     };
 
     fetchTests();
+
+    const pollInterval = setInterval(fetchTests, 5000);
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(pollInterval);
   }, []);
 
   const handleRunTest = async (testId) => {
@@ -153,6 +169,22 @@ export default function LoadTestsPage() {
         script: testInfo.script,
         options: k6Options
       });
+
+      console.log();
+      
+      
+      // K6/run endpoint'inden dönen runId'yi sakla
+      const runId = response.data.runId || response.data.testId;
+      console.log("K6 test started with runId:", runId);
+      console.log("K6 test started with testId:", testId);
+      
+      // Test ID'sini güncelle - bu ID'yi durdurma işlemi için kullanacağız
+      setK6Tests(prevTests => prevTests.map(t => {
+        if (t.id === testId) {
+          return { ...t, runId: runId, status: "running" };
+        }
+        return t;
+      }));
 
       const results = response.data;
       console.log("Test results:", results);
@@ -320,6 +352,56 @@ export default function LoadTestsPage() {
       });
     } finally {
       setIsRunning(prev => ({ ...prev, [testId]: false }));
+    }
+  };
+
+  const handleStopTest = async (testId) => {
+    try {
+      setIsStopping(prev => ({ ...prev, [testId]: true }));
+      
+      // Update UI immediately for better user experience
+      setK6Tests(prevTests => prevTests.map(t => {
+        if (t.id === testId) {
+          return {
+            ...t,
+            status: "stopping"
+          };
+        }
+        return t;
+      }));
+      
+      toast.info("Test durduruluyor", { description: "Lütfen bekleyin..." });
+      
+      // Doğru test ID'sini bul - runId varsa onu kullan, yoksa normal id'yi kullan
+      const test = k6Tests.find(t => t.id === testId);
+      const runIdToStop = test?.runId;
+      
+      if (!runIdToStop) {
+        console.error("RunId bulunamadı, test durdurulamıyor");
+        toast.error("Test durdurulamadı", { 
+          description: "Test çalıştırma ID'si bulunamadı. Test zaten tamamlanmış olabilir."
+        });
+        setIsStopping(prev => ({ ...prev, [testId]: false }));
+        return;
+      }
+      
+      console.log("Stopping test with runId:", runIdToStop);
+      
+      // Call backend to stop the test with the correct runId
+      await stopK6Test(runIdToStop);
+      
+      // Refresh tests to get the updated status
+      const response = await authAxios.get('/K6Test');
+      setK6Tests(response.data);
+      
+      toast.success("Test durduruldu");
+    } catch (error) {
+      console.error("Test durdurma hatası", error);
+      toast.error("Test durdurma başarısız", {
+        description: error.response?.data?.message || error.message
+      });
+    } finally {
+      setIsStopping(prev => ({ ...prev, [testId]: false }));
     }
   };
 
@@ -506,12 +588,39 @@ export default function LoadTestsPage() {
                       </Button>
                     </>
                   )}
-                  {test.status === 'running' && !isRunning[test.id] && (
+                  {test.status === 'running' && (
+                    <>
+                      <Button
+                        onClick={() => handleStopTest(test.id)}
+                        disabled={isStopping[test.id]}
+                        className="flex-1 bg-rose-600 hover:bg-rose-700 text-white"
+                      >
+                        {isStopping[test.id] ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Durduruluyor
+                          </>
+                        ) : (
+                          <>
+                            <Square className="h-4 w-4 mr-2" /> Testi Durdur
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleDeleteTest(test.id)}
+                        className="bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-600 hover:text-rose-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+
+                  {test.status === 'stopping' && (
                     <Button
                       disabled
-                      className="flex-1 bg-blue-500 text-white"
+                      className="flex-1 bg-purple-500 text-white"
                     >
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Çalışıyor
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Durduruluyor
                     </Button>
                   )}
                 </div>
