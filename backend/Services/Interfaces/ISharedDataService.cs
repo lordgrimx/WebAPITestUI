@@ -6,5 +6,6 @@ namespace WebTestUI.Backend.Services.Interfaces
     {
         Task<string> SaveSharedDataAsync(SharedDataDto data);
         Task<SharedDataDto?> GetSharedDataAsync(string shareId);
+        Task AssociateSharedDataWithUserAsync(string userId, SharedDataDto data); // New method
     }
 }

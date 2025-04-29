@@ -17,6 +17,7 @@ namespace WebTestUI.Backend.Data
         public DbSet<History> HistoryEntries { get; set; }
         public DbSet<EnvironmentConfig> Environments { get; set; }
         public DbSet<K6Test> K6Tests { get; set; }
+        public DbSet<SharedData> SharedData { get; set; } // Add DbSet for SharedData
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

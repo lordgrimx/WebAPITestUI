@@ -10,7 +10,8 @@ namespace WebTestUI.Backend.DTOs
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
         public int? EnvironmentId { get; set; }
-        public int RequestCount { get; set; }
+        public int RequestCount { get; set; } // This might become redundant or calculated differently
+        public List<RequestDto> Requests { get; set; } = new List<RequestDto>(); // Add list for requests
     }
 
     public class CreateCollectionDto
