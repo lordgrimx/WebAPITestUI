@@ -7,8 +7,60 @@ import { Button } from '../ui/button';
 import { toast } from 'react-toastify';
 import { authAxios, useAuth } from '@/lib/auth-context'; // Import useAuth
 import Link from 'next/link';
-import { ArrowLeft, Badge } from 'lucide-react';
+import { ArrowLeft, Badge, ChevronsUpDown, Check } from 'lucide-react';
 import { useTheme } from 'next-themes'; // Import useTheme from next-themes
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// HTTP Method renkleri ve Badge variantları (CollectionsSidebar.jsx'ten kopyalandı)
+const methodStyles = {
+  GET:    {
+    variant: "default",
+    className: "text-blue-800 hover:bg-blue-200 border-blue-300 object-fit",
+    darkClassName: "text-blue-100 hover:bg-blue-800 border-blue-700"
+  },
+  POST:   {
+    variant: "default",
+    className: "text-green-800 hover:bg-green-200 border-green-300",
+    darkClassName: "text-green-100 hover:bg-green-800 border-green-700"
+  },
+  PUT:    {
+    variant: "default",
+    className: "text-yellow-800 hover:bg-yellow-200 border-yellow-300",
+    darkClassName: "text-yellow-100 hover:bg-yellow-800 border-yellow-700"
+  },
+  DELETE: {
+    variant: "destructive",
+    className: "text-red-800 hover:bg-red-200 border-red-300",
+    darkClassName: "text-red-100 hover:bg-red-800 border-red-700"
+  },
+  PATCH:  {
+    variant: "default",
+    className: "text-purple-800 hover:bg-purple-200 border-purple-300",
+    darkClassName: "text-purple-100 hover:bg-purple-800 border-purple-700"
+  },
+  OPTIONS:{
+    variant: "secondary",
+    className: "text-gray-800 hover:bg-gray-200 border-gray-300",
+    darkClassName: "text-gray-100 hover:bg-gray-600 border-gray-500"
+  },
+  HEAD:   {
+    variant: "secondary",
+    className: "text-pink-800 hover:bg-pink-200 border-pink-300",
+    darkClassName: "text-pink-100 hover:bg-pink-800 border-pink-700"
+  },
+  DEFAULT:{
+    variant: "secondary",
+    className: "text-gray-800 hover:bg-gray-200 border-gray-300",
+    darkClassName: "text-gray-100 hover:bg-gray-600 border-gray-500"
+  },
+};
+
+const getMethodStyle = (method, currentTheme) => {
+  const style = methodStyles[method.toUpperCase()] || methodStyles.DEFAULT;
+  // Return the appropriate class based on the current theme
+  return currentTheme === 'dark' ? style.darkClassName : style.className;
+};
+
 
 // Add this helper function at the top of the file
 const getPathFromUrl = (urlString) => {
@@ -110,6 +162,7 @@ const MonitoringDashboard = () => {
   };
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState(null); // Add state for selected environment ID
   const timeList = ['30s', '1m', '5m', '10m'];
   const [refreshRate, setRefreshRate] = useState(timeList[0]); // Default to 30s
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,15 +202,25 @@ const MonitoringDashboard = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Fetch collections
-        const collectionsResponse = await authAxios.get('/collections');
+        // Read currentEnvironmentId from localStorage
+        const currentEnvironmentId = typeof window !== 'undefined' ? localStorage.getItem('currentEnvironmentId') : null;
+
+        // Fetch collections including environment name, filtered by currentEnvironmentId
+        const collectionsResponse = await authAxios.get('/collections', {
+          params: {
+            currentEnvironmentId: currentEnvironmentId // Include current environment ID from localStorage
+          }
+        });
         if (collectionsResponse.data) {
           setCollections(collectionsResponse.data);
         }
 
-        // Fetch history with limit
+        // Fetch history with limit and environment filter
         const historyResponse = await authAxios.get('/history', {
-          params: { limit: 50 }
+          params: {
+            limit: 50,
+            currentEnvironmentId: selectedEnvironmentId || currentEnvironmentId // Include selected environment ID or current environment ID from localStorage
+          }
         });
         if (historyResponse.data) {
           setHistory(historyResponse.data);
@@ -185,7 +248,7 @@ const MonitoringDashboard = () => {
 
     const interval = setInterval(fetchData, getRefreshInterval());
     return () => clearInterval(interval);
-  }, [refreshRate]);
+  }, [refreshRate, selectedEnvironmentId]); // Add selectedEnvironmentId to dependency array
 
   // Transform history data for requests table
   const requests = useMemo(() => 
@@ -231,6 +294,7 @@ const MonitoringDashboard = () => {
     
     console.log("Selected collection:", selected, "from ID:", collectionId);
     setSelectedProject(selected || null);
+    setSelectedEnvironmentId(selected?.EnvironmentId || null); // Store selected environment ID
     setSelectedEndpoint(null); // Reset selected endpoint when changing collection
   };
 
@@ -513,20 +577,43 @@ const MonitoringDashboard = () => {
             >
               <i className={`fas ${sidebarCollapsed ? 'fa-bars' : 'fa-times'} text-lg`}></i>
             </button>
-            
-            <div className="relative">
-              <select
-                className="bg-input rounded-md px-3 py-2 text-sm text-foreground"
+              <div className="relative">
+              <Select
                 value={selectedProject?.id || selectedProject?._id || ''}
-                onChange={(e) => handleProjectSelect(e.target.value)}
+                onValueChange={handleProjectSelect}
               >
-                <option value="">Koleksiyon Seçin</option>
-                {collections?.map(collection => (
-                  <option key={collection.id || collection._id} value={collection.id || collection._id}>
-                    {collection.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-[180px] bg-input text-foreground border border-border rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-1">
+                  <SelectValue placeholder="Koleksiyon Seçin" />
+                  <ChevronsUpDown className="h-4 w-4 ml-auto opacity-70" />
+                </SelectTrigger>
+                <SelectContent 
+                  className="bg-input border border-border shadow-md rounded-md overflow-hidden w-[180px]" 
+                  sideOffset={5} 
+                  align="end"
+                  position="popper"
+                >
+                  <SelectGroup>
+                    {collections && collections.length > 0 ? (
+                      collections.map(collection => (
+                        <SelectItem 
+                          key={collection.id || collection._id} 
+                          value={collection.id || collection._id}
+                          className="border w-full border-border rounded-md hover:bg-accent hover:text-accent-foreground"
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>{collection.name}{collection.EnvironmentName ? ` - ${collection.EnvironmentName}` : ''}</span> {/* Display collection name and environment name */}
+                            {((selectedProject?.id || selectedProject?._id) === (collection.id || collection._id)) && (
+                              <Check className="h-4 w-4 ml-2 text-primary" />
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-2 text-sm text-muted-foreground">Koleksiyon bulunamadı</div>
+                    )}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
             
             <div className="flex items-center bg-green-500 px-2 py-1 rounded-full text-xs text-white"> {/* Bağlantı durumu için sabit renk */}
@@ -546,11 +633,13 @@ const MonitoringDashboard = () => {
             <i className="fas fa-search absolute left-3 top-2.5 text-muted-foreground"></i>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <button className="flex items-center bg-input hover:bg-accent rounded-md px-3 py-2 text-sm cursor-pointer !rounded-button whitespace-nowrap text-foreground">
-                <span onClick={()=> handleRefreshRateChangeToggle()}>Yenileme: {refreshRate}</span>
-                <i className="fas fa-chevron-down ml-2 text-muted-foreground text-xs"></i>
+          <div className="flex items-center space-x-4">            <div className="relative">
+              <button 
+                onClick={()=> handleRefreshRateChangeToggle()} 
+                className="flex items-center justify-between w-[150px] bg-input hover:bg-accent/80 rounded-md px-3 py-2 text-sm cursor-pointer text-foreground border border-border focus:ring-2 focus:ring-primary focus:ring-offset-1"
+              >
+                <span>Yenileme: {refreshRate}</span>
+                <ChevronsUpDown className="h-4 w-4 opacity-70" />
               </button>
             </div>
             
@@ -695,9 +784,15 @@ const MonitoringDashboard = () => {
                   <tr key={request.id} className="hover:bg-accent">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{request.timestamp}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                      <Badge variant="secondary">
-                        {request.method}
-                      </Badge>
+                      <div className="relative inline-block">
+                        <Badge
+                          variant="secondary"
+                          className={`w-14 h-14 flex-shrink-0 ${getMethodStyle(request.method, theme)}`}
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          {request.method.toUpperCase()}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{request.endpoint}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
