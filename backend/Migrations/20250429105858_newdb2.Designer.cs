@@ -12,8 +12,8 @@ using WebTestUI.Backend.Data;
 namespace WebTestUI.Backend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250417103213_K6TestColumnUpdates")]
-    partial class K6TestColumnUpdates
+    [Migration("20250429105858_newdb2")]
+    partial class newdb2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -612,6 +612,360 @@ namespace WebTestUI.Backend.Migrations
                     b.Navigation("Request");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("WebTestUI.Backend.Data.Entities.K6Test", b =>
+                {
+                    b.OwnsOne("WebTestUI.Backend.Data.Entities.K6TestError", "ErrorDetails", b1 =>
+                        {
+                            b1.Property<Guid>("K6TestId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("Code")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Message")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Stack")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.HasKey("K6TestId");
+
+                            b1.ToTable("K6Tests");
+
+                            b1.WithOwner()
+                                .HasForeignKey("K6TestId");
+                        });
+
+                    b.OwnsMany("WebTestUI.Backend.Data.Entities.K6TestLog", "Logs", b1 =>
+                        {
+                            b1.Property<Guid>("K6TestId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("int");
+
+                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
+
+                            b1.Property<string>("Data")
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Level")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("Message")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<long>("Timestamp")
+                                .HasColumnType("bigint");
+
+                            b1.HasKey("K6TestId", "Id");
+
+                            b1.ToTable("K6TestLog");
+
+                            b1.WithOwner()
+                                .HasForeignKey("K6TestId");
+
+                            b1.OwnsOne("WebTestUI.Backend.Data.Entities.K6TestError", "Error", b2 =>
+                                {
+                                    b2.Property<Guid>("K6TestLogK6TestId")
+                                        .HasColumnType("uniqueidentifier");
+
+                                    b2.Property<int>("K6TestLogId")
+                                        .HasColumnType("int");
+
+                                    b2.Property<string>("Code")
+                                        .HasColumnType("nvarchar(max)");
+
+                                    b2.Property<string>("Message")
+                                        .IsRequired()
+                                        .HasColumnType("nvarchar(max)");
+
+                                    b2.Property<string>("Name")
+                                        .IsRequired()
+                                        .HasColumnType("nvarchar(max)");
+
+                                    b2.Property<string>("Stack")
+                                        .HasColumnType("nvarchar(max)");
+
+                                    b2.HasKey("K6TestLogK6TestId", "K6TestLogId");
+
+                                    b2.ToTable("K6TestLog");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("K6TestLogK6TestId", "K6TestLogId");
+                                });
+
+                            b1.Navigation("Error");
+                        });
+
+                    b.OwnsOne("WebTestUI.Backend.Data.Entities.K6TestOptions", "Options", b1 =>
+                        {
+                            b1.Property<Guid>("K6TestId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("Duration")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<int>("Vus")
+                                .HasColumnType("int");
+
+                            b1.HasKey("K6TestId");
+
+                            b1.ToTable("K6Tests");
+
+                            b1.WithOwner()
+                                .HasForeignKey("K6TestId");
+                        });
+
+                    b.OwnsOne("WebTestUI.Backend.Data.Entities.K6TestResults", "Results", b1 =>
+                        {
+                            b1.Property<Guid>("K6TestId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<double>("AverageResponseTime")
+                                .HasColumnType("float")
+                                .HasAnnotation("Relational:JsonPropertyName", "averageResponseTime");
+
+                            b1.Property<string>("Duration")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)")
+                                .HasAnnotation("Relational:JsonPropertyName", "duration");
+
+                            b1.Property<double>("FailureRate")
+                                .HasColumnType("float")
+                                .HasAnnotation("Relational:JsonPropertyName", "failureRate");
+
+                            b1.Property<double>("P95ResponseTime")
+                                .HasColumnType("float")
+                                .HasAnnotation("Relational:JsonPropertyName", "p95ResponseTime");
+
+                            b1.Property<double>("RequestsPerSecond")
+                                .HasColumnType("float")
+                                .HasAnnotation("Relational:JsonPropertyName", "requestsPerSecond");
+
+                            b1.Property<long>("Timestamp")
+                                .HasColumnType("bigint")
+                                .HasAnnotation("Relational:JsonPropertyName", "timestamp");
+
+                            b1.Property<int>("Vus")
+                                .HasColumnType("int")
+                                .HasAnnotation("Relational:JsonPropertyName", "vus");
+
+                            b1.HasKey("K6TestId");
+
+                            b1.ToTable("K6Tests");
+
+                            b1.WithOwner()
+                                .HasForeignKey("K6TestId");
+
+                            b1.OwnsOne("WebTestUI.Backend.Data.Entities.K6TestDetailedMetrics", "DetailedMetrics", b2 =>
+                                {
+                                    b2.Property<Guid>("K6TestResultsK6TestId")
+                                        .HasColumnType("uniqueidentifier");
+
+                                    b2.Property<double>("ChecksRate")
+                                        .HasColumnType("float")
+                                        .HasAnnotation("Relational:JsonPropertyName", "checksRate");
+
+                                    b2.Property<string>("DataReceived")
+                                        .IsRequired()
+                                        .HasColumnType("nvarchar(max)")
+                                        .HasAnnotation("Relational:JsonPropertyName", "dataReceived");
+
+                                    b2.Property<string>("DataSent")
+                                        .IsRequired()
+                                        .HasColumnType("nvarchar(max)")
+                                        .HasAnnotation("Relational:JsonPropertyName", "dataSent");
+
+                                    b2.Property<double>("HttpReqFailed")
+                                        .HasColumnType("float")
+                                        .HasAnnotation("Relational:JsonPropertyName", "httpReqFailed");
+
+                                    b2.Property<double>("HttpReqRate")
+                                        .HasColumnType("float")
+                                        .HasAnnotation("Relational:JsonPropertyName", "httpReqRate");
+
+                                    b2.Property<int>("Iterations")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "iterations");
+
+                                    b2.Property<double>("SuccessRate")
+                                        .HasColumnType("float")
+                                        .HasAnnotation("Relational:JsonPropertyName", "successRate");
+
+                                    b2.HasKey("K6TestResultsK6TestId");
+
+                                    b2.ToTable("K6Tests");
+
+                                    b2.HasAnnotation("Relational:JsonPropertyName", "detailedMetrics");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("K6TestResultsK6TestId");
+
+                                    b2.OwnsOne("WebTestUI.Backend.Data.Entities.HttpReqDurationMetrics", "HttpReqDuration", b3 =>
+                                        {
+                                            b3.Property<Guid>("K6TestDetailedMetricsK6TestResultsK6TestId")
+                                                .HasColumnType("uniqueidentifier");
+
+                                            b3.Property<double>("Avg")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "avg");
+
+                                            b3.Property<double>("Max")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "max");
+
+                                            b3.Property<double>("Med")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "med");
+
+                                            b3.Property<double>("Min")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "min");
+
+                                            b3.Property<double>("P90")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "p90");
+
+                                            b3.Property<double>("P95")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "p95");
+
+                                            b3.HasKey("K6TestDetailedMetricsK6TestResultsK6TestId");
+
+                                            b3.ToTable("K6Tests");
+
+                                            b3.HasAnnotation("Relational:JsonPropertyName", "httpReqDuration");
+
+                                            b3.WithOwner()
+                                                .HasForeignKey("K6TestDetailedMetricsK6TestResultsK6TestId");
+                                        });
+
+                                    b2.OwnsOne("WebTestUI.Backend.Data.Entities.IterationDurationMetrics", "IterationDuration", b3 =>
+                                        {
+                                            b3.Property<Guid>("K6TestDetailedMetricsK6TestResultsK6TestId")
+                                                .HasColumnType("uniqueidentifier");
+
+                                            b3.Property<double>("Avg")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "avg");
+
+                                            b3.Property<double>("Max")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "max");
+
+                                            b3.Property<double>("Med")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "med");
+
+                                            b3.Property<double>("Min")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "min");
+
+                                            b3.Property<double>("P90")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "p90");
+
+                                            b3.Property<double>("P95")
+                                                .HasColumnType("float")
+                                                .HasAnnotation("Relational:JsonPropertyName", "p95");
+
+                                            b3.HasKey("K6TestDetailedMetricsK6TestResultsK6TestId");
+
+                                            b3.ToTable("K6Tests");
+
+                                            b3.HasAnnotation("Relational:JsonPropertyName", "iterationDuration");
+
+                                            b3.WithOwner()
+                                                .HasForeignKey("K6TestDetailedMetricsK6TestResultsK6TestId");
+                                        });
+
+                                    b2.Navigation("HttpReqDuration")
+                                        .IsRequired();
+
+                                    b2.Navigation("IterationDuration")
+                                        .IsRequired();
+                                });
+
+                            b1.OwnsOne("WebTestUI.Backend.Data.Entities.StatusCodeMetrics", "StatusCodes", b2 =>
+                                {
+                                    b2.Property<Guid>("K6TestResultsK6TestId")
+                                        .HasColumnType("uniqueidentifier");
+
+                                    b2.Property<int>("Other")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "other");
+
+                                    b2.Property<int>("Status200")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "status_200");
+
+                                    b2.Property<int>("Status201")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "status_201");
+
+                                    b2.Property<int>("Status204")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "status_204");
+
+                                    b2.Property<int>("Status400")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "status_400");
+
+                                    b2.Property<int>("Status401")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "status_401");
+
+                                    b2.Property<int>("Status403")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "status_403");
+
+                                    b2.Property<int>("Status404")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "status_404");
+
+                                    b2.Property<int>("Status415")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "status_415");
+
+                                    b2.Property<int>("Status500")
+                                        .HasColumnType("int")
+                                        .HasAnnotation("Relational:JsonPropertyName", "status_500");
+
+                                    b2.HasKey("K6TestResultsK6TestId");
+
+                                    b2.ToTable("K6Tests");
+
+                                    b2.HasAnnotation("Relational:JsonPropertyName", "statusCodes");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("K6TestResultsK6TestId");
+                                });
+
+                            b1.Navigation("DetailedMetrics");
+
+                            b1.Navigation("StatusCodes")
+                                .IsRequired();
+                        });
+
+                    b.Navigation("ErrorDetails");
+
+                    b.Navigation("Logs");
+
+                    b.Navigation("Options");
+
+                    b.Navigation("Results");
                 });
 
             modelBuilder.Entity("WebTestUI.Backend.Data.Entities.Request", b =>

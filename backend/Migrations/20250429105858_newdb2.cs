@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace WebTestUI.Backend.Migrations
 {
     /// <inheritdoc />
-    public partial class AddUserFieldsAgain : Migration
+    public partial class newdb2 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -80,8 +80,50 @@ namespace WebTestUI.Backend.Migrations
                     Script = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     AuthType = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AuthToken = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Options_Vus = table.Column<int>(type: "int", nullable: true),
+                    Options_Duration = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ErrorDetails_Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ErrorDetails_Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ErrorDetails_Stack = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ErrorDetails_Code = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RequestId = table.Column<int>(type: "int", nullable: true),
                     Status = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Results_Vus = table.Column<int>(type: "int", nullable: true),
+                    Results_Duration = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Results_RequestsPerSecond = table.Column<double>(type: "float", nullable: true),
+                    Results_FailureRate = table.Column<double>(type: "float", nullable: true),
+                    Results_AverageResponseTime = table.Column<double>(type: "float", nullable: true),
+                    Results_P95ResponseTime = table.Column<double>(type: "float", nullable: true),
+                    Results_Timestamp = table.Column<long>(type: "bigint", nullable: true),
+                    Results_DetailedMetrics_ChecksRate = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_DataReceived = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Results_DetailedMetrics_DataSent = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Results_DetailedMetrics_HttpReqRate = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_HttpReqFailed = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_SuccessRate = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_Iterations = table.Column<int>(type: "int", nullable: true),
+                    Results_DetailedMetrics_HttpReqDuration_Avg = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_HttpReqDuration_Min = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_HttpReqDuration_Med = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_HttpReqDuration_Max = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_HttpReqDuration_P90 = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_HttpReqDuration_P95 = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_IterationDuration_Avg = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_IterationDuration_Min = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_IterationDuration_Med = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_IterationDuration_Max = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_IterationDuration_P90 = table.Column<double>(type: "float", nullable: true),
+                    Results_DetailedMetrics_IterationDuration_P95 = table.Column<double>(type: "float", nullable: true),
+                    Results_StatusCodes_Status200 = table.Column<int>(type: "int", nullable: true),
+                    Results_StatusCodes_Status201 = table.Column<int>(type: "int", nullable: true),
+                    Results_StatusCodes_Status204 = table.Column<int>(type: "int", nullable: true),
+                    Results_StatusCodes_Status400 = table.Column<int>(type: "int", nullable: true),
+                    Results_StatusCodes_Status401 = table.Column<int>(type: "int", nullable: true),
+                    Results_StatusCodes_Status403 = table.Column<int>(type: "int", nullable: true),
+                    Results_StatusCodes_Status404 = table.Column<int>(type: "int", nullable: true),
+                    Results_StatusCodes_Status415 = table.Column<int>(type: "int", nullable: true),
+                    Results_StatusCodes_Status500 = table.Column<int>(type: "int", nullable: true),
+                    Results_StatusCodes_Other = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<long>(type: "bigint", nullable: false),
                     UpdatedAt = table.Column<long>(type: "bigint", nullable: false)
                 },
@@ -239,6 +281,33 @@ namespace WebTestUI.Backend.Migrations
                         name: "FK_Environments_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "K6TestLog",
+                columns: table => new
+                {
+                    K6TestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Timestamp = table.Column<long>(type: "bigint", nullable: false),
+                    Message = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Level = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Data = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Error_Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Error_Message = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Error_Stack = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Error_Code = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_K6TestLog", x => new { x.K6TestId, x.Id });
+                    table.ForeignKey(
+                        name: "FK_K6TestLog_K6Tests_K6TestId",
+                        column: x => x.K6TestId,
+                        principalTable: "K6Tests",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -422,13 +491,16 @@ namespace WebTestUI.Backend.Migrations
                 name: "HistoryEntries");
 
             migrationBuilder.DropTable(
-                name: "K6Tests");
+                name: "K6TestLog");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "Requests");
+
+            migrationBuilder.DropTable(
+                name: "K6Tests");
 
             migrationBuilder.DropTable(
                 name: "Collections");
