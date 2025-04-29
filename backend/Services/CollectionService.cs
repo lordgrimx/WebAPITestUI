@@ -18,7 +18,6 @@ namespace WebTestUI.Backend.Services
             _dbContext = dbContext;
             _logger = logger;
         }
-
         public async Task<IEnumerable<CollectionDto>> GetUserCollectionsAsync(string userId, string? currentEnvironmentId)
         {
             try
@@ -28,8 +27,13 @@ namespace WebTestUI.Backend.Services
 
                 if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
                 {
-                    // Koleksiyonları doğrudan EnvironmentId'ye göre filtrele
-                    query = query.Where(c => c.EnvironmentId == envId);
+                    // Eğer currentEnvironmentId 0 ise, tüm koleksiyonları göster 
+                    // (0 değeri "tümü göster" anlamına gelir)
+                    if (envId != 0)
+                    {
+                        // Koleksiyonları doğrudan EnvironmentId'ye göre filtrele
+                        query = query.Where(c => c.EnvironmentId == envId);
+                    }
                 }
 
                 var collections = await query
