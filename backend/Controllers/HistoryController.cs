@@ -24,7 +24,7 @@ namespace WebTestUI.Backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUserHistory([FromQuery] int limit = 50)
+        public async Task<IActionResult> GetUserHistory([FromQuery] string? currentEnvironmentId, [FromQuery] int limit = 50)
         {
             try
             {
@@ -34,7 +34,7 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                var history = await _historyService.GetUserHistoryAsync(userId, limit);
+                var history = await _historyService.GetUserHistoryAsync(userId, currentEnvironmentId, limit);
                 return Ok(history);
             }
             catch (Exception ex)
@@ -45,7 +45,7 @@ namespace WebTestUI.Backend.Controllers
         }
 
         [HttpGet("request/{requestId}")]
-        public async Task<IActionResult> GetRequestHistory(int requestId)
+        public async Task<IActionResult> GetRequestHistory(int requestId, [FromQuery] string? currentEnvironmentId)
         {
             try
             {
@@ -55,7 +55,7 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                var history = await _historyService.GetRequestHistoryAsync(requestId, userId);
+                var history = await _historyService.GetRequestHistoryAsync(requestId, userId, currentEnvironmentId);
                 return Ok(history);
             }
             catch (Exception ex)

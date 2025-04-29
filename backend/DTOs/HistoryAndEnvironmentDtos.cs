@@ -41,6 +41,8 @@ namespace WebTestUI.Backend.DTOs
         public string ResponseBody { get; set; }
 
         public int? RequestId { get; set; }
+
+        public int? EnvironmentId { get; set; } // Add EnvironmentId
     }
 
     // Environment DTOs
@@ -69,7 +71,8 @@ namespace WebTestUI.Backend.DTOs
     {
         public string Name { get; set; }
 
-        public Dictionary<string, string> Variables { get; set; }
+        // Change Variables type from Dictionary<string, string> to string
+        public string Variables { get; set; } 
 
         public bool? IsActive { get; set; }
     }

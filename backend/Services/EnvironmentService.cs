@@ -82,7 +82,7 @@ namespace WebTestUI.Backend.Services
                 // Serialize the dictionary to JSON string for storage
                 var variablesJson = JsonSerializer.Serialize(model.Variables ?? new Dictionary<string, string>());
 
-                var environment = new EnvironmentVariable
+                var environment = new EnvironmentConfig
                 {
                     Name = model.Name,
                     Variables = variablesJson, // Store as JSON string
@@ -128,10 +128,11 @@ namespace WebTestUI.Backend.Services
                     environment.Name = model.Name;
                 }
 
-                if (model.Variables != null)
+                // model.Variables is now a string (JSON string from frontend)
+                if (model.Variables != null) 
                 {
-                    // Serialize the dictionary to JSON string for storage
-                    environment.Variables = JsonSerializer.Serialize(model.Variables);
+                    // Directly assign the JSON string, no need to re-serialize
+                    environment.Variables = model.Variables; 
                 }
 
                 if (model.IsActive.HasValue && model.IsActive.Value && !environment.IsActive)
@@ -226,8 +227,8 @@ namespace WebTestUI.Backend.Services
             }
         }
 
-        // Helper method to map EnvironmentVariable entity to EnvironmentDto
-        private EnvironmentDto MapToDto(EnvironmentVariable environment)
+        // Helper method to map EnvironmentConfig entity to EnvironmentDto
+        private EnvironmentDto MapToDto(EnvironmentConfig environment)
         {
             // Deserialize JSON string to Dictionary for the DTO
             var variablesDict = new Dictionary<string, string>();

@@ -1,0 +1,4 @@
+# Bu dosyalar hariç her şeyi yok say
+*
+!database
+!Dockerfile

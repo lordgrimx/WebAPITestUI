@@ -20,13 +20,20 @@ namespace WebTestUI.Backend.Services
             _logger = logger;
         }
 
-        public async Task<IEnumerable<HistoryDto>> GetUserHistoryAsync(string userId, int limit = 50)
+        public async Task<IEnumerable<HistoryDto>> GetUserHistoryAsync(string userId, string? currentEnvironmentId, int limit = 50)
         {
             try
             {
-                var history = await _dbContext.HistoryEntries
+                var query = _dbContext.HistoryEntries
                     .Include(h => h.Request)
-                    .Where(h => h.UserId == userId)
+                    .Where(h => h.UserId == userId);
+
+                if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
+                {
+                    query = query.Where(h => h.EnvironmentId == envId);
+                }
+
+                var history = await query
                     .OrderByDescending(h => h.Timestamp)
                     .Take(limit)
                     .ToListAsync();
@@ -40,13 +47,20 @@ namespace WebTestUI.Backend.Services
             }
         }
 
-        public async Task<IEnumerable<HistoryDto>> GetRequestHistoryAsync(int requestId, string userId)
+        public async Task<IEnumerable<HistoryDto>> GetRequestHistoryAsync(int requestId, string userId, string? currentEnvironmentId)
         {
             try
             {
-                var history = await _dbContext.HistoryEntries
+                var query = _dbContext.HistoryEntries
                     .Include(h => h.Request)
-                    .Where(h => h.RequestId == requestId && h.UserId == userId)
+                    .Where(h => h.RequestId == requestId && h.UserId == userId);
+
+                 if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
+                {
+                    query = query.Where(h => h.EnvironmentId == envId);
+                }
+
+                var history = await query
                     .OrderByDescending(h => h.Timestamp)
                     .ToListAsync();
 
@@ -152,6 +166,7 @@ namespace WebTestUI.Backend.Services
                 {
                     UserId = userId,
                     RequestId = model.RequestId, // Keep RequestId even if validation fails, or set to null based on requirements
+                    EnvironmentId = model.EnvironmentId, // Save EnvironmentId from DTO
                     Method = model.Method,
                     Url = model.Url,
                     Status = model.StatusCode, // Fix: Use StatusCode from DTO

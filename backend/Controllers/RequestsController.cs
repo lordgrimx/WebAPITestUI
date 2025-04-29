@@ -24,7 +24,7 @@ namespace WebTestUI.Backend.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetUserRequests()
+        public async Task<IActionResult> GetUserRequests([FromQuery] string? currentEnvironmentId)
         {
             try
             {
@@ -34,7 +34,7 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                var requests = await _requestService.GetUserRequestsAsync(userId);
+                var requests = await _requestService.GetUserRequestsAsync(userId, currentEnvironmentId);
                 return Ok(requests);
             }
             catch (Exception ex)
@@ -45,7 +45,7 @@ namespace WebTestUI.Backend.Controllers
         }
 
         [HttpGet("collection/{collectionId}")]
-        public async Task<IActionResult> GetCollectionRequests(int collectionId)
+        public async Task<IActionResult> GetCollectionRequests(int collectionId, [FromQuery] string? currentEnvironmentId)
         {
             try
             {
@@ -55,7 +55,7 @@ namespace WebTestUI.Backend.Controllers
                     return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
                 }
 
-                var requests = await _requestService.GetCollectionRequestsAsync(collectionId, userId);
+                var requests = await _requestService.GetCollectionRequestsAsync(collectionId, userId, currentEnvironmentId);
                 return Ok(requests);
             }
             catch (Exception ex)

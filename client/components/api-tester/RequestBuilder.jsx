@@ -1005,10 +1005,10 @@ export default function RequestBuilder({
     // Clear previous errors before sending
     setError(null);
 
-    // Prepare the request configuration object using the latest state
-
-    // 1. Prepare Default Headers from settings
-    const defaultHeadersFromSettings = (settings?.defaultHeaders || [])
+    // Prepare the request configuration object using the latest state    // 1. Prepare Default Headers from settings
+    // Ensure defaultHeaders is always an array before calling filter
+    const defaultHeadersArray = Array.isArray(settings?.defaultHeaders) ? settings.defaultHeaders : [];
+    const defaultHeadersFromSettings = defaultHeadersArray
       .filter(h => h.name?.trim()) // Ensure header name is not empty
       .reduce((acc, header) => {
         acc[header.name] = header.value || ""; // Use name as key
