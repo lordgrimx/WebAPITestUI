@@ -653,10 +653,10 @@ const MonitoringDashboard = () => {
             
             {/* Profile Picture/Initials */}
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground overflow-hidden">
-              {user?.ProfileImageBase64 ? (
+              {user?.profileImageBase64 ? (
                 <img
-                  src={user.ProfileImageBase64}
-                  alt={user.Name || 'User Avatar'}
+                  src={user.profileImageBase64}
+                  alt={user.name || 'User Avatar'}
                   className="w-full h-full object-cover"
                 />
               ) : (
