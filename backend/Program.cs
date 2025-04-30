@@ -120,6 +120,10 @@ builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IK6TestService, K6TestService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ISharedDataService, SharedDataService>();
+builder.Services.AddScoped<IFaqService, FaqService>();
+builder.Services.AddScoped<ISupportTicketService, SupportTicketService>();
+builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddScoped<IHelpDocumentService, HelpDocumentService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();

@@ -18,6 +18,11 @@ namespace WebTestUI.Backend.Data
         public DbSet<EnvironmentConfig> Environments { get; set; }
         public DbSet<K6Test> K6Tests { get; set; }
         public DbSet<SharedData> SharedData { get; set; } // Add DbSet for SharedData
+        public DbSet<Faq> Faqs { get; set; }
+        public DbSet<SupportTicket> SupportTickets { get; set; }
+        public DbSet<SupportTicketReply> SupportTicketReplies { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+        public DbSet<HelpDocument> HelpDocuments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -87,6 +92,33 @@ namespace WebTestUI.Backend.Data
                 .WithMany(u => u.Environments)
                 .HasForeignKey(e => e.UserId)
                 .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Support Ticket
+            modelBuilder.Entity<SupportTicket>()
+                .HasOne(st => st.User)
+                .WithMany()
+                .HasForeignKey(st => st.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Support Ticket Reply
+            modelBuilder.Entity<SupportTicketReply>()
+                .HasOne(str => str.Ticket)
+                .WithMany(st => st.Replies)
+                .HasForeignKey(str => str.TicketId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SupportTicketReply>()
+                .HasOne(str => str.User)
+                .WithMany()
+                .HasForeignKey(str => str.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // Chat Message
+            modelBuilder.Entity<ChatMessage>()
+                .HasOne(cm => cm.User)
+                .WithMany()
+                .HasForeignKey(cm => cm.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }
