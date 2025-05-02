@@ -41,7 +41,7 @@ namespace WebTestUI.Backend.DTOs
     {
         public double Rate { get; set; }
         public double Count { get; set; }
-        public TrendStats Trend { get; set; }
+        public TrendStats? Trend { get; set; }
     }
 
     public class TrendStats
@@ -56,10 +56,10 @@ namespace WebTestUI.Backend.DTOs
 
     public class K6MetricsResponseDto
     {
-        public string Status { get; set; }
-        public K6DetailedMetricsDto Metrics { get; set; }
-        public string RunId { get; set; }
-        public string TestId { get; set; }
+        public string? Status { get; set; }
+        public K6DetailedMetricsDto? Metrics { get; set; }
+        public string? RunId { get; set; }
+        public string? TestId { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime? EndTime { get; set; }
 

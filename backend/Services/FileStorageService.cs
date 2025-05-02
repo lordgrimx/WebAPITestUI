@@ -50,7 +50,7 @@ namespace WebTestUI.Backend.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Dosya kaydedilirken bir hata oluştu: {FileName}", fileName);
-                return null;
+                return string.Empty;
             }
         }
 

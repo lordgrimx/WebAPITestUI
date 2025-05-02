@@ -32,6 +32,11 @@ namespace WebTestUI.Backend.Services
 
         public async Task<NotificationDto> CreateNotificationAsync(CreateNotificationDto createDto)
         {
+            if (string.IsNullOrEmpty(createDto.UserId))
+            {
+                throw new ArgumentException("UserId cannot be null or empty");
+            }
+
             // Check if user exists
             var user = await _context.Users.FindAsync(createDto.UserId);
             if (user == null)
@@ -72,8 +77,15 @@ namespace WebTestUI.Backend.Services
             };
 
             // Send real-time notification via SignalR - Using Groups instead of specific user
-            await _notificationHubContext.Clients.Group(notification.UserId)
-                .SendAsync("ReceiveNotification", notificationDto);
+            if (!string.IsNullOrEmpty(notification.UserId))
+            {
+                var userId = notification.UserId;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await _notificationHubContext.Clients.Group(userId)
+                        .SendAsync("ReceiveNotification", notificationDto);
+                }
+            }
 
             // Handle email notifications based on preferences
             await HandleEmailNotificationAsync(notification, preferences);
@@ -131,7 +143,7 @@ namespace WebTestUI.Backend.Services
             var notification = await _context.Notifications.FindAsync(id);
             if (notification == null)
             {
-                return null;
+                return null!;
             }
 
             return new NotificationDto
@@ -160,8 +172,11 @@ namespace WebTestUI.Backend.Services
             await _context.SaveChangesAsync();
             
             // Update clients in real-time - Use Group instead of User
-            await _notificationHubContext.Clients.Group(notification.UserId)
-                .SendAsync("NotificationRead", id);
+            if (!string.IsNullOrEmpty(notification.UserId))
+            {
+                await _notificationHubContext.Clients.Group(notification.UserId)
+                    .SendAsync("NotificationRead", id);
+            }
                 
             return true;
         }
@@ -203,8 +218,12 @@ namespace WebTestUI.Backend.Services
             await _context.SaveChangesAsync();
             
             // Update clients in real-time - Use Group instead of User
-            await _notificationHubContext.Clients.Group(notification.UserId)
-                .SendAsync("NotificationDeleted", id);
+            if (!string.IsNullOrEmpty(notification.UserId))
+            {
+                await _notificationHubContext.Clients.Group(notification.UserId)
+                    .SendAsync("NotificationDeleted", id);
+            }
+            
                 
             return true;
         }
@@ -520,7 +539,7 @@ namespace WebTestUI.Backend.Services
         private async Task HandleIntegrationNotificationsAsync(Notification notification, NotificationPreference preferences)
         {
             // Handle Slack notifications
-            if (preferences.SlackEnabled && !string.IsNullOrEmpty(preferences.SlackWebhookUrl))
+            if (preferences.SlackEnabled && !string.IsNullOrEmpty(preferences.SlackWebhookUrl) && !string.IsNullOrEmpty(preferences.SlackChannel))
             {
                 await SendSlackNotificationAsync(notification, preferences.SlackWebhookUrl, preferences.SlackChannel);
             }
@@ -532,7 +551,7 @@ namespace WebTestUI.Backend.Services
             }
         }
 
-        private async Task SendSlackNotificationAsync(Notification notification, string webhookUrl, string channel)
+        private Task SendSlackNotificationAsync(Notification notification, string webhookUrl, string channel)
         {
             // Implementation would go here to send notification to Slack
             // You would use HttpClient to post a JSON payload to the Slack webhook URL
@@ -542,10 +561,12 @@ namespace WebTestUI.Backend.Services
             // var client = new HttpClient();
             // var payload = new { text = $"{notification.Title}: {notification.Message}", channel = channel };
             // var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-            // await client.PostAsync(webhookUrl, content);
+            // return client.PostAsync(webhookUrl, content);
+            
+            return Task.CompletedTask;
         }
 
-        private async Task SendDiscordNotificationAsync(Notification notification, string webhookUrl)
+        private Task SendDiscordNotificationAsync(Notification notification, string webhookUrl)
         {
             // Implementation would go here to send notification to Discord
             // You would use HttpClient to post a JSON payload to the Discord webhook URL
@@ -555,7 +576,9 @@ namespace WebTestUI.Backend.Services
             // var client = new HttpClient();
             // var payload = new { content = $"**{notification.Title}**\n{notification.Message}" };
             // var content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
-            // await client.PostAsync(webhookUrl, content);
+            // return client.PostAsync(webhookUrl, content);
+            
+            return Task.CompletedTask;
         }
 
         #endregion

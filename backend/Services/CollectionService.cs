@@ -41,7 +41,7 @@ namespace WebTestUI.Backend.Services
                     .Select(c => new CollectionDto
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Name = c.Name ?? string.Empty,
                         Description = c.Description,
                         CreatedAt = c.CreatedAt,
                         UpdatedAt = c.UpdatedAt,
@@ -70,7 +70,7 @@ namespace WebTestUI.Backend.Services
                     .Select(c => new CollectionDto
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Name = c.Name ?? string.Empty,
                         Description = c.Description,
                         CreatedAt = c.CreatedAt,
                         UpdatedAt = c.UpdatedAt,
@@ -108,7 +108,7 @@ namespace WebTestUI.Backend.Services
                 return new CollectionDto
                 {
                     Id = collection.Id,
-                    Name = collection.Name,
+                    Name = collection.Name ?? string.Empty,
                     Description = collection.Description,
                     CreatedAt = collection.CreatedAt,
                     UpdatedAt = collection.UpdatedAt,
@@ -152,7 +152,7 @@ namespace WebTestUI.Backend.Services
                 return new CollectionDto
                 {
                     Id = collection.Id,
-                    Name = collection.Name,
+                    Name = collection.Name ?? string.Empty,
                     Description = collection.Description,
                     CreatedAt = collection.CreatedAt,
                     UpdatedAt = collection.UpdatedAt,

@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Security.Claims;
 using System.Threading.Tasks; // Add Task namespace
 using WebTestUI.Backend.Data.Entities;
 

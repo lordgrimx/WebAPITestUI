@@ -8,9 +8,9 @@ namespace WebTestUI.Backend.DTOs
     // DTO for a history item when sharing, excluding response details
     public class SharedHistoryItemDto
     {
-        public string Method { get; set; }
-        public string Url { get; set; }
-        public string RequestName { get; set; }
+        public string? Method { get; set; }
+        public string? Url { get; set; }
+        public string? RequestName { get; set; }
         public Dictionary<string, string>? RequestHeaders { get; set; }
         public string? RequestBody { get; set; }
     }

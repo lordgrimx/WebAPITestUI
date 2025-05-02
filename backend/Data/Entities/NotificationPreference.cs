@@ -10,7 +10,7 @@ namespace WebTestUI.Backend.Data.Entities
         public int Id { get; set; }
 
         [Required]
-        public string UserId { get; set; }
+        public string? UserId { get; set; }
 
         // Push Notifications
         public bool ApiUpdatesEnabled { get; set; } = true;
@@ -40,6 +40,6 @@ namespace WebTestUI.Backend.Data.Entities
 
         // Navigation properties
         [ForeignKey("UserId")]
-        public virtual ApplicationUser User { get; set; }
+        public virtual ApplicationUser? User { get; set; }
     }
 }

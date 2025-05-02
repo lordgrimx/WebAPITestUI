@@ -20,7 +20,7 @@ namespace WebTestUI.Backend.Hubs
             }
         }
 
-        public override async Task OnDisconnectedAsync(Exception exception)
+        public override async Task OnDisconnectedAsync(Exception? exception)
         {
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             
@@ -34,7 +34,10 @@ namespace WebTestUI.Backend.Hubs
 
         public async Task SendNotification(NotificationDto notification)
         {
-            await Clients.Group(notification.UserId).SendAsync("ReceiveNotification", notification);
+            if (!string.IsNullOrEmpty(notification.UserId))
+            {
+                await Clients.Group(notification.UserId).SendAsync("ReceiveNotification", notification);
+            }
         }
 
         public async Task MarkAsRead(int notificationId)

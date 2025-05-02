@@ -52,6 +52,6 @@ namespace WebTestUI.Backend.Data.Entities
         public virtual ICollection<History> HistoryEntries { get; set; }
         public virtual ICollection<EnvironmentConfig> Environments { get; set; }
         public virtual ICollection<Notification> Notifications { get; set; }
-        public virtual NotificationPreference NotificationPreference { get; set; }
+        public required virtual NotificationPreference NotificationPreference { get; set; }
     }
 }

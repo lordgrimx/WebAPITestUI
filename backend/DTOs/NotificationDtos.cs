@@ -7,11 +7,11 @@ namespace WebTestUI.Backend.DTOs
     public class NotificationDto
     {
         public int Id { get; set; }
-        public string UserId { get; set; }
-        public string Title { get; set; }
-        public string Message { get; set; }
-        public string Type { get; set; }
-        public string RelatedEntityType { get; set; }
+        public string? UserId { get; set; }
+        public string? Title { get; set; }
+        public string? Message { get; set; }
+        public string? Type { get; set; }
+        public string? RelatedEntityType { get; set; }
         public int? RelatedEntityId { get; set; }
         public bool IsRead { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -37,11 +37,11 @@ namespace WebTestUI.Backend.DTOs
         public bool DiscordEnabled { get; set; } = false;
 
         // Slack Integration Config
-        public string SlackWebhookUrl { get; set; }
-        public string SlackChannel { get; set; }
+        public string? SlackWebhookUrl { get; set; }
+        public string? SlackChannel { get; set; }
 
         // Discord Integration Config
-        public string DiscordWebhookUrl { get; set; }
+        public string? DiscordWebhookUrl { get; set; }
     }
 
     // DTO for updating notification preferences
@@ -64,21 +64,21 @@ namespace WebTestUI.Backend.DTOs
         public bool? DiscordEnabled { get; set; }
 
         // Slack Integration Config
-        public string SlackWebhookUrl { get; set; }
-        public string SlackChannel { get; set; }
+        public string? SlackWebhookUrl { get; set; }
+        public string? SlackChannel { get; set; }
 
         // Discord Integration Config
-        public string DiscordWebhookUrl { get; set; }
+        public string? DiscordWebhookUrl { get; set; }
     }
 
     // DTO for creating a new notification
     public class CreateNotificationDto
     {
-        public string UserId { get; set; }
-        public string Title { get; set; }
-        public string Message { get; set; }
-        public string Type { get; set; }
-        public string RelatedEntityType { get; set; }
+        public string? UserId { get; set; }
+        public string? Title { get; set; }
+        public string? Message { get; set; }
+        public string? Type { get; set; }
+        public string? RelatedEntityType { get; set; }
         public int? RelatedEntityId { get; set; }
     }
 

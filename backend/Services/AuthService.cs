@@ -38,6 +38,14 @@ namespace WebTestUI.Backend.Services
         public async Task<AuthResultDto> RegisterAsync(RegisterDto model)
         {
             // Aynı e-posta ile kullanıcı var mı kontrol et
+            if (string.IsNullOrEmpty(model.Email))
+            {
+                return new AuthResultDto
+                {
+                    Success = false,
+                    Message = "E-posta adresi gereklidir."
+                };
+            }
             var existingUser = await _userManager.FindByEmailAsync(model.Email);
             if (existingUser != null)
             {
@@ -48,13 +56,36 @@ namespace WebTestUI.Backend.Services
                 };
             }
 
+            if (string.IsNullOrEmpty(model.Password))
+            {
+                return new AuthResultDto
+                {
+                    Success = false,
+                    Message = "Şifre gereklidir."
+                };
+            }
+
             // Yeni kullanıcı oluştur
             var newUser = new ApplicationUser
             {
                 UserName = model.Email,
                 Email = model.Email,
                 Name = model.Name,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                NotificationPreference = new Data.Entities.NotificationPreference
+                {
+                    // Default notification preferences
+                    ApiUpdatesEnabled = true,
+                    RequestErrorsEnabled = true,
+                    TestFailuresEnabled = true,
+                    MentionsEnabled = true,
+                    EmailCommentsEnabled = false,
+                    EmailSharedApisEnabled = true,
+                    EmailSecurityAlertsEnabled = true,
+                    NewsletterEnabled = false,
+                    SlackEnabled = false,
+                    DiscordEnabled = false
+                }
             };
 
             var result = await _userManager.CreateAsync(newUser, model.Password);
@@ -83,6 +114,15 @@ namespace WebTestUI.Backend.Services
 
         public async Task<AuthResultDto> LoginAsync(LoginDto model)
         {
+            if (string.IsNullOrEmpty(model.Email))
+            {
+                return new AuthResultDto
+                {
+                    Success = false,
+                    Message = "E-posta adresi gereklidir."
+                };
+            }
+
             // Kullanıcıyı bul
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
@@ -91,6 +131,15 @@ namespace WebTestUI.Backend.Services
                 {
                     Success = false,
                     Message = "Geçersiz e-posta veya şifre."
+                };
+            }
+
+            if (string.IsNullOrEmpty(model.Password))
+            {
+                return new AuthResultDto
+                {
+                    Success = false,
+                    Message = "Şifre gereklidir."
                 };
             }
 
@@ -137,6 +186,15 @@ namespace WebTestUI.Backend.Services
 
         public async Task<AuthResultDto> VerifyTwoFactorAsync(TwoFactorVerifyDto model)
         {
+            if (string.IsNullOrEmpty(model.UserId))
+            {
+                return new AuthResultDto
+                {
+                    Success = false,
+                    Message = "Kullanıcı ID gereklidir."
+                };
+            }
+
             var user = await _userManager.FindByIdAsync(model.UserId);
             if (user == null)
             {
