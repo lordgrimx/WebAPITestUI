@@ -29,6 +29,7 @@ import {
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AIChatModal from "./AIChatModal";
+import DocumentationDetailModal from "./DocumentationDetailModal";
 import { getFaqs } from "@/lib/api/faq-api";
 import { getHelpDocuments } from "@/lib/api/help-api";
 import { createTicket } from "@/lib/api/support-api";
@@ -37,6 +38,8 @@ import { createTicket } from "@/lib/api/support-api";
 function HelpSupportModal({ open, setOpen, darkMode }) {
   const [activeTab, setActiveTab] = useState("faq");
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
   const [faqs, setFaqs] = useState([]);
   const [helpDocuments, setHelpDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,45 +67,85 @@ function HelpSupportModal({ open, setOpen, darkMode }) {
     try {
       setIsLoading(true);
       const data = await getFaqs();
-      setFaqs(data);
+      
+      // Veritabanı boşsa veya API çağrısı sonucu boş dizi dönerse varsayılan verileri kullan
+      if (!data || data.length === 0) {
+        setDefaultFaqs();
+      } else {
+        setFaqs(data);
+      }
     } catch (error) {
       console.error('Error fetching FAQs:', error);
-      // Fallback to hardcoded FAQs if API fails
-      setFaqs([
-        {
-          id: 1,
-          question: "How do I create a new API request?",
-          answer: "To create a new API request, click on the '+' button in the top left corner of the sidebar and select 'New Request'. You can then specify the request method, URL, and other details.",
-          category: "Getting Started"
-        },
-        {
-          id: 2,
-          question: "How do I save an API request?",
-          answer: "After configuring your API request, click the 'Save' button in the top navigation bar. You can provide a name, description, and select a collection to save it to.",
-          category: "Getting Started"
-        },
-        {
-          id: 3,
-          question: "How do I share my API requests with team members?",
-          answer: "You can share API requests by clicking the 'Share' button in the top navigation bar. You can generate a shareable link or directly share with specific team members if you're on a team plan.",
-          category: "Collaboration"
-        },
-        {
-          id: 4,
-          question: "How do I set up environment variables?",
-          answer: "Click on the 'Environment' dropdown in the top navigation bar. Here you can create new environments and define variables that can be used across your API requests.",
-          category: "Environment"
-        },
-        {
-          id: 5,
-          question: "How do I run automated tests?",
-          answer: "In the request builder, navigate to the 'Tests' tab where you can write JavaScript test scripts that will be executed after your request completes. The results will be displayed in the Test Results panel.",
-          category: "Testing"
-        }
-      ]);
+      setDefaultFaqs();
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  const setDefaultFaqs = () => {
+    // PUTman hakkında Türkçe varsayılan SSS verileri
+    setFaqs([
+      {
+        id: 1,
+        question: "PUTman'de koleksiyon nasıl oluşturabilirim?",
+        answer: "Koleksiyon oluşturmak için sol üstteki '+' butonuna tıklayın ve 'Yeni Koleksiyon' seçeneğini seçin. Koleksiyona bir isim ve açıklama ekleyebilirsiniz. Koleksiyonlar, benzer API isteklerinizi gruplandırmanıza yardımcı olur.",
+        category: "Başlangıç"
+      },
+      {
+        id: 2,
+        question: "API isteğimi nasıl kaydedebilirim?",
+        answer: "API isteğinizi yapılandırdıktan sonra, üst navigasyon çubuğundaki 'Kaydet' düğmesine tıklayın. Bir isim ve açıklama ekleyebilir ve kaydetmek istediğiniz koleksiyonu seçebilirsiniz.",
+        category: "Başlangıç"
+      },
+      {
+        id: 3,
+        question: "Ortam değişkenlerini (environments) nasıl kullanabilirim?",
+        answer: "Üst navigasyon çubuğundaki 'Ortam' açılır menüsüne tıklayın. Burada yeni ortamlar oluşturabilir ve API isteklerinizde kullanabileceğiniz değişkenler tanımlayabilirsiniz. Değişkenleri {{değişken_adı}} şeklinde kullanabilirsiniz.",
+        category: "Ortamlar"
+      },
+      {
+        id: 4,
+        question: "K6 performans testlerini nasıl çalıştırabilirim?",
+        answer: "Ana menüden 'K6 Testleri' bölümüne gidin. Burada yeni bir performans testi oluşturabilir veya mevcut bir testi düzenleyebilirsiniz. Test için gerekli parametreleri ayarlayın (kullanıcı sayısı, süre vb.) ve 'Testi Başlat' düğmesine tıklayın. Sonuçlar grafiksel olarak gösterilecektir.",
+        category: "Testler"
+      },
+      {
+        id: 5,
+        question: "API isteklerimi ekip üyeleriyle nasıl paylaşabilirim?",
+        answer: "İsteğinizin detay sayfasında 'Paylaş' düğmesine tıklayın. Paylaşılabilir bir bağlantı oluşturabilir veya bir ekip planındaysanız, belirli ekip üyeleriyle doğrudan paylaşabilirsiniz. Ayrıca koleksiyonları da aynı şekilde paylaşabilirsiniz.",
+        category: "İşbirliği"
+      },
+      {
+        id: 6,
+        question: "JWT token nasıl kullanabilirim?",
+        answer: "İsteğinizin 'Başlıklar' sekmesinde, 'Authorization' alanına 'Bearer [token]' formatında JWT token'ınızı ekleyin. Token'ı manuel olarak ekleyebilir veya ortam değişkenleri kullanarak {{jwt_token}} şeklinde referans verebilirsiniz.",
+        category: "Güvenlik"
+      },
+      {
+        id: 7,
+        question: "İstek geçmişimi nasıl görüntüleyebilirim?",
+        answer: "Ana menüden 'Geçmiş' bölümüne gidin. Burada yaptığınız tüm isteklerin kaydını görüntüleyebilir, filtreleyebilir ve yeniden çalıştırabilirsiniz. İsterseniz geçmişteki bir isteği koleksiyonunuza da ekleyebilirsiniz.",
+        category: "Geçmiş"
+      },
+      {
+        id: 8,
+        question: "Proxy ayarlarını nasıl yapılandırabilirim?",
+        answer: "Ayarlar menüsünden 'Proxy' sekmesine gidin. Burada HTTP proxy sunucunuzu yapılandırabilir, port numarasını belirleyebilir ve gerekirse kimlik doğrulama bilgilerini ekleyebilirsiniz. Proxy ayarları, tüm isteklerinize uygulanacaktır.",
+        category: "Proxy"
+      },
+      {
+        id: 9,
+        question: "PUTman ile Postman arasındaki farklar nelerdir?",
+        answer: "PUTman, Postman'in temel özelliklerini sunarken daha modern bir kullanıcı arayüzüne, daha hızlı performansa ve gelişmiş takım işbirliği özelliklerine sahiptir. Ayrıca K6 entegrasyonu ile doğrudan yük testleri yapabilirsiniz.",
+        category: "Genel Bilgiler"
+      },
+      {
+        id: 10,
+        question: "Bir API yanıtının belirli bir değerini nasıl test edebilirim?",
+        answer: "İstek yapılandırıcınızda, 'Testler' sekmesine gidin. Burada JavaScript ile test komutları yazabilirsiniz. Örneğin: `pm.test('Durum kodu 200 olmalı', function() { pm.response.to.have.status(200); });` gibi testler yazabilirsiniz.",
+        category: "Testler"
+      }
+    ]);
   };
   
   const fetchHelpDocuments = async () => {
@@ -111,43 +154,95 @@ function HelpSupportModal({ open, setOpen, darkMode }) {
     try {
       setIsLoading(true);
       const data = await getHelpDocuments();
-      setHelpDocuments(data);
+      
+      // Veritabanı boşsa veya API çağrısı sonucu boş dizi dönerse varsayılan verileri kullan
+      if (!data || data.length === 0) {
+        setDefaultHelpDocuments();
+      } else {
+        setHelpDocuments(data);
+      }
     } catch (error) {
       console.error('Error fetching help documents:', error);
-      // Fallback to hardcoded help documents if API fails
-      setHelpDocuments([
-        {
-          id: 1,
-          title: "Getting Started Guide",
-          description: "Learn the basics of using the API Testing Tool",
-          category: "Guides",
-          iconName: "BookOpen"
-        },
-        {
-          id: 2,
-          title: "API Documentation",
-          description: "Detailed documentation for our RESTful API",
-          category: "Technical",
-          iconName: "FileText"
-        },
-        {
-          id: 3,
-          title: "Writing Test Scripts",
-          description: "Learn how to write automated tests for your API",
-          category: "Testing",
-          iconName: "FileText"
-        },
-        {
-          id: 4,
-          title: "Using Environment Variables",
-          description: "Guide to setting up and using environment variables",
-          category: "Environment",
-          iconName: "FileText"
-        }
-      ]);
+      setDefaultHelpDocuments();
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const setDefaultHelpDocuments = () => {
+    // PUTman hakkında Türkçe varsayılan dokümantasyon verileri
+    setHelpDocuments([
+      {
+        id: 1,
+        title: "Başlangıç Kılavuzu",
+        description: "PUTman API test aracını kullanmanın temellerini öğrenin",
+        category: "Kılavuzlar",
+        iconName: "BookOpen"
+      },
+      {
+        id: 2,
+        title: "API İstekleri Oluşturma",
+        description: "Farklı HTTP metodlarıyla API istekleri nasıl oluşturulur ve yapılandırılır",
+        category: "Kılavuzlar",
+        iconName: "FileText"
+      },
+      {
+        id: 3,
+        title: "Koleksiyonlar ile Çalışma",
+        description: "İsteklerinizi düzenlemek ve paylaşmak için koleksiyonları kullanma",
+        category: "Kılavuzlar",
+        iconName: "FileText"
+      },
+      {
+        id: 4,
+        title: "Ortam Değişkenleri",
+        description: "Farklı ortamlarda çalışmak için değişkenleri ayarlama ve kullanma",
+        category: "Ortamlar",
+        iconName: "FileText"
+      },
+      {
+        id: 5,
+        title: "JWT Kimlik Doğrulama",
+        description: "API isteklerinizde JWT token kullanımı",
+        category: "Güvenlik",
+        iconName: "Info"
+      },
+      {
+        id: 6,
+        title: "Proxy Kullanımı",
+        description: "API isteklerinizi proxy üzerinden yönlendirme",
+        category: "Proxy",
+        iconName: "FileText"
+      },
+      {
+        id: 7,
+        title: "K6 Performans Testleri",
+        description: "K6 ile yük testi oluşturma ve analiz etme",
+        category: "Testler",
+        iconName: "BookOpen"
+      },
+      {
+        id: 8,
+        title: "Ekip İşbirliği",
+        description: "PUTman'i ekibinizle birlikte kullanma stratejileri",
+        category: "İşbirliği",
+        iconName: "FileText"
+      },
+      {
+        id: 9,
+        title: "Gelişmiş Test Senaryoları",
+        description: "Karmaşık API davranışlarını test etmek için script yazma",
+        category: "Testler",
+        iconName: "FileText"
+      },
+      {
+        id: 10,
+        title: "PUTman Klavye Kısayolları",
+        description: "Verimli çalışmak için kullanabileceğiniz tüm klavye kısayolları",
+        category: "İpuçları",
+        iconName: "Info"
+      }
+    ]);
   };
   
   const handleSubmitTicket = async (e) => {
@@ -194,6 +289,12 @@ function HelpSupportModal({ open, setOpen, darkMode }) {
       case "Info": return <Info className="h-5 w-5 mr-2 text-blue-500" />;
       default: return <FileText className="h-5 w-5 mr-2 text-blue-500" />;
     }
+  };
+
+  // Dokümantasyon detay modalını açma işlevi
+  const openDocumentationModal = (doc) => {
+    setSelectedDocument(doc);
+    setIsDocModalOpen(true);
   };
   
   // Filter and search FAQs
@@ -332,6 +433,7 @@ function HelpSupportModal({ open, setOpen, darkMode }) {
                             className={`p-4 border rounded-md flex flex-col space-y-2 cursor-pointer ${
                               darkMode ? "border-gray-700 hover:bg-gray-700" : "border-gray-200 hover:bg-gray-50"
                             }`}
+                            onClick={() => openDocumentationModal(doc)}
                           >
                             <div className="font-medium flex items-center">
                               {getIconComponent(doc.iconName)}
@@ -346,7 +448,20 @@ function HelpSupportModal({ open, setOpen, darkMode }) {
                 </div>
                 
                 <div className="flex justify-center">
-                  <Button variant="outline" className="flex items-center">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center"
+                    onClick={() => {
+                      // İlk dokümantasyon öğesini göster
+                      if (filteredHelpDocuments.length > 0) {
+                        openDocumentationModal(filteredHelpDocuments[0]);
+                      } else {
+                        toast.error("Dokümantasyon bulunamadı", {
+                          description: "Şu anda görüntülenecek dokümantasyon bulunmamaktadır."
+                        });
+                      }
+                    }}
+                  >
                     Browse Full Documentation <ExternalLink className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
@@ -387,7 +502,6 @@ function HelpSupportModal({ open, setOpen, darkMode }) {
                           id="support-email" 
                           type="email" 
                           placeholder="Your email address" 
-                          defaultValue="john.doe@example.com"
                           className={`${darkMode ? "bg-gray-700 border-gray-700" : ""}`}
                           value={ticketEmail}
                           onChange={(e) => setTicketEmail(e.target.value)}
@@ -437,6 +551,14 @@ function HelpSupportModal({ open, setOpen, darkMode }) {
       </DialogContent>
       
       <AIChatModal open={isChatModalOpen} setOpen={setIsChatModalOpen} darkMode={darkMode} />
+      
+      <DocumentationDetailModal 
+        open={isDocModalOpen} 
+        setOpen={setIsDocModalOpen} 
+        darkMode={darkMode} 
+        documentData={selectedDocument} 
+        allDocuments={filteredHelpDocuments}
+      />
 
     </Dialog>
   );

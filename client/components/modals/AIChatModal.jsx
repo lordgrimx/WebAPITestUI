@@ -359,19 +359,99 @@ function AIChatModal({ open, setOpen, darkMode }) {
           )}
 
           <div className="flex-1 flex flex-col overflow-hidden">
-            <ScrollArea className="flex-1 p-4">
+            <ScrollArea className="flex-1 p-4" style={{ height: "calc(100% - 60px)", overflow: "auto" }}>
               <div className="space-y-4 pb-2">
                 {messages.length === 0 && (
-                  <div className="text-center py-10">
+                  <div className="text-center py-6">
                     <Bot className="h-12 w-12 mx-auto opacity-20 mb-4" />
-                    <h3 className="text-lg font-medium mb-2">How can I help you today?</h3>
-                    <p className="text-sm opacity-70 max-w-md mx-auto">
-                      Ask me anything about our API testing platform, collections, requests, environments, or any other features.
+                    <h3 className="text-lg font-medium mb-2">PUTman Yardım Asistanı</h3>
+                    <p className="text-sm opacity-70 max-w-md mx-auto mb-8">
+                      API test platformumuz, koleksiyonlar, istekler, ortamlar veya diğer özellikler hakkında sorularınızı yanıtlayabilirim.
                     </p>
+                    
+                    {/* FAQ ve Documentation Bölümleri */}
+                    <div className="grid md:grid-cols-2 gap-6 mt-8 max-w-3xl mx-auto text-left">
+                      {/* Sık Sorulan Sorular (FAQ) */}
+                      <div className={`rounded-xl p-5 ${darkMode ? "bg-gray-700" : "bg-gray-50"} shadow-sm border ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
+                        <h4 className="font-medium text-md mb-3 flex items-center">
+                          <div className={`rounded-full p-1 mr-2 ${darkMode ? "bg-purple-500/20" : "bg-purple-100"}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${darkMode ? "text-purple-400" : "text-purple-500"}`}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                          </div>
+                          Sık Sorulan Sorular
+                        </h4>
+                        <ul className="space-y-2 text-sm">
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("Koleksiyon nasıl oluşturabilirim?")}>
+                            • Koleksiyon nasıl oluşturabilirim?
+                          </li>
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("Ortam değişkenleri nasıl kullanılır?")}>
+                            • Ortam değişkenleri nasıl kullanılır?
+                          </li>
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("JWT token nasıl kullanabilirim?")}>
+                            • JWT token nasıl kullanabilirim?
+                          </li>
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("K6 performans testlerini nasıl çalıştırabilirim?")}>
+                            • K6 performans testlerini nasıl çalıştırabilirim?
+                          </li>
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("Başka kullanıcılara koleksiyon nasıl paylaşabilirim?")}>
+                            • Başka kullanıcılara koleksiyon nasıl paylaşabilirim?
+                          </li>
+                        </ul>
+                      </div>
+
+                      {/* Dokümantasyon */}
+                      <div className={`rounded-xl p-5 ${darkMode ? "bg-gray-700" : "bg-gray-50"} shadow-sm border ${darkMode ? "border-gray-600" : "border-gray-200"}`}>
+                        <h4 className="font-medium text-md mb-3 flex items-center">
+                          <div className={`rounded-full p-1 mr-2 ${darkMode ? "bg-blue-500/20" : "bg-blue-100"}`}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`${darkMode ? "text-blue-400" : "text-blue-500"}`}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                          </div>
+                          Dokümantasyon
+                        </h4>
+                        <ul className="space-y-2 text-sm">
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("PUTman nedir ve nasıl kullanılır?")}>
+                            • PUTman'e genel bakış
+                          </li>
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("İstekler nasıl oluşturulur ve düzenlenir?")}>
+                            • İstekler (Requests)
+                          </li>
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("Koleksiyon yönetimi hakkında bilgi ver")}>
+                            • Koleksiyon Yönetimi
+                          </li>
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("Ortamlar (environments) nasıl kullanılır?")}>
+                            • Ortamlar (Environments)
+                          </li>
+                          <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("Proxy özellikleri nelerdir?")}>
+                            • Proxy Özellikleri
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                    
+                    {/* Kısayollar ve İpuçları */}
+                    <div className={`rounded-xl p-4 mt-6 max-w-3xl mx-auto ${darkMode ? "bg-blue-500/10 text-blue-200" : "bg-blue-50 text-blue-700"} text-sm`}>
+                      <h5 className="font-medium mb-2 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        Kısayollar ve İpuçları
+                      </h5>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs mt-2">
+                        <div className="flex items-center">
+                          <kbd className={`px-1.5 py-0.5 rounded text-xs mr-2 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}>Ctrl+S</kbd>
+                          <span>İsteği Kaydet</span>
+                        </div>
+                        <div className="flex items-center">
+                          <kbd className={`px-1.5 py-0.5 rounded text-xs mr-2 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}>Ctrl+Enter</kbd>
+                          <span>İsteği Gönder</span>
+                        </div>
+                        <div className="flex items-center">
+                          <kbd className={`px-1.5 py-0.5 rounded text-xs mr-2 ${darkMode ? "bg-gray-700" : "bg-gray-200"}`}>Ctrl+Space</kbd>
+                          <span>Otomatik Tamamlama</span>
+                        </div>
+                      </div>
+                    </div>
+                    
                     {isFetchingSessions && (
                       <div className="mt-4 text-sm">
                         <p className="text-amber-500 dark:text-amber-400">
-                          Checking chat availability...
+                          Sohbet kullanılabilirliği kontrol ediliyor...
                         </p>
                       </div>
                     )}
