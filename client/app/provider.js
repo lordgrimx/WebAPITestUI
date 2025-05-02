@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes"
 import { AuthProvider } from "@/lib/auth-context"
 import { SettingsProvider } from "@/lib/settings-context"
+import { EnvironmentProvider } from "@/lib/environment-context"
 import { RequestProvider } from "@/lib/request-context"
 import LoadingWrapper from "@/components/LoadingWrapper"
 import { I18nextProvider } from "react-i18next"
@@ -94,17 +95,17 @@ function Provider({ children }) {
         >
             <AuthProvider>
                 <SettingsProvider>
-                    <RequestProvider>
-                        <I18nextProvider i18n={i18n}>
-                            <LanguageWrapper>
-                                <LoadingWrapper>
-                                    <MainLayout>
+                    <EnvironmentProvider>
+                        <RequestProvider>
+                            <I18nextProvider i18n={i18n}>
+                                <LanguageWrapper>
+                                    <LoadingWrapper>
                                         {children}
-                                    </MainLayout>
-                                </LoadingWrapper>
-                            </LanguageWrapper>
-                        </I18nextProvider>
-                    </RequestProvider>
+                                    </LoadingWrapper>
+                                </LanguageWrapper>
+                            </I18nextProvider>
+                        </RequestProvider>
+                    </EnvironmentProvider>
                 </SettingsProvider>
             </AuthProvider>
         </NextThemesProvider>

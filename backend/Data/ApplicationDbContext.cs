@@ -1,3 +1,4 @@
+// filepath: d:\Projects\WebAPITestUI-semih.net1\backend\Data\ApplicationDbContext.cs
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using WebTestUI.Backend.Data.Entities;
@@ -14,8 +15,11 @@ namespace WebTestUI.Backend.Data
         public DbSet<Collection> Collections { get; set; }
         public DbSet<Request> Requests { get; set; }
         public DbSet<History> HistoryEntries { get; set; }
-        public DbSet<EnvironmentVariable> Environments { get; set; }
+        public DbSet<EnvironmentConfig> Environments { get; set; }
         public DbSet<K6Test> K6Tests { get; set; }
+        public DbSet<SharedData> SharedData { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<NotificationPreference> NotificationPreferences { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -30,6 +34,13 @@ namespace WebTestUI.Backend.Data
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Collection>()
+                .HasOne(c => c.Environment)
+                .WithMany(e => e.Collections)
+                .HasForeignKey(c => c.EnvironmentId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.NoAction); // Changed from SetNull to NoAction to avoid cascade cycles
+
             // Request
             modelBuilder.Entity<Request>()
                 .HasOne(r => r.User)
@@ -42,7 +53,14 @@ namespace WebTestUI.Backend.Data
                 .WithMany(c => c.Requests)
                 .HasForeignKey(r => r.CollectionId)
                 .IsRequired(false)  // Optional relationship - a request can exist without a collection
-                .OnDelete(DeleteBehavior.ClientSetNull); // Changed from SetNull to ClientSetNull
+                .OnDelete(DeleteBehavior.NoAction); // Changed from SetNull or ClientSetNull to NoAction to avoid cascade cycles
+
+            modelBuilder.Entity<Request>()
+                .HasOne(r => r.Environment)
+                .WithMany(e => e.Requests)
+                .HasForeignKey(r => r.EnvironmentId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.NoAction); // Changed from SetNull to NoAction to avoid cascade cycles
 
             // History
             modelBuilder.Entity<History>()
@@ -58,34 +76,34 @@ namespace WebTestUI.Backend.Data
                 .IsRequired(false)  // Optional relationship - history can exist for ad-hoc requests
                 .OnDelete(DeleteBehavior.NoAction);
 
+            modelBuilder.Entity<History>()
+                .HasOne(h => h.Environment)
+                .WithMany(e => e.HistoryEntries)
+                .HasForeignKey(h => h.EnvironmentId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.NoAction); // Changed to NoAction to avoid cascade cycles
+
             // Environment
-            modelBuilder.Entity<EnvironmentVariable>()
+            modelBuilder.Entity<EnvironmentConfig>()
                 .HasOne(e => e.User)
                 .WithMany(u => u.Environments)
                 .HasForeignKey(e => e.UserId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Add indexes
-            modelBuilder.Entity<Collection>()
-                .HasIndex(c => new { c.UserId, c.Name });
+            // Notification
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Request>()
-                .HasIndex(r => r.CollectionId);
-
-            modelBuilder.Entity<History>()
-                .HasIndex(h => h.Timestamp);
-
-            modelBuilder.Entity<EnvironmentVariable>()
-                .HasIndex(e => new { e.UserId, e.IsActive });
-
-            // K6Test için indeksler
-            modelBuilder.Entity<K6Test>()
-                .HasIndex(k => k.RequestId)
-                .HasDatabaseName("IX_K6Tests_RequestId");
-
-            modelBuilder.Entity<K6Test>()
-                .HasIndex(k => k.Status)
-                .HasDatabaseName("IX_K6Tests_Status");
+            // Notification Preferences
+            modelBuilder.Entity<NotificationPreference>()
+                .HasOne(np => np.User)
+                .WithOne(u => u.NotificationPreference)
+                .HasForeignKey<NotificationPreference>(np => np.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

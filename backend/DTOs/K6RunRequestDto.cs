@@ -3,8 +3,8 @@ namespace WebTestUI.Backend.DTOs
     public class K6RunRequestDto
     {
         public Guid TestId { get; set; }
-        public string Script { get; set; }
-        public K6Options Options { get; set; }
+        public string? Script { get; set; }
+        public K6Options? Options { get; set; }
         public string? OutputFormat { get; set; } = "json";
         public bool? Paused { get; set; } = false;
         public bool? GracefulStop { get; set; } = false;

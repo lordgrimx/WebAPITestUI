@@ -6,30 +6,151 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { authAxios } from "@/lib/auth-context";
+import { authAxios, useAuth } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { useSettings } from "@/lib/settings-context"; // Import the settings hook
+import { useTheme } from "next-themes"; // Import the theme hook
+import { useEnvironment } from "@/lib/environment-context"; // Import our new environment context
+import { useRouter, useSearchParams } from 'next/navigation'; // URL parametreleri için
 import { useRequest } from "@/lib/request-context"; // Import the request context
 // Proxy için https-proxy-agent gerekebilir, ancak bunu API rotasında kullanacağız.
 import axios from "axios"; // Axios for HTTP requests
 import CollectionsSidebar from "./CollectionsSidebar";
 import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
+import Header from "../Header";
+import ImportDataModal from "../ImportDataModal";
+
 
 export default function ApiTester() {
-  const { settings } = useSettings(); // Get settings from context (updateSetting kaldırıldı, kullanılmıyor)
-  const { setCurrentRequestData } = useRequest(); // Get setCurrentRequestData from request context
-  
-  const [selectedRequestId, setSelectedRequestId] = useState(null);  
+  const { isAuthenticated } = useAuth(); // Get authentication status
+  const { settings } = useSettings(); // Get settings from context
+  const { currentEnvironment, environments, isEnvironmentLoading, triggerEnvironmentChange, setCurrentEnvironmentById } = useEnvironment(); // Use our environment context with all needed variables
+  const [selectedRequestId, setSelectedRequestId] = useState(null);
+  const { setCurrentRequestData } = useRequest();
   const [currentUserID, setCurrentUserID] = useState(null); // State to hold current user ID
   const [responseData, setResponseData] = useState(null); // Initialize as null
   const [error, setError] = useState(null); // General request error state
   const [sidebarError, setSidebarError] = useState(null); // Specific error for sidebar loading
   const [currentRequestData, setCurrentRequestDataLocal] = useState(null); // State to hold current request builder data
   const [initialDataFromHistory, setInitialDataFromHistory] = useState(null); // State to hold data from selected history item
-  const [darkMode, setDarkMode] = useState(false); // Manage dark mode state here
-  const [authToken, setAuthToken] = useState(''); // Initialize empty
+  const { theme, setTheme } = useTheme(); // Use the theme hook instead of local state
+  const isDarkMode = theme === 'dark'; // Derive dark mode from theme 
+  const [authToken, setAuthToken] = useState('');
   const [historyUpdated, setHistoryUpdated] = useState(0); // Add this new state
+  const [environmentChangedTimestamp, setEnvironmentChangedTimestamp] = useState(Date.now()); // Add state for environment changes
+  const [collections, setCollections] = useState([]); // State for collections
+  const [history, setHistory] = useState([]); // State for history
+  const [isLoadingCollections, setIsLoadingCollections] = useState(true); // Loading state for collections
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true); // Loading state for history
+  
+  // Import modalı için state'ler
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Listen for history updates to refresh environment if needed
+  useEffect(() => {
+    // When history is updated, trigger an environment refresh
+    // This ensures environment is reloaded after any operations that might change it
+    triggerEnvironmentChange();
+  }, [historyUpdated, triggerEnvironmentChange]);
+    // URL'den paylaşılan verileri alıp analiz eden useEffect
+  useEffect(() => {
+    const importDataParam = searchParams.get('importData');
+    
+    if (importDataParam) {
+      try {
+        // URL'den veriyi çözümle (decode)
+        const jsonString = decodeURIComponent(atob(importDataParam));
+        const parsedData = JSON.parse(jsonString);
+        
+        console.log("Found import data in URL:", parsedData);
+        
+        // Import verisini ve modalı göster
+        setImportData(parsedData);
+        setShowImportModal(true);
+        
+        // URL'den import parametresini temizle (sayfa yenilendiğinde tekrar gösterilmemesi için)
+        // Bu URL'yi temizler ama modal açık kalır
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('importData');
+          router.replace(url.pathname + url.search);
+        }
+      } catch (error) {
+        console.error("Failed to parse import data:", error);
+        toast.error("Invalid import data", { description: "The shared link contains invalid data." });
+      }
+    }
+  }, [searchParams, router]);
+
+  // Fetch collections on component mount
+  // Fetch collections on component mount and when authentication status changes
+  useEffect(() => {
+    const fetchCollections = async () => {
+      if (!isAuthenticated) {
+        setIsLoadingCollections(false);
+        setCollections([]); // Clear collections if not authenticated
+        return;
+      }
+      try {
+        setIsLoadingCollections(true);
+        const response = await authAxios.get('/collections');
+        setCollections(response.data);
+      } catch (error) {
+        console.error("Failed to fetch collections:", error);
+        setSidebarError("Failed to load collections."); // Use existing sidebar error state
+        toast.error("Failed to load collections", { description: error.message });
+      } finally {
+        setIsLoadingCollections(false);
+      }
+    };
+    fetchCollections();
+  }, [isAuthenticated]); // Depend on isAuthenticated
+
+  // Fetch history on component mount and when historyUpdated changes
+  // Fetch history on component mount, when historyUpdated changes, and when authentication status changes
+  useEffect(() => {
+    const fetchHistory = async () => {
+       if (!isAuthenticated) {
+        setIsLoadingHistory(false);
+        setHistory([]); // Clear history if not authenticated
+        return;
+      }
+      try {
+        setIsLoadingHistory(true);
+        const response = await authAxios.get('/history');
+        setHistory(response.data);
+      } catch (error) {
+        console.error("Failed to fetch history:", error);
+        // Decide if you want a separate error state for history or use the general one
+        toast.error("Failed to load history", { description: error.message });
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+    fetchHistory();
+  }, [historyUpdated, isAuthenticated]); // Depend on historyUpdated and isAuthenticated
+
+  // Listen for environment changes to update headers and other environment-dependent data
+  useEffect(() => {
+    if (currentEnvironment && currentRequestData) {
+      // When environment changes, update request data with environment-specific values
+      // This ensures headers and other settings are updated when environment changes
+      console.log("Environment changed, updating request data...");
+      
+      // We'll handle the specifics in the RequestBuilder component
+      // Just force a re-render here by setting key in the component
+    }
+  }, [currentEnvironment, currentRequestData]);
+
+  // Listen for environment changes to trigger sidebar refresh
+  useEffect(() => {
+    console.log("Environment context changed in ApiTester, updating timestamp.");
+    setEnvironmentChangedTimestamp(Date.now()); // Update timestamp when environment changes
+  }, [currentEnvironment]); // Depend only on currentEnvironment
 
   // Test execution helper function
   const runTests = (testScript, environment) => {
@@ -145,7 +266,8 @@ export default function ApiTester() {
         responseHeaders: {}, // Initialize empty object
         requestBody: "",     // Initialize empty string
         responseBody: historyData.responseData,
-        requestId: historyData.requestId || null
+        requestId: historyData.requestId || null,
+        environmentId: currentEnvironment?.id || null // Add current environment ID
       };
 
       // Parse headers if they exist
@@ -543,19 +665,18 @@ export default function ApiTester() {
         responseHeaders: JSON.stringify(errorHeaders),
         isTruncated: false,
         // Backend will get userId from session
-      });
-
-      // Update the response display with error details
+      });      // Update the response display with error details
       setResponseData({
         status: status,
         data: errorData,
         headers: errorHeaders,
         size: "0 KB",
-        timeTaken: `${duration} ms`,        isError: true, // Add an error flag
+        timeTaken: `${duration} ms`,        
+        isError: true, // Add an error flag
         viaProxy: settings.proxyEnabled && settings.proxyUrl && status !== 0 // Indicate proxy if it wasn't a network error before proxy
       });
     }
-  }, [selectedRequestId, currentUserID, settings]); // Updated dependencies, removed recordHistory
+  }, [selectedRequestId,authToken, settings, updateAuthToken]); // Removed currentUserID and authToken, kept only necessary dependencies
 
   // Handler for selecting a request from a collection
   const handleRequestSelect = useCallback((requestId) => {
@@ -591,44 +712,128 @@ export default function ApiTester() {
       auth: { type: "none" }, // Reset auth
       tests: { script: "", results: [] } // Reset tests
     });
+  }, []);  // Callback to update UI when a request is saved
+  const handleRequestSaved = useCallback(() => {
+    // Update historyUpdated state to trigger a refresh of the collections sidebar
+    setHistoryUpdated(prev => prev + 1);
   }, []);
-
+  
+  // Paylaşılan verileri içe aktarma işlemini gerçekleştiren fonksiyon
+  const handleImportConfirm = useCallback((data) => {
+    try {
+      // Request verilerini aktarma
+      if (data.request) {
+        const requestData = {
+          method: data.request.method || 'GET',
+          url: data.request.url || '',
+          headers: data.request.headers || {},
+          params: data.request.params || {},
+          body: data.request.body || '',
+          auth: data.request.auth || { type: 'none' },
+          tests: data.request.tests || { script: '', results: [] },
+        };
+        
+        console.log("Importing request data:", requestData);
+        setCurrentRequestData(requestData);
+        
+        // Environment verilerini aktarma
+        if (data.environment) {
+          // Environment context üzerinden mevcut environment'ı kontrol et
+          const existingEnv = environments.find(env => 
+            env.name === data.environment.name || env.id === data.environment.id
+          );
+          
+          if (existingEnv) {
+            // Eğer environment zaten varsa, onu aktif et
+            setCurrentEnvironmentById(existingEnv.id);
+          } else {
+            // Eğer environment yoksa ve API üzerinden yeni environment oluşturma yapılacaksa
+            // burada o kodu ekleyebiliriz (şimdilik yalnızca bir uyarı gösteriyoruz)
+            toast.info("Environment not found", { 
+              description: "The shared environment could not be found in your workspace." 
+            });
+          }
+        }
+        
+        toast.success("Data imported successfully", { 
+          description: "The shared request data has been imported." 
+        });
+      }
+    } catch (error) {
+      console.error("Failed to import data:", error);
+      toast.error("Import failed", { description: error.message });
+    }
+  }, [environments, setCurrentEnvironmentById, setCurrentRequestData, setCollections, setHistory]); // Add dependencies for state updates
   return (
-    <div className="flex flex-col h-screen overflow-hidden">
-      <div className="flex-1 min-h-0">
-        <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]">
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-            <CollectionsSidebar
-              setSelectedRequestId={handleRequestSelect} // For collection requests
-              onHistorySelect={handleHistorySelect}     // For history items
-              hasError={!!sidebarError}
-              onError={setSidebarError}
-              darkMode={darkMode} // Pass dark mode state
-              historyUpdated={historyUpdated} // Add this prop
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={40} minSize={30}>
-            <RequestBuilder
-              key={selectedRequestId || initialDataFromHistory?.url} // Add key to force re-render/reset on selection change
-              selectedRequestId={selectedRequestId}
-              initialData={initialDataFromHistory} // Pass history data
-              onSendRequest={handleSendRequest}
-              onRequestDataChange={handleRequestDataChange}
-              authToken={authToken}
-              onUpdateAuthToken={updateAuthToken}
-              darkMode={darkMode} // Pass dark mode state
-              apiKeys={settings.apiKeys || []} // Pass apiKeys from settings
-              testResults={responseData?.testResults} // Pass test results
-            />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-
-          <ResizablePanel defaultSize={40} minSize={25}>
-            <ResponseDisplay responseData={responseData} darkMode={darkMode} /> 
-          </ResizablePanel>
-        </ResizablePanelGroup>
+    <>
+    <Header
+        currentRequestData={currentRequestData}
+        onRequestSaved={handleRequestSaved}
+        collections={collections} // Pass collections data
+        history={history} // Pass history data
+      />
+      
+      <ImportDataModal
+        open={showImportModal}
+        setOpen={setShowImportModal}
+        importData={importData}
+        onImportConfirm={handleImportConfirm}
+        darkMode={isDarkMode}
+      />
+      <div className="flex flex-col h-screen overflow-hidden"> {/* Use flex-col for vertical layout */}
+        
+        {/* Environment Loading Overlay */}
+        {isEnvironmentLoading && (
+          <div className="absolute inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-8 shadow-lg max-w-md w-full">
+              <div className="flex flex-col items-center">
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <h3 className="text-xl font-medium mb-2">Ortam Yükleniyor</h3>
+                <p className="text-gray-500 dark:text-gray-400 text-center">
+                  Seçili ortam ayarları yükleniyor, lütfen bekleyin...
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Rest of the layout */}
+        <div className="flex-1 min-h-0"> {/* Add min-h-0 to allow proper flex shrinking */}
+          <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]">{/* Adjust height to account for header and monitor panel */}
+            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+              <CollectionsSidebar
+                setSelectedRequestId={handleRequestSelect} // For collection requests
+                onHistorySelect={handleHistorySelect}     // For history items
+                hasError={!!sidebarError}
+                onError={setSidebarError}
+                darkMode={isDarkMode} // Pass isDarkMode instead
+                historyUpdated={historyUpdated} // Add this prop
+                currentEnvironment={currentEnvironment} // Pass the current environment from context
+                environmentChangedTimestamp={environmentChangedTimestamp} // Pass the timestamp
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={30}>              <RequestBuilder
+                key={selectedRequestId || initialDataFromHistory?.url} // Add key to force re-render/reset on selection change
+                selectedRequestId={selectedRequestId}
+                initialData={initialDataFromHistory} // Pass history data
+                onSendRequest={handleSendRequest}
+                onRequestDataChange={handleRequestDataChange}
+                authToken={authToken}
+                onUpdateAuthToken={updateAuthToken}
+                darkMode={isDarkMode} // Pass isDarkMode instead
+                apiKeys={settings.apiKeys || []} // Pass apiKeys from settings
+                testResults={responseData?.testResults} // Pass test results
+              />
+            </ResizablePanel>
+            <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={25}>
+              <ResponseDisplay responseData={responseData} darkMode={isDarkMode} /> 
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        </div>
+        
+        {/* Fixed height for monitor panel */}
+        
       </div>
-    </div>
+    </>
   );
 }

@@ -90,6 +90,7 @@ namespace WebTestUI.Backend.Services
                 Console.WriteLine($"Received headers: {generateDto.RequestData.Headers}");
                 var headers = !string.IsNullOrEmpty(generateDto.RequestData.Headers)
                     ? JsonSerializer.Deserialize<Dictionary<string, string>>(generateDto.RequestData.Headers)
+                    ?? new Dictionary<string, string>()
                     : new Dictionary<string, string>();
 
                 // Parse dynamic parameters
@@ -98,7 +99,7 @@ namespace WebTestUI.Backend.Services
                     : new Dictionary<string, JsonElement>();
 
                 // Build parameter data array string for script
-                var paramDataArrays = BuildParameterDataArrays(parameters);
+                var paramDataArrays = BuildParameterDataArrays(parameters ?? new Dictionary<string, JsonElement>());
 
                 // Add auth headers if needed
                 if (!string.IsNullOrEmpty(generateDto.RequestData.AuthToken) && !string.IsNullOrEmpty(generateDto.RequestData.AuthType))
@@ -164,7 +165,7 @@ export const options = {{
 export default function() {{
     // Get random values for each parameter
     const paramValues = {{}}
-    {BuildParameterRandomization(parameters)}
+    {BuildParameterRandomization(parameters ?? new Dictionary<string, JsonElement>())}
 
     // Replace parameters in URL and body
     const url = replaceParameters('{generateDto.RequestData.Url}', paramValues);
@@ -333,6 +334,7 @@ export default function() {{
             catch (Exception ex)
             {
                 test.Status = "failed";
+                test.Logs = test.Logs ?? new List<K6TestLog>();
                 test.Logs.Add(new K6TestLog
                 {
                     Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),

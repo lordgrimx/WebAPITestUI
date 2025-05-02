@@ -8,14 +8,25 @@ using WebTestUI.Backend.Data;
 using WebTestUI.Backend.Data.Entities; // Add this for ApplicationUser
 using WebTestUI.Backend.Services;
 using WebTestUI.Backend.Services.Interfaces;
+using dotenv.net; // Add dotenv support
 // Add Swashbuckle using directives if they are missing implicitly
 // using Swashbuckle.AspNetCore.SwaggerGen;
 // using Swashbuckle.AspNetCore.SwaggerUI;
+
+// Load environment variables from .env.local file
+DotEnv.Fluent()
+    .WithEnvFiles(".env.local")
+    .WithTrimValues()
+    .WithProbeForEnv(probeLevelsToSearch: 5)
+    .Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+
+// Add SignalR for real-time notifications
+builder.Services.AddSignalR();
 
 // Add DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -57,6 +68,25 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = builder.Configuration["JWT:Issuer"],
         ValidAudience = builder.Configuration["JWT:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? throw new InvalidOperationException("JWT:Key is not configured")))
+    };
+    
+    // Configure JwtBearer for SignalR
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            
+            // If the request is for the hub
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && 
+                path.StartsWithSegments("/hubs/notifications"))
+            {
+                // Read the token from the query string
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 
@@ -110,6 +140,9 @@ builder.Services.AddScoped<IEnvironmentService, EnvironmentService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IK6TestService, K6TestService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ISharedDataService, SharedDataService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();
@@ -159,18 +192,47 @@ app.UseCors("AllowSpecificOrigin");
 app.UseCors();
 
 // Enable static file serving (for wwwroot)
-app.UseStaticFiles(); 
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<WebTestUI.Backend.Hubs.NotificationHub>("/hubs/notifications");
 
-// Seed roles
+// Seed roles and default environment
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(); // Optional: If you need UserManager too
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    // Ensure database is created and migrations are applied
+    try
+    {
+        dbContext.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while migrating the database.");
+    }
+
+    // Check for default environment
+    if (!dbContext.Environments.Any())
+    {
+        logger.LogInformation("Creating default environment...");
+        dbContext.Environments.Add(new EnvironmentConfig
+        {
+            Name = "Default",
+            IsActive = true,
+            Variables = "{}",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+        dbContext.SaveChanges();
+    }
+
     string[] roleNames = { "ADMIN", "USER" };
     IdentityResult roleResult;
 
@@ -196,7 +258,21 @@ using (var scope = app.Services.CreateScope())
             UserName = adminEmail,
             Email = adminEmail,
             Name = "Admin User",
-            EmailConfirmed = true // Assuming admin email is confirmed
+            EmailConfirmed = true,
+            NotificationPreference = new NotificationPreference
+                {
+                    // Default notification preferences
+                    ApiUpdatesEnabled = true,
+                    RequestErrorsEnabled = true,
+                    TestFailuresEnabled = true,
+                    MentionsEnabled = true,
+                    EmailCommentsEnabled = true,
+                    EmailSharedApisEnabled = true,
+                    EmailSecurityAlertsEnabled = true,
+                    NewsletterEnabled = true,
+                    SlackEnabled = true,
+                    DiscordEnabled = true
+                } // Assuming admin email is confirmed
         };
         var createAdminResult = await userManager.CreateAsync(adminUser, adminPassword);
         if (createAdminResult.Succeeded)

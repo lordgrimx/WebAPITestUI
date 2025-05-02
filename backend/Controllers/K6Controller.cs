@@ -203,7 +203,7 @@ namespace WebTestUI.Backend.Controllers
                 }
 
                 // Read metrics from the JSON output file
-                string jsonContent = null;
+                string? jsonContent = null;
                 if (System.IO.File.Exists(jsonOutputPath))
                 {
                     try
@@ -480,7 +480,7 @@ namespace WebTestUI.Backend.Controllers
 
             if (metricPointsData.Count > 0)
             {                // Helper function to create a MetricData object from collected points
-                MetricData CreateMetricDataFromPoints(string metricName, List<double> values)
+                MetricData? CreateMetricDataFromPoints(string metricName, List<double> values)
                 {
                     if (values == null || values.Count == 0)
                         return null;
@@ -707,7 +707,7 @@ namespace WebTestUI.Backend.Controllers
 
 
         // Helper function to parse the 'values' element of a metric.
-        private MetricData ParseValuesElement(JsonElement valuesElement, string metricNameForLogging)
+        private MetricData? ParseValuesElement(JsonElement valuesElement, string metricNameForLogging)
         {
             try
             {
@@ -754,7 +754,7 @@ namespace WebTestUI.Backend.Controllers
         // Extracts metric data from the main metrics container (e.g., from State Point). 
         // This method might become less relevant if the primary approach focuses on latest Metric definitions.
         // Kept for potential future use or if State Point parsing is re-enabled as primary.
-        private MetricData ExtractMetricDataFromJson(JsonElement metricsContainer, string metricName)
+        private MetricData? ExtractMetricDataFromJson(JsonElement metricsContainer, string metricName)
         {
             _logger.LogDebug($"Extracting metric '{metricName}' from metrics container.");
             if (!metricsContainer.TryGetProperty(metricName, out var metricElement))

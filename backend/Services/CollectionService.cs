@@ -18,21 +18,36 @@ namespace WebTestUI.Backend.Services
             _dbContext = dbContext;
             _logger = logger;
         }
-
-        public async Task<IEnumerable<CollectionDto>> GetUserCollectionsAsync(string userId)
+        public async Task<IEnumerable<CollectionDto>> GetUserCollectionsAsync(string userId, string? currentEnvironmentId)
         {
             try
             {
-                var collections = await _dbContext.Collections
-                    .Where(c => c.UserId == userId)
+                var query = _dbContext.Collections
+                    .Where(c => c.UserId == userId);
+
+                if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
+                {
+                    // Eğer currentEnvironmentId 0 ise, tüm koleksiyonları göster 
+                    // (0 değeri "tümü göster" anlamına gelir)
+                    if (envId != 0)
+                    {
+                        // Koleksiyonları doğrudan EnvironmentId'ye göre filtrele
+                        query = query.Where(c => c.EnvironmentId == envId);
+                    }
+                }
+
+                var collections = await query
                     .OrderBy(c => c.Name)
                     .Select(c => new CollectionDto
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Name = c.Name ?? string.Empty,
                         Description = c.Description,
                         CreatedAt = c.CreatedAt,
                         UpdatedAt = c.UpdatedAt,
+                        EnvironmentId = c.EnvironmentId, // EnvironmentId alanını da DTO'ya ekleyelim
+                        // İstek sayısını da EnvironmentId'ye göre filtreleyebiliriz, ancak bu mevcut DTO yapısını değiştirir.
+                        // İhtiyaç olursa bu kısım güncellenebilir.
                         RequestCount = _dbContext.Requests.Count(r => r.CollectionId == c.Id)
                     })
                     .ToListAsync();
@@ -55,15 +70,16 @@ namespace WebTestUI.Backend.Services
                     .Select(c => new CollectionDto
                     {
                         Id = c.Id,
-                        Name = c.Name,
+                        Name = c.Name ?? string.Empty,
                         Description = c.Description,
                         CreatedAt = c.CreatedAt,
                         UpdatedAt = c.UpdatedAt,
+                        EnvironmentId = c.EnvironmentId,
                         RequestCount = _dbContext.Requests.Count(r => r.CollectionId == c.Id)
                     })
                     .FirstOrDefaultAsync();
 
-                return collection;
+                return collection!; // Interfaz uyumluluğu için null! kullanıyoruz
             }
             catch (Exception ex)
             {
@@ -81,6 +97,7 @@ namespace WebTestUI.Backend.Services
                     Name = model.Name,
                     Description = model.Description,
                     UserId = userId,
+                    EnvironmentId = model.EnvironmentId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -91,10 +108,11 @@ namespace WebTestUI.Backend.Services
                 return new CollectionDto
                 {
                     Id = collection.Id,
-                    Name = collection.Name,
+                    Name = collection.Name ?? string.Empty,
                     Description = collection.Description,
                     CreatedAt = collection.CreatedAt,
                     UpdatedAt = collection.UpdatedAt,
+                    EnvironmentId = collection.EnvironmentId,
                     RequestCount = 0
                 };
             }
@@ -114,7 +132,7 @@ namespace WebTestUI.Backend.Services
 
                 if (collection == null)
                 {
-                    return null;
+                    return null!; // Interfaz uyumluluğu için null! kullanıyoruz
                 }
 
                 if (!string.IsNullOrEmpty(model.Name))
@@ -134,10 +152,11 @@ namespace WebTestUI.Backend.Services
                 return new CollectionDto
                 {
                     Id = collection.Id,
-                    Name = collection.Name,
+                    Name = collection.Name ?? string.Empty,
                     Description = collection.Description,
                     CreatedAt = collection.CreatedAt,
                     UpdatedAt = collection.UpdatedAt,
+                    EnvironmentId = collection.EnvironmentId,
                     RequestCount = await _dbContext.Requests.CountAsync(r => r.CollectionId == id)
                 };
             }

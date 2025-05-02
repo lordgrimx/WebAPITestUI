@@ -15,21 +15,63 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
   const { login, verify2FA } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [is2FARequired, setIs2FARequired] = useState(false);
   const [pendingUserId, setPendingUserId] = useState(null);
   
   const handleLogin2 = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
+    
+    // İki faktörlü doğrulama aşamasında ise doğrulama işlemini yap
+    if (is2FARequired) {
+      try {
+        if (!verificationCode) {
+          setError('Please enter the verification code');
+          setIsLoading(false);
+          return;
+        }
+        
+        const result = await verify2FA(pendingUserId, verificationCode);
+        
+        if (result.success) {
+          toast.success("Login successful!");
+          onClose();
+          if (result.token) {
+            localStorage.setItem('token', result.token);
+          }
+          window.location.reload();
+        } else {
+          setError(result.error || 'Invalid verification code');
+          toast.error(result.error || "Verification failed");
+        }
+      } catch (err) {
+        setError(err.message);
+        toast.error(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+    
+    // Normal giriş aşaması
     try {
       const result = await login(email, password);
       
       if (!result.success) {
+        // Check if 2FA is required
+        if (result.requires2FA && result.userId) {
+          setPendingUserId(result.userId);
+          setIs2FARequired(true);
+          toast.info("Please enter the verification code sent to your email");
+          setIsLoading(false);
+          return;
+        }
+        
         setError(result.error || 'Login failed');
         toast.error(result.error || "Login failed");
         return;
@@ -94,58 +136,97 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
               </div>
 
               <form onSubmit={handleLogin2} className="space-y-5">
-                <div>
-                  <Label htmlFor="email-login" className="text-sm font-medium text-gray-700">
-                    Email
-                  </Label>
-                  <div className="relative mt-1">
-                    <Input
-                      id="email-login"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
-                      placeholder="your@email.com"
-                      required
-                    />
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
+                {!is2FARequired ? (
+                  <>
+                    <div>
+                      <Label htmlFor="email-login" className="text-sm font-medium text-gray-700">
+                        Email
+                      </Label>
+                      <div className="relative mt-1">
+                        <Input
+                          id="email-login"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className={`w-full pl-10 pr-4 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
+                          placeholder="your@email.com"
+                          required
+                        />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
 
-                <div>
-                  <Label htmlFor="password-login" className="text-sm font-medium text-gray-700">
-                    Password
-                  </Label>
-                  <div className="relative mt-1">
-                    <Input
-                      id="password-login"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
-                      placeholder="••••••••"
-                      required
-                    />
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
+                    <div>
+                      <Label htmlFor="password-login" className="text-sm font-medium text-gray-700">
+                        Password
+                      </Label>
+                      <div className="relative mt-1">
+                        <Input
+                          id="password-login"
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className={`w-full pl-10 pr-4 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
+                          placeholder="••••••••"
+                          required
+                        />
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
 
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center">
-                    <Checkbox 
-                      id="remember-me-login" 
-                      checked={rememberMe}
-                      onCheckedChange={setRememberMe}
-                      className="mr-2"
-                    />
-                    <Label htmlFor="remember-me-login" className="text-gray-700 cursor-pointer">
-                      Remember me
-                    </Label>
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        <Checkbox 
+                          id="remember-me-login" 
+                          checked={rememberMe}
+                          onCheckedChange={setRememberMe}
+                          className="mr-2"
+                        />
+                        <Label htmlFor="remember-me-login" className="text-gray-700 cursor-pointer">
+                          Remember me
+                        </Label>
+                      </div>
+                      <a href="#" className="font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                        Forgot password?
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-center">
+                      <p className="text-sm text-blue-800">
+                        A verification code has been sent to your email.
+                        <br />Please enter the code below to continue.
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="verification-code" className="text-sm font-medium text-gray-700">
+                        Verification Code
+                      </Label>
+                      <Input
+                        id="verification-code"
+                        type="text"
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value)}
+                        className={`w-full py-3 bg-gray-50 border text-center text-lg tracking-widest font-mono ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
+                        placeholder="123456"
+                        maxLength={6}
+                        required
+                        autoFocus
+                      />
+                      <div className="text-center mt-2">
+                        <button 
+                          type="button" 
+                          onClick={() => setIs2FARequired(false)}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          Back to login
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <a href="#" className="font-medium text-blue-600 hover:text-blue-800 transition-colors">
-                    Forgot password?
-                  </a>
-                </div>
+                )}
 
                 {error && (
                   <p className="text-sm text-red-600 text-center">{error}</p>
@@ -162,10 +243,10 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Signing in...
+                      {is2FARequired ? 'Verifying...' : 'Signing in...'}
                     </div>
                   ) : (
-                    'Sign in'
+                    is2FARequired ? 'Verify Code' : 'Sign in'
                   )}
                 </Button>
               </form>
@@ -206,14 +287,6 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
           </div>
         </DialogContent>
       </Dialog>
-
-      {show2FAModal && (
-        <TwoFactorModal 
-          onVerify={handle2FAVerification} 
-          onCancel={handle2FACancel} 
-          email={email}
-        />
-      )}
     </>
   );
 };
