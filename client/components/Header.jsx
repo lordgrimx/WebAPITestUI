@@ -33,6 +33,7 @@ import GenerateCodeModal from "@/components/GenerateCodeModal";
 import SaveRequestModal from "@/components/SaveRequestModal";
 import EnvironmentModal from "@/components/EnvironmentModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
+import NotificationBell from "@/components/NotificationBell";
 import { useAuth } from "@/lib/auth-context";
 import { useSettings } from "@/lib/settings-context"; // useSettings hook'unu import et
 import { useEnvironment } from "@/lib/environment-context"; // Import useEnvironment
@@ -613,6 +614,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>          
+          <NotificationBell darkMode={isDarkMode} />
           <Button
             variant="ghost"
             size="icon"

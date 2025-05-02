@@ -17,7 +17,9 @@ namespace WebTestUI.Backend.Data
         public DbSet<History> HistoryEntries { get; set; }
         public DbSet<EnvironmentConfig> Environments { get; set; }
         public DbSet<K6Test> K6Tests { get; set; }
-        public DbSet<SharedData> SharedData { get; set; } // Add DbSet for SharedData
+        public DbSet<SharedData> SharedData { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<NotificationPreference> NotificationPreferences { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -87,6 +89,20 @@ namespace WebTestUI.Backend.Data
                 .WithMany(u => u.Environments)
                 .HasForeignKey(e => e.UserId)
                 .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Notification
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany(u => u.Notifications)
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Notification Preferences
+            modelBuilder.Entity<NotificationPreference>()
+                .HasOne(np => np.User)
+                .WithOne(u => u.NotificationPreference)
+                .HasForeignKey<NotificationPreference>(np => np.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

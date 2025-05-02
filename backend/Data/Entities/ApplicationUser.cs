@@ -13,11 +13,13 @@ namespace WebTestUI.Backend.Data.Entities
             Requests = new HashSet<Request>();
             HistoryEntries = new HashSet<History>();
             Environments = new HashSet<EnvironmentConfig>();
+            Notifications = new HashSet<Notification>();
         }
 
         public string? Name { get; set; }
         // public string? ProfileImage { get; set; } // Replaced with Base64
-        public string? ProfileImageBase64 { get; set; } // Store image as Base64 string        public string? Phone { get; set; } // Made Phone nullable
+        public string? ProfileImageBase64 { get; set; } // Store image as Base64 string        
+        public string? Phone { get; set; } // Made Phone nullable
         public string? Address { get; set; }
         public string? Website { get; set; }
         public new bool TwoFactorEnabled { get; set; } // Use 'new' keyword to hide the base class property
@@ -49,5 +51,7 @@ namespace WebTestUI.Backend.Data.Entities
         public virtual ICollection<Request> Requests { get; set; }
         public virtual ICollection<History> HistoryEntries { get; set; }
         public virtual ICollection<EnvironmentConfig> Environments { get; set; }
+        public virtual ICollection<Notification> Notifications { get; set; }
+        public virtual NotificationPreference NotificationPreference { get; set; }
     }
 }

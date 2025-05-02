@@ -16,10 +16,12 @@
         "features": "Özellikler",
         "pricing": "Fiyatlandırma",
         "documentation": "Dokümantasyon",
+        "loadTests": "Yük Testleri",
         "about": "Hakkında",
         "monitoring": "İzleme",
         "share": "Paylaş",
         "environments": "Ortamlar",
+        "environmentLoading": "Ortamlar yükleniyor...",
         "environmentList": {
             "development": "Geliştirme",
             "staging": "Test",

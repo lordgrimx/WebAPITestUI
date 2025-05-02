@@ -22,21 +22,18 @@ export default function ImportDataModal({
   onImportConfirm,
   darkMode,
 }) {
-  const { t } = useTranslation();
+
   const [activeTab, setActiveTab] = useState("request");
 
-  console.log("ImportDataModal received importData:", importData);
-  console.log("ImportDataModal received collections:", importData?.collections);
-  console.log("ImportDataModal received history:", importData?.history);
 
   const handleConfirmImport = () => {
     try {
       onImportConfirm(importData);
-      toast.success(t("import.success", "Data imported successfully"));
+      toast.success("Veriler başarıyla içe aktarıldı");
       setOpen(false);
     } catch (error) {
       console.error("Failed to import data:", error);
-      toast.error(t("import.failed", "Failed to import data"));
+      toast.error("Veri içe aktarılamadı");
     }
   };
 
@@ -54,31 +51,31 @@ export default function ImportDataModal({
       <DialogContent className={`sm:max-w-[600px] ${darkMode ? "bg-gray-800 text-white" : ""}`}>
         <DialogHeader>
           <DialogTitle className={darkMode ? "text-white" : ""}>
-            {t("import.title", "Import Shared Data")}
+            Paylaşılan Verileri İçe Aktar
           </DialogTitle>
           <DialogDescription className={darkMode ? "text-gray-300" : ""}>
-            {t("import.description", "Review and confirm importing the following data")}
+            Aşağıdaki verileri gözden geçirin ve içe aktarmayı onaylayın
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="request" className="w-full" onValueChange={setActiveTab}>
           <TabsList className="w-full">
             <TabsTrigger value="request" className="flex-1">
-              {t("import.request", "Request")}
+              İstek
             </TabsTrigger>
             {importData?.environment && (
               <TabsTrigger value="environment" className="flex-1">
-                {t("import.environment", "Environment")}
+                Ortam
               </TabsTrigger>
             )}
             {importData?.collections && importData.collections.length > 0 && (
               <TabsTrigger value="collections" className="flex-1">
-                {t("import.collections", "Collections")}
+                Koleksiyonlar
               </TabsTrigger>
             )}
             {importData?.history && importData.history.length > 0 && (
               <TabsTrigger value="history" className="flex-1">
-                {t("import.history", "History")}
+                Geçmiş
               </TabsTrigger>
             )}
           </TabsList>
@@ -132,7 +129,7 @@ export default function ImportDataModal({
                 )}
               </div>
             ) : (
-              <p>{t("import.noRequestData", "No request data to import")}</p>
+              <p>İçe aktarılacak istek verisi bulunamadı</p>
             )}
           </TabsContent>
 
@@ -178,7 +175,7 @@ export default function ImportDataModal({
          {importData?.collections && importData.collections.length > 0 && (
            <TabsContent value="collections" className="border rounded-md p-4 mt-4 max-h-[400px] overflow-y-auto">
              <div>
-               <h3 className="text-base font-semibold mb-2">{t("import.collections", "Collections")}</h3>
+               <h3 className="text-base font-semibold mb-2">Koleksiyonlar</h3>
                <pre className={`text-xs p-3 rounded overflow-x-auto ${darkMode ? "bg-gray-900" : "bg-gray-100"}`}>
                  {formatJson(importData.collections)}
                </pre>
@@ -189,7 +186,7 @@ export default function ImportDataModal({
          {importData?.history && importData.history.length > 0 && (
            <TabsContent value="history" className="border rounded-md p-4 mt-4 max-h-[400px] overflow-y-auto">
              <div>
-               <h3 className="text-base font-semibold mb-2">{t("import.history", "History")}</h3>
+               <h3 className="text-base font-semibold mb-2">Geçmiş</h3>
                <pre className={`text-xs p-3 rounded overflow-x-auto ${darkMode ? "bg-gray-900" : "bg-gray-100"}`}>
                  {formatJson(importData.history)}
                </pre>
@@ -204,10 +201,10 @@ export default function ImportDataModal({
             onClick={() => setOpen(false)}
             className={darkMode ? "text-white border-gray-600" : ""}
           >
-            {t("general.cancel", "Cancel")}
+            İptal
           </Button>
           <Button onClick={handleConfirmImport}>
-            {t("import.confirmButton", "Import Data")}
+            Veriyi İçe Aktar
           </Button>
         </DialogFooter>
       </DialogContent>
