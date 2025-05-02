@@ -258,7 +258,21 @@ using (var scope = app.Services.CreateScope())
             UserName = adminEmail,
             Email = adminEmail,
             Name = "Admin User",
-            EmailConfirmed = true // Assuming admin email is confirmed
+            EmailConfirmed = true,
+            NotificationPreference = new NotificationPreference
+                {
+                    // Default notification preferences
+                    ApiUpdatesEnabled = true,
+                    RequestErrorsEnabled = true,
+                    TestFailuresEnabled = true,
+                    MentionsEnabled = true,
+                    EmailCommentsEnabled = true,
+                    EmailSharedApisEnabled = true,
+                    EmailSecurityAlertsEnabled = true,
+                    NewsletterEnabled = true,
+                    SlackEnabled = true,
+                    DiscordEnabled = true
+                } // Assuming admin email is confirmed
         };
         var createAdminResult = await userManager.CreateAsync(adminUser, adminPassword);
         if (createAdminResult.Succeeded)
