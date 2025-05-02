@@ -6,6 +6,7 @@ using System.Security.Claims;
 using System.Text.RegularExpressions;
 using WebTestUI.Backend.DTOs;
 using WebTestUI.Backend.Services;
+using WebTestUI.Backend.Services.Interfaces;
 using System.Text;
 using System.Text.Json;
 using System.Linq;
@@ -14,12 +15,13 @@ using Microsoft.VisualBasic; // Added for LINQ usage
 namespace WebTestUI.Backend.Controllers
 {
 
-    // Default path, can be overridden in configuration    [ApiController]
+    // Default path, can be overridden in configuration    
+    [ApiController]
     [Route("api/[controller]")]
     [Authorize]
     public partial class K6Controller : ControllerBase
     {
-
+        private readonly INotificationService _notificationService;
         private readonly ILogger<K6Controller> _logger;
         private readonly IConfiguration _configuration;
         private readonly IK6TestService _k6TestService;
@@ -29,18 +31,25 @@ namespace WebTestUI.Backend.Controllers
         public K6Controller(
             ILogger<K6Controller> logger,
             IConfiguration configuration,
-            IK6TestService k6TestService)
+            IK6TestService k6TestService,
+            INotificationService notificationService)  // Changed to INotificationService
         {
             _logger = logger;
             _configuration = configuration;
             _k6TestService = k6TestService;
             _k6ExecutablePath = _configuration["K6:ExecutablePath"] ?? "k6";
             _runningTests = new Dictionary<string, Process>();
+            _notificationService = notificationService;
         }
 
         [HttpPost("run")]
         public async Task<IActionResult> RunK6Test([FromBody] K6RunRequestDto request)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("User ID not found in token.");
+            }
             try
             {
                 var tempDir = Path.GetTempPath();
@@ -277,6 +286,15 @@ namespace WebTestUI.Backend.Controllers
 
                     // Log the metrics as JSON for debugging
                     LogMetricsToConsole(metrics);
+                    // Send notification if configured
+                    await _notificationService.CreateNotificationAsync(new CreateNotificationDto {
+                        UserId = userId,
+                        Title = exitCode == 99 ? "K6 Test Completed (Thresholds Violated)" : "K6 Test Completed",
+                        Message = $"K6 test run finished. Exit Code: {exitCode}. Check results.", // Add more details if needed
+                        Type = exitCode == 99 ? "test_threshold_violation" : "test_success",
+                        RelatedEntityType = "k6_run", // Or link to a specific K6Test entity if applicable
+                        RelatedEntityId = request.TestId.ToString() // Convert Guid to string
+                    });
 
                     return Ok(new K6MetricsResponseDto
                     {
@@ -298,6 +316,16 @@ namespace WebTestUI.Backend.Controllers
             catch (Exception ex)
             {
                 _logger.LogError($"Error running K6 test: {ex.Message}");
+                if (!string.IsNullOrEmpty(userId)) {
+                    await _notificationService.CreateNotificationAsync(new CreateNotificationDto {
+                        UserId = userId,
+                        Title = "K6 Test Failed",
+                        Message = "An unexpected error occurred while running the K6 test.",
+                        Type = "test_error",
+                        RelatedEntityType = "k6_run",
+                        RelatedEntityId = request.TestId.ToString() // Convert Guid to string
+                    });
+                }
                 return StatusCode(500, new { error = ex.Message });
             }
         }

@@ -47,6 +47,16 @@ namespace WebTestUI.Backend.Services
             // Check user preferences for this type of notification
             var preferences = await GetOrCreateUserPreferencesAsync(createDto.UserId);
             
+            // Convert string RelatedEntityId to int? if possible
+            int? relatedEntityId = null;
+            if (!string.IsNullOrEmpty(createDto.RelatedEntityId))
+            {
+                if (int.TryParse(createDto.RelatedEntityId, out int parsedId))
+                {
+                    relatedEntityId = parsedId;
+                }
+            }
+
             // Create notification
             var notification = new Notification
             {
@@ -55,7 +65,7 @@ namespace WebTestUI.Backend.Services
                 Message = createDto.Message,
                 Type = createDto.Type,
                 RelatedEntityType = createDto.RelatedEntityType,
-                RelatedEntityId = createDto.RelatedEntityId,
+                RelatedEntityId = relatedEntityId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -348,7 +358,7 @@ namespace WebTestUI.Backend.Services
                 Message = $"'{apiName}' API'si güncellendi.",
                 Type = "api_update",
                 RelatedEntityType = "request",
-                RelatedEntityId = apiId
+                RelatedEntityId = apiId.ToString()
             });
         }
 
@@ -365,7 +375,7 @@ namespace WebTestUI.Backend.Services
                 Message = errorMessage,
                 Type = "request_error",
                 RelatedEntityType = "request",
-                RelatedEntityId = requestId
+                RelatedEntityId = requestId.ToString()
             });
         }
 
@@ -382,7 +392,7 @@ namespace WebTestUI.Backend.Services
                 Message = $"'{testName}' testi başarısız oldu.",
                 Type = "test_failure",
                 RelatedEntityType = "test",
-                RelatedEntityId = testId
+                RelatedEntityId = testId.ToString()
             });
         }
 
@@ -415,7 +425,7 @@ namespace WebTestUI.Backend.Services
                 Message = $"{commentedBy} yorum yaptı: {content}",
                 Type = "comment",
                 RelatedEntityType = entityType,
-                RelatedEntityId = entityId
+                RelatedEntityId = entityId.ToString()
             });
         }
 
@@ -430,7 +440,7 @@ namespace WebTestUI.Backend.Services
                 Message = $"{sharedBy}, '{apiName}' API'sini sizinle paylaştı.",
                 Type = "shared_api",
                 RelatedEntityType = "request",
-                RelatedEntityId = apiId
+                RelatedEntityId = apiId.ToString()
             });
         }
 

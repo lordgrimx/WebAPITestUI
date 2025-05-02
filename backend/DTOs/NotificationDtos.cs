@@ -79,7 +79,7 @@ namespace WebTestUI.Backend.DTOs
         public string? Message { get; set; }
         public string? Type { get; set; }
         public string? RelatedEntityType { get; set; }
-        public int? RelatedEntityId { get; set; }
+        public string? RelatedEntityId { get; set; } // Changed from int? to string? to handle both int and Guid
     }
 
     // DTO for notification statistics
