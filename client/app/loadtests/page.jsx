@@ -36,14 +36,15 @@ import {
   HelpCircleIcon,
   CheckCheckIcon,
   ActivityIcon,
-  Square
+  Square,
+  ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authAxios } from '@/lib/auth-context';
-import { toast as sonnerToast } from 'sonner';
 import LoadTestDialog from '@/components/api-tester/LoadTestDialog';
+import Link from 'next/link';
 
 function MetricItem({ label, value }) {
   return (
@@ -468,9 +469,14 @@ export default function LoadTestsPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Yük Testleri</h1>
+        <div className='flex items-center justify-center'>
+          <Link href="/home" className="text-blue-400 hover:text-blue-700">
+            <ArrowLeft className={`h-10 w-10 mr-4`}/>
+          </Link>
+          <h1 className="text-3xl font-bold">Yük Testleri</h1>
+        </div>
         <Button 
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-400 hover:bg-blue-700"
           onClick={() => setIsCreateDialogOpen(true)}
         >
           Yeni Test Oluştur

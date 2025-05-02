@@ -6,6 +6,61 @@ import { format } from "date-fns";
 import { Button } from '../ui/button';
 import { toast } from 'react-toastify';
 import { authAxios, useAuth } from '@/lib/auth-context'; // Import useAuth
+import Link from 'next/link';
+import { ArrowLeft, Badge, ChevronsUpDown, Check } from 'lucide-react';
+import { useTheme } from 'next-themes'; // Import useTheme from next-themes
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+// HTTP Method renkleri ve Badge variantları (CollectionsSidebar.jsx'ten kopyalandı)
+const methodStyles = {
+  GET:    {
+    variant: "default",
+    className: "text-blue-800 hover:bg-blue-200 border-blue-300 object-fit",
+    darkClassName: "text-blue-100 hover:bg-blue-800 border-blue-700"
+  },
+  POST:   {
+    variant: "default",
+    className: "text-green-800 hover:bg-green-200 border-green-300",
+    darkClassName: "text-green-100 hover:bg-green-800 border-green-700"
+  },
+  PUT:    {
+    variant: "default",
+    className: "text-yellow-800 hover:bg-yellow-200 border-yellow-300",
+    darkClassName: "text-yellow-100 hover:bg-yellow-800 border-yellow-700"
+  },
+  DELETE: {
+    variant: "destructive",
+    className: "text-red-800 hover:bg-red-200 border-red-300",
+    darkClassName: "text-red-100 hover:bg-red-800 border-red-700"
+  },
+  PATCH:  {
+    variant: "default",
+    className: "text-purple-800 hover:bg-purple-200 border-purple-300",
+    darkClassName: "text-purple-100 hover:bg-purple-800 border-purple-700"
+  },
+  OPTIONS:{
+    variant: "secondary",
+    className: "text-gray-800 hover:bg-gray-200 border-gray-300",
+    darkClassName: "text-gray-100 hover:bg-gray-600 border-gray-500"
+  },
+  HEAD:   {
+    variant: "secondary",
+    className: "text-pink-800 hover:bg-pink-200 border-pink-300",
+    darkClassName: "text-pink-100 hover:bg-pink-800 border-pink-700"
+  },
+  DEFAULT:{
+    variant: "secondary",
+    className: "text-gray-800 hover:bg-gray-200 border-gray-300",
+    darkClassName: "text-gray-100 hover:bg-gray-600 border-gray-500"
+  },
+};
+
+const getMethodStyle = (method, currentTheme) => {
+  const style = methodStyles[method.toUpperCase()] || methodStyles.DEFAULT;
+  // Return the appropriate class based on the current theme
+  return currentTheme === 'dark' ? style.darkClassName : style.className;
+};
+
 
 // Add this helper function at the top of the file
 const getPathFromUrl = (urlString) => {
@@ -32,14 +87,23 @@ const getPathFromUrl = (urlString) => {
   }
 };
 
-// Update the helper functions
-const getStatusColor = (status) => {
-  if (!status) return '#909399'; // Gray for unknown
-  if (status < 200) return '#909399'; // Gray for informational
-  if (status < 300) return '#67C23A'; // Green for success
-  if (status < 400) return '#E6A23C'; // Yellow for redirection
-  if (status < 500) return '#F56C6C'; // Red for client errors
-  return '#B71C1C'; // Dark red for server errors
+// Update the helper functions with theme awareness
+const getStatusColor = (status, currentTheme) => {
+  // Default to dark theme colors
+  const colors = {
+    info: currentTheme === 'light' ? '#909399' : '#a0aec0',          // Gray for unknown/informational (gray-500 / slate-400)
+    success: currentTheme === 'light' ? '#22C55E' : '#67C23A',       // Green for success
+    redirect: currentTheme === 'light' ? '#F59E0B' : '#E6A23C',      // Yellow for redirection
+    clientError: currentTheme === 'light' ? '#EF4444' : '#F56C6C',   // Red for client errors
+    serverError: currentTheme === 'light' ? '#B91C1C' : '#B71C1C'    // Dark red for server errors
+  };
+  
+  if (!status) return colors.info;
+  if (status < 200) return colors.info;
+  if (status < 300) return colors.success;
+  if (status < 400) return colors.redirect;
+  if (status < 500) return colors.clientError;
+  return colors.serverError;
 };
 
 // Add these helper functions at the top
@@ -77,14 +141,41 @@ const getInitials = (user) => {
 
 const MonitoringDashboard = () => {
   const { user } = useAuth(); // Get user from context
+  const { theme } = useTheme(); // Get the current theme
+  
+  // Helper function to get theme-dependent colors
+  const getThemeColors = () => {
+    const isDark = theme === 'dark';
+    return {
+      textColor: isDark ? '#e2e8f0' : '#374151', // text-slate-200 / text-gray-800
+      axisColor: isDark ? '#a0aec0' : '#6b7280', // slate-400 / gray-500
+      gridColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: isDark ? 'transparent' : 'transparent', // Use transparent for chart background
+      // Chart series colors (Tailwind equivalents)
+      responseTimeColor: isDark ? '#60a5fa' : '#3b82f6', // blue-400 / blue-500
+      requestCountColor: isDark ? '#4ade80' : '#22c55e', // green-400 / green-500
+      errorRateColor: isDark ? '#f87171' : '#ef4444',   // red-400 / red-500
+      // Area fill colors (with transparency)
+      responseTimeAreaColor: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(59, 130, 246, 0.5)',
+      errorRateAreaColor: isDark ? 'rgba(248, 113, 113, 0.5)' : 'rgba(239, 68, 68, 0.5)',
+    };
+  };
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
-  const [refreshRate, setRefreshRate] = useState('30s');
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState(null); // Add state for selected environment ID
+  const timeList = ['30s', '1m', '5m', '10m'];
+  const [refreshRate, setRefreshRate] = useState(timeList[0]); // Default to 30s
   const [searchQuery, setSearchQuery] = useState('');
   const [endpointFilter, setEndpointFilter] = useState('All');
   const [selectedEndpoint, setSelectedEndpoint] = useState(null);
   const [timeRange, setTimeRange] = useState('24h');
   
+
+    const handleRefreshRateChangeToggle = () =>{
+    const currentIndex = timeList.indexOf(refreshRate);
+    const nextIndex = (currentIndex + 1) % timeList.length; // Calculate next index, wrap around if needed
+    setRefreshRate(timeList[nextIndex]);
+  }
 
   // Add chart refs
   const [charts, setCharts] = useState({
@@ -111,15 +202,25 @@ const MonitoringDashboard = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Fetch collections
-        const collectionsResponse = await authAxios.get('/collections');
+        // Read currentEnvironmentId from localStorage
+        const currentEnvironmentId = typeof window !== 'undefined' ? localStorage.getItem('currentEnvironmentId') : null;
+
+        // Fetch collections including environment name, filtered by currentEnvironmentId
+        const collectionsResponse = await authAxios.get('/collections', {
+          params: {
+            currentEnvironmentId: currentEnvironmentId // Include current environment ID from localStorage
+          }
+        });
         if (collectionsResponse.data) {
           setCollections(collectionsResponse.data);
         }
 
-        // Fetch history with limit
+        // Fetch history with limit and environment filter
         const historyResponse = await authAxios.get('/history', {
-          params: { limit: 50 }
+          params: {
+            limit: 50,
+            currentEnvironmentId: selectedEnvironmentId || currentEnvironmentId // Include selected environment ID or current environment ID from localStorage
+          }
         });
         if (historyResponse.data) {
           setHistory(historyResponse.data);
@@ -137,17 +238,17 @@ const MonitoringDashboard = () => {
     // Set up refresh interval based on refreshRate
     const getRefreshInterval = () => {
       switch (refreshRate) {
-        case '5s': return 5000;
-        case '10s': return 10000;
         case '30s': return 30000;
         case '1m': return 60000;
+        case '5m': return 300000;
+        case '10m': return 600000;;
         default: return 30000;
       }
     };
 
     const interval = setInterval(fetchData, getRefreshInterval());
     return () => clearInterval(interval);
-  }, [refreshRate]);
+  }, [refreshRate, selectedEnvironmentId]); // Add selectedEnvironmentId to dependency array
 
   // Transform history data for requests table
   const requests = useMemo(() => 
@@ -193,6 +294,7 @@ const MonitoringDashboard = () => {
     
     console.log("Selected collection:", selected, "from ID:", collectionId);
     setSelectedProject(selected || null);
+    setSelectedEnvironmentId(selected?.EnvironmentId || null); // Store selected environment ID
     setSelectedEndpoint(null); // Reset selected endpoint when changing collection
   };
 
@@ -207,10 +309,35 @@ const MonitoringDashboard = () => {
     if (!mounted || !filteredRequests) return;
 
     // Initialize charts only after component is mounted
-    const responseTimeChart = echarts.init(document.getElementById('response-time-chart'));
-    const requestCountChart = echarts.init(document.getElementById('request-count-chart'));
-    const errorRateChart = echarts.init(document.getElementById('error-rate-chart'));
-    const statusDistributionChart = echarts.init(document.getElementById('status-distribution-chart'));
+    const isDark = theme === 'dark';
+    const textColor = isDark ? '#e2e8f0' : '#374151';
+    const axisColor = isDark ? '#a0aec0' : '#6b7280';
+    const backgroundColor = isDark ? 'transparent' : 'transparent';
+    
+    // Initialize charts with theme
+    const responseTimeChart = echarts.init(document.getElementById('response-time-chart'), null, {
+      renderer: 'canvas',
+      useDirtyRect: false,
+      locale: 'TR'
+    });
+    
+    const requestCountChart = echarts.init(document.getElementById('request-count-chart'), null, {
+      renderer: 'canvas',
+      useDirtyRect: false,
+      locale: 'TR'
+    });
+    
+    const errorRateChart = echarts.init(document.getElementById('error-rate-chart'), null, {
+      renderer: 'canvas',
+      useDirtyRect: false,
+      locale: 'TR'
+    });
+    
+    const statusDistributionChart = echarts.init(document.getElementById('status-distribution-chart'), null, {
+      renderer: 'canvas',
+      useDirtyRect: false,
+      locale: 'TR'
+    });
 
     // Store chart instances
     setCharts({
@@ -239,35 +366,35 @@ const MonitoringDashboard = () => {
     const errorRateData = timeData.map(time => {
       const { total, errors } = timeGroups[time];
       return total > 0 ? (errors / total) * 100 : 0;
-    });
+    });    // Set options for response time chart
+    const themeColors = getThemeColors(); // Get theme-dependent colors
 
-    // Set options for response time chart
     responseTimeChart.setOption({
       animation: false,
       title: {
         text: 'Yanıt Süresi (ms)',
         left: 'center',
-        textStyle: { color: '#e2e8f0' }
+        textStyle: { color: themeColors.textColor }
       },
       tooltip: { trigger: 'axis' },
       xAxis: {
         type: 'category',
         data: timeData,
-        axisLabel: { color: '#a0aec0' }
+        axisLabel: { color: themeColors.axisColor }
       },
       yAxis: {
         type: 'value',
-        axisLabel: { color: '#a0aec0' }
+        axisLabel: { color: themeColors.axisColor }
       },
       series: [{
         data: responseTimesData,
         type: 'line',
         smooth: true,
-        lineStyle: { color: '#4299e1' },
+        lineStyle: { color: themeColors.responseTimeColor },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(66, 153, 225, 0.5)' },
-            { offset: 1, color: 'rgba(66, 153, 225, 0.1)' }
+            { offset: 0, color: themeColors.responseTimeAreaColor },
+            { offset: 1, color: themeColors.responseTimeAreaColor.replace('0.5', '0.1') } // Less opaque at the bottom
           ])
         }
       }]
@@ -278,22 +405,22 @@ const MonitoringDashboard = () => {
       title: {
         text: 'İstek Sayısı',
         left: "center",
-        textStyle: { color: "#e2e8f0" }
+        textStyle: { color: themeColors.textColor }
       },
       tooltip: { trigger: "axis" },
       xAxis: {
         type: "category",
         data: timeData,
-        axisLabel: { color: "#a0aec0" }
+        axisLabel: { color: themeColors.axisColor }
       },
       yAxis: {
         type: "value",
-        axisLabel: { color: "#a0aec0" }
+        axisLabel: { color: themeColors.axisColor }
       },
       series: [{
         data: requestCountData,
         type: "bar",
-        itemStyle: { color: "#48bb78" }
+        itemStyle: { color: themeColors.requestCountColor }
       }]
     });
     // Set options for error rate chart
@@ -302,27 +429,27 @@ const MonitoringDashboard = () => {
       title: {
         text: 'Hata Oranı',
         left: "center",
-        textStyle: { color: "#e2e8f0" }
+        textStyle: { color: themeColors.textColor }
       },
       tooltip: { trigger: "axis" },
       xAxis: {
         type: "category",
         data: timeData,
-        axisLabel: { color: "#a0aec0" }
+        axisLabel: { color: themeColors.axisColor }
       },
       yAxis: {
         type: "value",
-        axisLabel: { color: "#a0aec0" }
+        axisLabel: { color: themeColors.axisColor }
       },
       series: [{
         data: errorRateData,
         type: "line",
         smooth: true,
-        lineStyle: { color: "#f56565" },
+        lineStyle: { color: themeColors.errorRateColor },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "rgba(245, 101, 101, 0.5)" },
-            { offset: 1, color: "rgba(245, 101, 101, 0.1)" }
+            { offset: 0, color: themeColors.errorRateAreaColor },
+            { offset: 1, color: themeColors.errorRateAreaColor.replace('0.5', '0.1') } // Less opaque at the bottom
           ])
         }
       }]
@@ -337,13 +464,13 @@ const MonitoringDashboard = () => {
       title: {
         text: 'Durum Dağılımı',
         left: "center",
-        textStyle: { color: "#e2e8f0" }
+        textStyle: { color: themeColors.textColor }
       },
       tooltip: { trigger: "item" },
       legend: {
         orient: "vertical",
         left: "left",
-        textStyle: { color: "#a0aec0" }
+        textStyle: { color: themeColors.axisColor }
       },
       series: [{
         type: "pie",
@@ -353,10 +480,10 @@ const MonitoringDashboard = () => {
           itemStyle: {
             shadowBlur: 10,
             shadowOffsetX: 0,
-            shadowColor: "rgba(0, 0, 0, 0.5)"
+            shadowColor: themeColors.gridColor // Use gridColor for shadow
           }
         },
-        label: { color: "#e2e8f0" }
+        label: { color: themeColors.textColor }
       }]
     });
 
@@ -405,8 +532,7 @@ const MonitoringDashboard = () => {
       total > 0 ? (errors / total) * 100 : 0
     );
   };
-
-  // Inside the calculateStatusDistribution function, replace with:
+  // Status distribution calculation function
   const calculateStatusDistribution = (history) => {
     if (!history?.length) return [];
 
@@ -419,7 +545,7 @@ const MonitoringDashboard = () => {
     return Object.entries(statusCounts).map(([status, value]) => ({
       name: `Status ${status}`,
       value,
-      itemStyle: { color: getStatusColor(Number(status)) }
+      itemStyle: { color: getStatusColor(Number(status), theme) }
     })).sort((a, b) => Number(a.name.split(' ')[1]) - Number(b.name.split(' ')[1]));
   };
 
@@ -434,35 +560,63 @@ const MonitoringDashboard = () => {
     return matchesSearch && matchesFilter;
   });
 
+  const themeColors = getThemeColors(); // Get theme-dependent colors
+
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-gray-100">
+    <div className="flex flex-col h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 py-3 px-4">
+      <header className="bg-card border-b border-border py-3 px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <button 
-              onClick={toggleSidebar} 
-              className="text-gray-400 hover:text-white cursor-pointer !rounded-button whitespace-nowrap"
+            <Link href="/home" className="">
+              <ArrowLeft className={`h-8 w-8 ml-4 text-muted-foreground hover:text-foreground`}/>
+            </Link>
+            <button
+              onClick={toggleSidebar}
+              className="text-muted-foreground hover:text-foreground cursor-pointer !rounded-button whitespace-nowrap"
             >
               <i className={`fas ${sidebarCollapsed ? 'fa-bars' : 'fa-times'} text-lg`}></i>
             </button>
-            
-            <div className="relative">
-              <select
-                className="bg-gray-700 rounded-md px-3 py-2"
+              <div className="relative">
+              <Select
                 value={selectedProject?.id || selectedProject?._id || ''}
-                onChange={(e) => handleProjectSelect(e.target.value)}
+                onValueChange={handleProjectSelect}
               >
-                <option value="">Koleksiyon Seçin</option>
-                {collections?.map(collection => (
-                  <option key={collection.id || collection._id} value={collection.id || collection._id}>
-                    {collection.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-[180px] bg-input text-foreground border border-border rounded-md focus:ring-2 focus:ring-primary focus:ring-offset-1">
+                  <SelectValue placeholder="Koleksiyon Seçin" />
+                  <ChevronsUpDown className="h-4 w-4 ml-auto opacity-70" />
+                </SelectTrigger>
+                <SelectContent 
+                  className="bg-input border border-border shadow-md rounded-md overflow-hidden w-[180px]" 
+                  sideOffset={5} 
+                  align="end"
+                  position="popper"
+                >
+                  <SelectGroup>
+                    {collections && collections.length > 0 ? (
+                      collections.map(collection => (
+                        <SelectItem 
+                          key={collection.id || collection._id} 
+                          value={collection.id || collection._id}
+                          className="border w-full border-border rounded-md hover:bg-accent hover:text-accent-foreground"
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>{collection.name}{collection.EnvironmentName ? ` - ${collection.EnvironmentName}` : ''}</span> {/* Display collection name and environment name */}
+                            {((selectedProject?.id || selectedProject?._id) === (collection.id || collection._id)) && (
+                              <Check className="h-4 w-4 ml-2 text-primary" />
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-2 text-sm text-muted-foreground">Koleksiyon bulunamadı</div>
+                    )}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
             
-            <div className="flex items-center bg-green-500 px-2 py-1 rounded-full text-xs">
+            <div className="flex items-center bg-green-500 px-2 py-1 rounded-full text-xs text-white"> {/* Bağlantı durumu için sabit renk */}
               <i className="fas fa-circle text-xs mr-1"></i>
               <span>Bağlı</span>
             </div>
@@ -472,31 +626,33 @@ const MonitoringDashboard = () => {
             <input
               type="text"
               placeholder="Endpoint Ara..."
-              className="bg-gray-700 w-full rounded-md py-2 pl-10 pr-4 text-sm border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-input w-full rounded-md py-2 pl-10 pr-4 text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <i className="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+            <i className="fas fa-search absolute left-3 top-2.5 text-muted-foreground"></i>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <button className="flex items-center bg-gray-700 hover:bg-gray-600 rounded-md px-3 py-2 text-sm cursor-pointer !rounded-button whitespace-nowrap">
+          <div className="flex items-center space-x-4">            <div className="relative">
+              <button 
+                onClick={()=> handleRefreshRateChangeToggle()} 
+                className="flex items-center justify-between w-[150px] bg-input hover:bg-accent/80 rounded-md px-3 py-2 text-sm cursor-pointer text-foreground border border-border focus:ring-2 focus:ring-primary focus:ring-offset-1"
+              >
                 <span>Yenileme: {refreshRate}</span>
-                <i className="fas fa-chevron-down ml-2 text-xs"></i>
+                <ChevronsUpDown className="h-4 w-4 opacity-70" />
               </button>
             </div>
             
-            <button className="text-gray-400 hover:text-white cursor-pointer !rounded-button whitespace-nowrap">
+            <button className="text-muted-foreground hover:text-foreground cursor-pointer !rounded-button whitespace-nowrap">
               <i className="fas fa-bell text-lg"></i>
             </button>
             
-            <button className="text-gray-400 hover:text-white cursor-pointer !rounded-button whitespace-nowrap">
+            <button className="text-muted-foreground hover:text-foreground cursor-pointer !rounded-button whitespace-nowrap">
               <i className="fas fa-cog text-lg"></i>
             </button>
             
             {/* Profile Picture/Initials */}
-            <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white overflow-hidden">
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground overflow-hidden">
               {user?.profileImageBase64 ? (
                 <img
                   src={user.profileImageBase64}
@@ -513,35 +669,35 @@ const MonitoringDashboard = () => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar with real endpoints */}
-        <aside className={`bg-gray-800 border-r border-gray-700 ${sidebarCollapsed ? 'hidden' : 'w-64'} flex-shrink-0 flex flex-col`}>
+        <aside className={`bg-card border-r border-border ${sidebarCollapsed ? 'hidden' : 'w-64'} flex-shrink-0 flex flex-col`}>
           <div className="p-4">
             <div className="relative">
               <input
                 type="text"
                 placeholder="Endpoint Ara..."
-                className="bg-gray-700 w-full rounded-md py-2 pl-10 pr-4 text-sm border-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="bg-input w-full rounded-md py-2 pl-10 pr-4 text-sm border border-border focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder:text-muted-foreground"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-              <i className="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+              <i className="fas fa-search absolute left-3 top-2.5 text-muted-foreground"></i>
             </div>
             
             <div className="mt-4 flex space-x-2">
-              <button 
-                onClick={() => setEndpointFilter('All')} 
-                className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'All' ? 'bg-blue-600' : 'bg-gray-700'}`}
+              <button
+                onClick={() => setEndpointFilter('All')}
+                className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'All' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'}`}
               >
                 Tümü
               </button>
-              <button 
-                onClick={() => setEndpointFilter('Active')} 
-                className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Active' ? 'bg-blue-600' : 'bg-gray-700'}`}
+              <button
+                onClick={() => setEndpointFilter('Active')}
+                className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Active' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'}`}
               >
                 Aktif
               </button>
-              <button 
-                onClick={() => setEndpointFilter('Inactive')} 
-                className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Inactive' ? 'bg-blue-600' : 'bg-gray-700'}`}
+              <button
+                onClick={() => setEndpointFilter('Inactive')}
+                className={`px-3 py-1 text-xs rounded-full cursor-pointer !rounded-button whitespace-nowrap ${endpointFilter === 'Inactive' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-accent'}`}
               >
                 Pasif
               </button>
@@ -551,24 +707,24 @@ const MonitoringDashboard = () => {
           <div className="flex-1 overflow-y-auto">
             {selectedProject ? (
               <div className="px-4 py-2">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   {selectedProject.name}
                 </h3>
                 <ul className="mt-2 space-y-1">
                   {filteredEndpoints.map(endpoint => (
                     <li key={endpoint.id}>
-                      <button 
+                      <button
                         onClick={() => setSelectedEndpoint(endpoint.name)}
                         className={`flex items-center justify-between w-full px-2 py-2 text-sm rounded-md ${
-                          selectedEndpoint === endpoint.name ? 'bg-gray-700' : 'hover:bg-gray-700'
+                          selectedEndpoint === endpoint.name ? 'bg-accent text-accent-foreground' : 'hover:bg-accent text-foreground'
                         }`}
                       >
                         <div className="flex items-center">
-                          <div className="h-2 w-2 rounded-full mr-2 bg-green-500"></div>
+                          <div className="h-2 w-2 rounded-full mr-2" style={{ backgroundColor: getStatusColor(200, theme) }}></div> {/* Use getStatusColor for active status */}
                           <span>{endpoint.name}</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs px-2 py-1 rounded-full bg-gray-700">
+                          <span className="text-xs px-2 py-1 rounded-full bg-secondary text-secondary-foreground">
                             {endpoint.method}
                           </span>
                         </div>
@@ -578,7 +734,7 @@ const MonitoringDashboard = () => {
                 </ul>
               </div>
             ) : (
-              <div className="px-4 py-2 text-gray-400">
+              <div className="px-4 py-2 text-muted-foreground">
                 Endpoint'leri görüntülemek için koleksiyon seçin
               </div>
             )}
@@ -586,14 +742,14 @@ const MonitoringDashboard = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-900 p-6">
+        <main className="flex-1 overflow-y-auto bg-background p-6">
           {mounted && ( // Only render charts when mounted
             <div className="grid grid-cols-2 gap-6 mb-6">
-              <div className="bg-gray-800 rounded-lg p-4 shadow-lg">
+              <div className="bg-card rounded-lg p-4 shadow-lg">
                 <div id="response-time-chart" className="h-80 w-full"></div>
               </div>
               
-              <div className="bg-gray-800 rounded-lg p-4 shadow-lg">
+              <div className="bg-card rounded-lg p-4 shadow-lg">
                 <div id="request-count-chart" className="h-80 w-full"></div>
               </div>
             </div>
@@ -601,11 +757,11 @@ const MonitoringDashboard = () => {
 
           {mounted && (
             <div className="grid grid-cols-2 gap-6 mb-6">
-              <div className="bg-gray-800 rounded-lg p-4 shadow-lg">
+              <div className="bg-card rounded-lg p-4 shadow-lg">
                 <div id="error-rate-chart" className="h-80 w-full"></div>
               </div>
               
-              <div className="bg-gray-800 rounded-lg p-4 shadow-lg">
+              <div className="bg-card rounded-lg p-4 shadow-lg">
                 <div id="status-distribution-chart" className="h-80 w-full"></div>
               </div>
             </div>
@@ -615,45 +771,49 @@ const MonitoringDashboard = () => {
             <table className="w-full">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Zaman</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Metod</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Endpoint</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Durum</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Yanıt Süresi</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">İşlemler</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Zaman</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Metod</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Endpoint</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Durum</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Yanıt Süresi</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">İşlemler</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-700">
+              <tbody className="divide-y divide-border">
                 {requests.map(request => (
-                  <tr key={request.id} className="hover:bg-gray-750">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{request.timestamp}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        request.method === 'GET' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {request.method}
-                      </span>
+                  <tr key={request.id} className="hover:bg-accent">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{request.timestamp}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                      <div className="relative inline-block">
+                        <Badge
+                          variant="secondary"
+                          className={`w-14 h-14 flex-shrink-0 ${getMethodStyle(request.method, theme)}`}
+                        />
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          {request.method.toUpperCase()}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{request.endpoint}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full`} 
-                        style={{ 
-                          backgroundColor: `${getStatusColor(request.statusCode)}20`, // Add transparency
-                          color: getStatusColor(request.statusCode) 
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{request.endpoint}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full`}
+                        style={{
+                          backgroundColor: `${getStatusColor(request.statusCode, theme)}20`, // Add transparency and pass theme
+                          color: getStatusColor(request.statusCode, theme) // Pass theme
                         }}>
                         {request.statusCode || 'Unknown'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{request.responseTime} ms</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{request.responseTime} ms</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-blue-400 hover:text-blue-300 mr-3"
+                        className="text-primary hover:text-primary/80 mr-3"
                         onClick={() => {
                           // Show response data in a dialog or modal
                           try {
-                            const responseData = request.responseData 
+                            const responseData = request.responseData
                               ? JSON.parse(request.responseData)
                               : null;
                             const headers = request.responseHeaders
@@ -678,7 +838,7 @@ const MonitoringDashboard = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-gray-400 hover:text-gray-300"
+                        className="text-muted-foreground hover:text-foreground"
                         onClick={() => {
                           // Download response data
                           const blob = new Blob([request.responseData], { type: 'application/json' });
