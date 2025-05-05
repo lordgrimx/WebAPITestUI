@@ -18,20 +18,32 @@ namespace WebTestUI.Backend.Controllers
         {
             _sharedDataService = sharedDataService;
         }
-
         [HttpPost]
-        public async Task<ActionResult<ShareLinkResponseDto>> ShareData([FromBody] SharedDataDto data)
+        public async Task<ActionResult<ShareLinkResponseDto>> ShareData([FromBody] SharedDataDto data, [FromQuery] int? currentEnvironmentId)
         {
             if (data == null)
             {
                 return BadRequest("Invalid data provided.");
             }
 
-            string shareId = await _sharedDataService.SaveSharedDataAsync(data);
+            // Make sure that only necessary data is included in the share
+            // Validate that it has at least an environment or collections
+            if (data.Environment == null && (data.Collections == null || !data.Collections.Any()))
+            {
+                return BadRequest("At least an environment or collections must be provided.");
+            }
+
+            // Get the current user ID
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("User must be authenticated to share data.");
+            }
+
+            string shareId = await _sharedDataService.SaveSharedDataAsync(data, currentEnvironmentId);
 
             return Ok(new ShareLinkResponseDto { ShareId = shareId });
         }
-
         [HttpGet("{shareId}")]
         public async Task<ActionResult<SharedDataDto>> GetSharedData(string shareId)
         {
@@ -50,11 +62,11 @@ namespace WebTestUI.Backend.Controllers
             // Get the logged-in user's ID
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // If a user is logged in, associate the shared data with them
+            // If a user is logged in, automatically associate the shared data with them
             if (!string.IsNullOrEmpty(userId))
             {
-                // Call a new service method to associate the data with the user
-                await _sharedDataService.AssociateSharedDataWithUserAsync(userId, data); // Assuming data contains necessary info
+                // Associate the environment and collections with this user
+                await _sharedDataService.AssociateSharedDataWithUserAsync(userId, data);
             }
 
             return Ok(data);

@@ -86,6 +86,14 @@ export default function ApiTester() {
     }
   }, [searchParams, router]);
 
+  // initialSharedData prop'u geldiğinde import modalını tetikleyen useEffect
+  useEffect(() => {
+    if (importData) { // Check if importData state is populated (which happens from URL param initially)
+      setShowImportModal(true);
+      // No need to set importData here, it's already set by the URL param useEffect
+    }
+  }, [importData]); // Depend on importData state
+
   // Fetch collections on component mount
   // Fetch collections on component mount and when authentication status changes
   useEffect(() => {
@@ -719,9 +727,10 @@ export default function ApiTester() {
   }, []);
   
   // Paylaşılan verileri içe aktarma işlemini gerçekleştiren fonksiyon
+  // Backend'in GET /SharedData/{shareId} endpoint'inin veriyi kullanıcıyla ilişkilendirdiği varsayılır.
   const handleImportConfirm = useCallback((data) => {
     try {
-      // Request verilerini aktarma
+      // Paylaşılan isteği RequestBuilder'a yükle
       if (data.request) {
         const requestData = {
           method: data.request.method || 'GET',
@@ -733,37 +742,30 @@ export default function ApiTester() {
           tests: data.request.tests || { script: '', results: [] },
         };
         
-        console.log("Importing request data:", requestData);
+        console.log("Importing request data to RequestBuilder:", requestData);
         setCurrentRequestData(requestData);
-        
-        // Environment verilerini aktarma
-        if (data.environment) {
-          // Environment context üzerinden mevcut environment'ı kontrol et
-          const existingEnv = environments.find(env => 
-            env.name === data.environment.name || env.id === data.environment.id
-          );
-          
-          if (existingEnv) {
-            // Eğer environment zaten varsa, onu aktif et
-            setCurrentEnvironmentById(existingEnv.id);
-          } else {
-            // Eğer environment yoksa ve API üzerinden yeni environment oluşturma yapılacaksa
-            // burada o kodu ekleyebiliriz (şimdilik yalnızca bir uyarı gösteriyoruz)
-            toast.info("Environment not found", { 
-              description: "The shared environment could not be found in your workspace." 
-            });
-          }
-        }
-        
-        toast.success("Data imported successfully", { 
-          description: "The shared request data has been imported." 
-        });
       }
+
+      // Backend'in ortam, koleksiyonlar ve geçmişi kaydettiği varsayılarak,
+      // frontend'deki ilgili listeleri yenilemek için context'leri veya state'leri tetikle.
+      // Environment context'i yenile
+      triggerEnvironmentChange(); 
+      // Collections ve History sidebar'ını yenilemek için historyUpdated state'ini tetikle
+      setHistoryUpdated(prev => prev + 1);
+
+      toast.success("Veriler başarıyla içe aktarıldı", { 
+        description: "Paylaşılan istek, ortam, koleksiyonlar ve geçmiş hesabınıza eklendi." 
+      });
+      
+      // Modalı kapat
+      setShowImportModal(false);
+
     } catch (error) {
       console.error("Failed to import data:", error);
-      toast.error("Import failed", { description: error.message });
+      toast.error("Veri içe aktarılamadı", { description: error.message });
     }
-  }, [environments, setCurrentEnvironmentById, setCurrentRequestData, setCollections, setHistory]); // Add dependencies for state updates
+  }, [setCurrentRequestData, triggerEnvironmentChange, setHistoryUpdated, setShowImportModal]); // Add dependencies
+
   return (
     <>
     <Header

@@ -243,11 +243,16 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         // For debugging - to see exactly what we're sending to the backend
       console.log('Sending data to backend (formatted):', JSON.stringify(exportData));
       
-      let shareId;
-
-      try {
+      let shareId;      try {
+        // Get currentEnvironmentId from localStorage for filtering
+        const currentEnvironmentId = typeof window !== 'undefined' ? localStorage.getItem('currentEnvironmentId') : null;
+        
         // Send data to backend and get shareId
-        const response = await authAxios.post('/SharedData', exportData);
+        // Add currentEnvironmentId as query parameter if it exists
+        const endpoint = currentEnvironmentId ? `/SharedData?currentEnvironmentId=${currentEnvironmentId}` : '/SharedData';
+        console.log('Using endpoint with environment filter:', endpoint);
+        
+        const response = await authAxios.post(endpoint, exportData);
         shareId = response.data.shareId;
 
         if (!shareId) {

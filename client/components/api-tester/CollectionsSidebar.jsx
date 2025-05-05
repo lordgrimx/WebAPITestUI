@@ -132,9 +132,11 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
       setIsLoading(true);
       try {
         // Using authAxios which automatically adds the token
+        // Environment ID'ye göre filtreleme yapalım
         const environmentId = currentEnvironment?.id;
         // Use currentEnvironmentId parameter name to match backend controller parameter
-        const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
+        // Eğer environmentId tanımsız veya 0 ise (yani "Tümü" seçiliyse), parametreyi gönderme
+        const endpoint = '/collections' + (environmentId && environmentId !== 0 ? `?currentEnvironmentId=${environmentId}` : '');
         const response = await authAxios.get(endpoint);
         console.log("Collections response:", response); // Log the response data
         if (response.data) {
@@ -156,7 +158,8 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
       const environmentId = currentEnvironment?.id;
       console.log("Fetching history for environment ID:", environmentId); // Log the environment ID
       // Use currentEnvironmentId parameter name to match backend controller parameter
-      const endpoint = '/history' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
+      // Eğer environmentId tanımsız veya 0 ise (yani "Tümü" seçiliyse), parametreyi gönderme
+      const endpoint = '/history' + (environmentId && environmentId !== 0 ? `?currentEnvironmentId=${environmentId}` : '');
       const response = await authAxios.get(endpoint);
       console.log("History response:", response.data); // Log the response data
       if (response.data) {
