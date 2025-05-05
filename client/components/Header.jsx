@@ -29,6 +29,14 @@ import {
   Home,
   Trash2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import SettingsModal from "@/components/SettingsModal";
 import GenerateCodeModal from "@/components/GenerateCodeModal";
 import SaveRequestModal from "@/components/SaveRequestModal";
@@ -43,6 +51,38 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useRequest } from "@/lib/request-context";
 
+// DeleteConfirmDialog bileşeni - Environment silme onay dialog'u
+const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
+  const { t } = useTranslation("common");
+  
+  const handleConfirm = () => {
+    onConfirm(environment);
+    setOpen(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{t('header.environmentDelete.title', 'Delete Environment')}</DialogTitle>
+          <DialogDescription>
+            {t('header.environmentDelete.confirmMessage', 
+              `Are you sure you want to delete the environment "${environment?.name}"? This will also delete all associated collections, requests, and history for this environment.`)}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            {t('general.cancel', 'Cancel')}
+          </Button>
+          <Button variant="destructive" onClick={handleConfirm}>
+            {t('general.delete', 'Delete')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // Accept currentRequestData prop from ApiTester
 export default function Header({ currentRequestData, openSignupModal, openLoginModal, onRequestSaved, collections, history }) {
   const [showSettings, setShowSettings] = useState(false);
@@ -50,6 +90,9 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   const [showSaveRequest, setShowSaveRequest] = useState(false);
   const [showEnvironmentModal, setShowEnvironmentModal] = useState(false);
   const [environmentToEdit, setEnvironmentToEdit] = useState(null);
+  // Environment silme dialog'u için state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [environmentToDelete, setEnvironmentToDelete] = useState(null);
   // Remove local environment state - get from context instead
   // const [environments, setEnvironments] = useState([]);
   // const [currentEnvironment, setCurrentEnvironment] = useState(null);
@@ -345,13 +388,23 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         description: "Could not export the request data.",
       });
     }
+  };  // Function to open the delete confirmation dialog
+  const openDeleteDialog = (env, e) => {
+    if (e) e.stopPropagation(); // Prevent triggering parent onClick
+    setEnvironmentToDelete(env);
+    setShowDeleteDialog(true);
   };
-  // Function to handle environment deletion with confirmation
-  const handleDeleteEnvironment = (env) => {
-    // Confirm before deleting
-    if (window.confirm(t('header.environmentDelete.confirmMessage', 
-      `Are you sure you want to delete the environment "${env.name}"? This will also delete all associated collections, requests, and history for this environment.`))) {
-      deleteEnvironment(env.id);
+
+  // Function to handle environment deletion after confirmation
+  const handleDeleteEnvironment = async (env) => {
+    if (env && env.id) {
+      try {
+        await deleteEnvironment(env.id);
+        toast.success(t('header.environmentDelete.success', 'Environment deleted successfully.'));
+      } catch (error) {
+        toast.error(t('header.environmentDelete.error', 'Failed to delete environment.'));
+        console.error('Delete environment error:', error);
+      }
     }
   };
 
@@ -463,6 +516,11 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         setOpen={setShowEnvironmentModal}
         environment={environmentToEdit}
         onEnvironmentSaved={handleEnvironmentSaved}
+      />      <DeleteConfirmDialog
+        open={showDeleteDialog}
+        setOpen={setShowDeleteDialog}
+        environment={environmentToDelete}
+        onConfirm={handleDeleteEnvironment}
       />
       <GenerateCodeModal
         open={showGenerateCode}
@@ -593,9 +651,8 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                         className="cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                       >
                         <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-                      </button>
-                      <button 
-                        onClick={(e) => handleDeleteEnvironment(env, e)} 
+                      </button>                      <button 
+                        onClick={(e) => openDeleteDialog(env, e)} 
                         className="cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                       >
                         <Trash2 className="h-3 w-3 text-red-400 hover:text-red-600" />
@@ -653,8 +710,9 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             user={user}
             onLogout={logout}
           />
-        </div>
-      </header>
+        </div>      </header>
+
+      {/* Delete confirmation dialog artık burada gerekli değil çünkü üstte zaten tanımlandı */}
     </>
   );
 }
