@@ -6,7 +6,7 @@ import { authAxios } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useTranslation } from "react-i18next"; // Çeviri hook'u eklendi
+import { useTranslation } from "react-i18next";
 import {
   Accordion,
   AccordionContent,
@@ -23,10 +23,9 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Plus, Folder, Trash2, History } from 'lucide-react';
+import { Plus, Folder, Trash2, History, Menu, X } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner"; // Add toast import
-import { env } from "process";
+import { toast } from "sonner";
 
 // HTTP Method renkleri ve Badge variantları
 const methodStyles = {
@@ -117,26 +116,68 @@ const getPathFromUrl = (urlString) => {
   }
 };
 
-// Update the component to accept historyUpdated and environmentChangedTimestamp props
+// Update the component to include mobile toggle functionality
 export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError, historyUpdated, currentEnvironment, environmentChangedTimestamp }) {
   const [newCollectionName, setNewCollectionName] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300); // Add debouncing  // State for storing collections and history items
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [collections, setCollections] = useState([]);
   const [historyItems, setHistoryItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz  // Fetch collections
+  const { t } = useTranslation("common");
+  
+  // Add state for mobile sidebar toggle
+  const [isMobile, setIsMobile] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Effect to detect screen size and set mobile state
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // Automatically close sidebar on mobile when resizing to mobile
+      if (mobile && !isMobile) {
+        setIsSidebarOpen(false);
+      } else if (!mobile && isMobile) {
+        // Automatically open sidebar when resizing to desktop
+        setIsSidebarOpen(true);
+      }
+    };
+    
+    // Set initial sizes on mount
+    handleResize();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMobile]);
+
+  // Toggle sidebar function for mobile
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  // Handle selection on mobile to automatically close the sidebar
+  const handleMobileSelection = (callback, ...args) => {
+    if (isMobile) {
+      callback(...args);
+      setIsSidebarOpen(false);
+    } else {
+      callback(...args);
+    }
+  };
+
+  // Fetch collections
   useEffect(() => {
     const fetchCollections = async () => {
       setIsLoading(true);
       try {
-        // Using authAxios which automatically adds the token
         const environmentId = currentEnvironment?.id;
-        // Use currentEnvironmentId parameter name to match backend controller parameter
         const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
         const response = await authAxios.get(endpoint);
-        console.log("Collections response:", response); // Log the response data
         if (response.data) {
           setCollections(response.data);
         }
@@ -148,44 +189,38 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
       }
     };
     fetchCollections();
-  }, [onError, currentEnvironment, environmentChangedTimestamp]); // Add environmentChangedTimestamp
-  
-  // Memoize the fetch history function
+  }, [onError, currentEnvironment, environmentChangedTimestamp]);
+
   const fetchHistory = useCallback(async () => {
     try {
       const environmentId = currentEnvironment?.id;
-      console.log("Fetching history for environment ID:", environmentId); // Log the environment ID
-      // Use currentEnvironmentId parameter name to match backend controller parameter
       const endpoint = '/history' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
       const response = await authAxios.get(endpoint);
-      console.log("History response:", response.data); // Log the response data
       if (response.data) {
         setHistoryItems(response.data);
       }
     } catch (error) {
       console.error("Error fetching history:", error);
     }
-  }, [currentEnvironment]); // Add currentEnvironment as dependency
+  }, [currentEnvironment]);
 
-  // Update useEffect to use memoized fetchHistory function
   useEffect(() => {
     fetchHistory();
-  }, [fetchHistory, historyUpdated, environmentChangedTimestamp]); // Add environmentChangedTimestamp  
-    const handleAddCollection = async () => {    if (newCollectionName.trim()) {
+  }, [fetchHistory, historyUpdated, environmentChangedTimestamp]);
+
+  const handleAddCollection = async () => {
+    if (newCollectionName.trim()) {
       try {
-        // Collection modeli için tüm gerekli alanları gönderelim
         const payload = {
           name: newCollectionName.trim(),
           description: "",
-          environmentId: currentEnvironment?.id // Environment ID'yi ekleyelim
+          environmentId: currentEnvironment?.id
         };
         const response = await authAxios.post('/collections', payload);
         if (response.data) {
           const environmentId = currentEnvironment?.id;
-          // Tutarlı şekilde currentEnvironmentId parametresi kullanılıyor
           const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
           const updatedCollections = await authAxios.get(endpoint);
-          console.log("Updated collections:", updatedCollections.data); // Log the updated collections
           setCollections(updatedCollections.data);
           toast.success("Collection added successfully");
         }
@@ -198,12 +233,13 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     } else {
       toast.warning("Please enter a collection name");
     }
-  };  const handleDeleteCollection = async (e, collectionId) => {
+  };
+
+  const handleDeleteCollection = async (e, collectionId) => {
     e.stopPropagation();
     if (window.confirm(t('collections.confirmDelete', "Bu koleksiyonu silmek istediğinizden emin misiniz? İçindeki tüm istekler de silinebilir."))) {
       try {
         await authAxios.delete(`/collections/${collectionId}`);
-        // Always send currentEnvironmentId as a query param
         const environmentId = currentEnvironment?.id;
         const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
         const updatedCollections = await authAxios.get(endpoint);
@@ -213,12 +249,13 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
         toast.error(t('collections.deleteError', "Failed to delete collection: ") + (err.response?.data?.message || err.message || "Unknown error"));
       }
     }
-  };  const handleDeleteRequest = async (e, requestId) => {
+  };
+
+  const handleDeleteRequest = async (e, requestId) => {
     e.stopPropagation();
     if (window.confirm(t('collections.confirmDeleteRequest', "Bu isteği silmek istediğinizden emin misiniz?"))) {
       try {
         await authAxios.delete(`/requests/${requestId}`);
-        // Always send currentEnvironmentId as a query param
         const environmentId = currentEnvironment?.id;
         const endpoint = '/collections' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
         const updatedCollections = await authAxios.get(endpoint);
@@ -229,10 +266,9 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
       }
     }
   };
-  
+
   const handleDeleteHistoryEntry = async (e, historyId) => {
     e.stopPropagation();
-    // Check if historyId is defined
     if (!historyId) {
       console.error("Cannot delete history entry: ID is undefined");
       toast.error("Failed to delete history entry: ID is missing");
@@ -240,11 +276,9 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     }
     try {
       await authAxios.delete(`/history/${historyId}`);
-      // Always send environmentId as a query param
       const environmentId = currentEnvironment?.id;
       const endpoint = '/history' + (environmentId ? `?currentEnvironmentId=${environmentId}` : '');
       const updatedHistory = await authAxios.get(endpoint);
-      console.log("Updated history:", updatedHistory.data); // Log the updated history
       setHistoryItems(updatedHistory.data);
       toast.success("History entry deleted successfully");
     } catch (err) {
@@ -257,7 +291,6 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     }
   };
 
-  // Update filteredCollections to use debouncedSearchTerm
   const filteredCollections = useMemo(() => 
     (collections || []).filter(collection =>
       collection?.name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
@@ -265,12 +298,24 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
     [collections, debouncedSearchTerm]
   );
 
-  // Optimize search input handler
   const handleSearchChange = useCallback((e) => {
     setSearchTerm(e.target.value);
   }, []);
+
+  const MobileToggleButton = () => (
+    <Button 
+      variant="ghost" 
+      size="icon" 
+      onClick={toggleSidebar}
+      className={`fixed z-50 top-16 left-2 rounded-full shadow-md ${darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-100'} md:hidden`}
+    >
+      {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+    </Button>
+  );
+
   if (hasError || !collections) {
-    return (      <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'} p-4`}>
+    return (
+      <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'} p-4`}>
         <Input
           type="search"
           placeholder={t('collections.searchPlaceholder', "Search collections...")}
@@ -290,98 +335,116 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
         </div>
       </div>
     );
-  }  return (
-    <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'}`}>
-      <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        <Input
-          type="search"
-          placeholder={t('collections.searchPlaceholder', "Search collections...")}
-          className={`w-full mb-2 ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
-          value={searchTerm}
-          onChange={handleSearchChange}
-        />
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className={`w-full ${darkMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
-              <Plus className="mr-2 h-4 w-4" /> {t('collections.newCollection', "New Collection")}
-            </Button>
-          </DialogTrigger>
-          <DialogContent aria-describedby="collection-dialog-description" className={darkMode ? 'dark bg-gray-800 border-gray-700' : ''}>
-            <DialogHeader>
-              <DialogTitle className={darkMode ? 'text-white' : ''}>{t('collections.addNewCollection', "Add New Collection")}</DialogTitle>
-              <DialogDescription id="collection-dialog-description" className={darkMode ? 'text-gray-400' : ''}>
-                {t('collections.createCollectionDesc', "Create a new collection for your API requests.")}
-              </DialogDescription>
-            </DialogHeader>
-            <Input
-              placeholder={t('collections.collectionName', "Collection Name")}
-              value={newCollectionName}
-              onChange={(e) => setNewCollectionName(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleAddCollection()}
-              autoFocus
-              aria-label="Collection name"
-              className={`${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
-            />
-            <DialogFooter>
-              <DialogClose asChild key="cancel-btn">
-                <Button variant="outline" className={darkMode ? 'border-gray-600 hover:bg-gray-700' : ''}>{t('general.cancel', "Cancel")}</Button>
-              </DialogClose>
-              <Button onClick={handleAddCollection} key="add-btn" className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{t('general.add', "Add")}</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>      <div className="flex-1 overflow-auto">
-        <ScrollArea className="h-full">
-          <div className="p-2">
-            <h3 className={`px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.title', "Collections")}</h3>
-            <Accordion type="multiple" className="w-full">
-              {isLoading && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.loading', "Loading collections...")}</p>
-              )}
-              {!isLoading && filteredCollections.length === 0 && searchTerm && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.notFound', "No collections found matching")} "{searchTerm}".</p>
-              )}
-              {!isLoading && filteredCollections.length === 0 && !searchTerm && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.empty', "No collections yet. Click \"+ New Collection\" to add one.")}</p>
-              )}              {!isLoading && filteredCollections.map((collection,index) => (
-                <CollectionItem
-                  key={index}
-                  collection={collection}
-                  setSelectedRequestId={setSelectedRequestId}
-                  onDeleteCollection={handleDeleteCollection}
-                  onDeleteRequest={handleDeleteRequest}
-                  darkMode={darkMode} // Pass darkMode
-                  t={t} // Çeviri fonksiyonunu CollectionItem'a aktarıyoruz
-                  currentEnvironment={currentEnvironment} // Environment değişkenini geçirelim
-                />
-              ))}
+  }
 
-            </Accordion>
+  return (
+    <>
+      {isMobile && <MobileToggleButton />}
 
-            <h3 className={`mt-4 px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.history', "History")}</h3>
-            <Accordion type="multiple" className="w-full">
-              {historyItems === null && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-500'}`}>{t('collections.historyError', "Error loading history.")}</p>
-              )}
-              {historyItems && historyItems.length === 0 && (
-                <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.noHistory', "No recent requests.")}</p>
-              )}
-              {historyItems && historyItems.map((item) => (
-                <HistoryItem
-                  key={item.id}
-                  item={item}
-                  // Pass onHistorySelect down to HistoryItem
-                  onHistorySelect={onHistorySelect}
-                  onDeleteHistoryEntry={handleDeleteHistoryEntry}
-                  darkMode={darkMode} // Pass darkMode
-                  t={t} // Çeviri fonksiyonunu HistoryItem'a aktarıyoruz
-                />
-              ))}
-            </Accordion>
-          </div>
-        </ScrollArea>
+      <div 
+        className={`${isMobile ? 'fixed inset-y-0 left-0 z-40 w-72 transition-transform duration-300 transform shadow-2xl ' + (isSidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'h-full flex flex-col border-r'} ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'}`}
+        style={{ top: isMobile ? '56px' : 0 }}
+      >
+        <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <Input
+            type="search"
+            placeholder={t('collections.searchPlaceholder', "Search collections...")}
+            className={`w-full mb-2 ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
+            value={searchTerm}
+            onChange={handleSearchChange}
+          />
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className={`w-full ${darkMode ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                <Plus className="mr-2 h-4 w-4" /> {t('collections.newCollection', "New Collection")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent aria-describedby="collection-dialog-description" className={darkMode ? 'dark bg-gray-800 border-gray-700' : ''}>
+              <DialogHeader>
+                <DialogTitle className={darkMode ? 'text-white' : ''}>{t('collections.addNewCollection', "Add New Collection")}</DialogTitle>
+                <DialogDescription id="collection-dialog-description" className={darkMode ? 'text-gray-400' : ''}>
+                  {t('collections.createCollectionDesc', "Create a new collection for your API requests.")}
+                </DialogDescription>
+              </DialogHeader>
+              <Input
+                placeholder={t('collections.collectionName', "Collection Name")}
+                value={newCollectionName}
+                onChange={(e) => setNewCollectionName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAddCollection()}
+                autoFocus
+                aria-label="Collection name"
+                className={`${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
+              />
+              <DialogFooter>
+                <DialogClose asChild key="cancel-btn">
+                  <Button variant="outline" className={darkMode ? 'border-gray-600 hover:bg-gray-700' : ''}>{t('general.cancel', "Cancel")}</Button>
+                </DialogClose>
+                <Button onClick={handleAddCollection} key="add-btn" className={`${darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'} text-white`}>{t('general.add', "Add")}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          <ScrollArea className="h-full">
+            <div className="p-2">
+              <h3 className={`px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.title', "Collections")}</h3>
+              <Accordion type="multiple" className="w-full">
+                {isLoading && (
+                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.loading', "Loading collections...")}</p>
+                )}
+                {!isLoading && filteredCollections.length === 0 && searchTerm && (
+                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.notFound', "No collections found matching")} "{searchTerm}".</p>
+                )}
+                {!isLoading && filteredCollections.length === 0 && !searchTerm && (
+                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.empty', "No collections yet. Click \"+ New Collection\" to add one.")}</p>
+                )}
+                {!isLoading && filteredCollections.map((collection, index) => (
+                  <CollectionItem
+                    key={index}
+                    collection={collection}
+                    setSelectedRequestId={(id) => handleMobileSelection(setSelectedRequestId, id)}
+                    onDeleteCollection={handleDeleteCollection}
+                    onDeleteRequest={handleDeleteRequest}
+                    darkMode={darkMode}
+                    t={t}
+                    currentEnvironment={currentEnvironment}
+                  />
+                ))}
+              </Accordion>
+
+              <h3 className={`mt-4 px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.history', "History")}</h3>
+              <Accordion type="multiple" className="w-full">
+                {historyItems === null && (
+                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-500'}`}>{t('collections.historyError', "Error loading history.")}</p>
+                )}
+                {historyItems && historyItems.length === 0 && (
+                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.noHistory', "No recent requests.")}</p>
+                )}
+                {historyItems && historyItems.map((item) => (
+                  <HistoryItem
+                    key={item.id}
+                    item={item}
+                    onHistorySelect={(item) => handleMobileSelection(onHistorySelect, item)}
+                    onDeleteHistoryEntry={handleDeleteHistoryEntry}
+                    darkMode={darkMode}
+                    t={t}
+                  />
+                ))}
+              </Accordion>
+            </div>
+          </ScrollArea>
+        </div>
       </div>
-    </div>
+
+      {isMobile && isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-30" 
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        ></div>
+      )}
+    </>
   );
 }
 
@@ -390,19 +453,19 @@ const CollectionItem = function CollectionItem({
   setSelectedRequestId,
   onDeleteCollection,
   onDeleteRequest,
-  darkMode, // Receive darkMode
-  t, // Çeviri fonksiyonunu al
-  currentEnvironment // Environment için yeni prop
+  darkMode,
+  t,
+  currentEnvironment
 }) {
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch requests for this collection
   useEffect(() => {
     const fetchRequests = async () => {
       if (!collection?.id) return;
       
-      setIsLoading(true);      try {        // Environment ID'sine göre filtreleme yapalım
+      setIsLoading(true);
+      try {
         const environmentId = currentEnvironment?.id;
         const endpoint = environmentId 
           ? `/requests/collection/${collection.id}?currentEnvironmentId=${environmentId}` 
@@ -420,7 +483,7 @@ const CollectionItem = function CollectionItem({
     };
     
     fetchRequests();
-  }, [collection?.id, currentEnvironment]); // Add currentEnvironment as dependency
+  }, [collection?.id, currentEnvironment]);
 
   return (
     <AccordionItem value={collection.id} className="border-b-0 mb-1">
@@ -448,8 +511,8 @@ const CollectionItem = function CollectionItem({
         {!isLoading && (!requests || requests.length === 0) && (
           <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>{t('collections.noRequests', "No requests in this collection.")}</p>
         )}
-        {!isLoading && requests && requests.map((request) => {          const style = getMethodStyle(request.method);
-          // Use the appropriate class based on dark mode
+        {!isLoading && requests && requests.map((request) => {          
+          const style = getMethodStyle(request.method);
           const badgeClassName = darkMode ? style.darkClassName : style.className;
           
           return (
@@ -483,31 +546,26 @@ const CollectionItem = function CollectionItem({
   );
 };
 
-// Accept onHistorySelect and darkMode props in HistoryItem
 const HistoryItem = function HistoryItem({
   item,
   onHistorySelect,
   onDeleteHistoryEntry,
   darkMode,
-  t // Çeviri fonksiyonunu al
-}) {  const style = getMethodStyle(item.method);
+  t
+}) {  
+  const style = getMethodStyle(item.method);
   const timeAgo = formatTimeAgo(item.timestamp);
   const displayPath = getPathFromUrl(item.url);
-  
-  // Extract ID from item, checking for different property names
   const itemId = item._id || item.id || item.historyId;
-  
-  // Log the item structure to help debug
+
   if (!itemId) {
     console.warn("History item missing ID:", item);
   }
   
-  // Use the appropriate class based on dark mode
   const badgeClassName = darkMode ? style.darkClassName : style.className;
 
   return (
     <AccordionItem value={itemId || 'no-id'} className="border-b-0 mb-1">
-      {/* Call onHistorySelect with the full item when clicked */}
       <div
         className={`flex items-center justify-between group ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} px-2 py-1.5 rounded cursor-pointer text-sm`}
         onClick={() => onHistorySelect(item)}
@@ -526,7 +584,6 @@ const HistoryItem = function HistoryItem({
             className={`h-6 w-6 opacity-0 group-hover:opacity-100 ${darkMode ? 'hover:text-red-400' : 'hover:text-red-500'}`}
             onClick={(e) => {
               e.stopPropagation();
-              // Only call delete if we have an ID
               if (itemId) {
                 onDeleteHistoryEntry(e, itemId);
               } else {

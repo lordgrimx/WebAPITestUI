@@ -214,46 +214,46 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
   return (
     <Dialog open={open} onOpenChange={setOpen} className="w-full">      
       <DialogContent 
-        className="min-w-3xl max-h-[90vh] overflow-hidden flex flex-col bg-white dark:bg-gray-800 dark:text-gray-100"
+        className="sm:max-w-md md:max-w-2xl lg:max-w-4xl w-[95%] max-h-[95vh] overflow-hidden flex flex-col bg-white dark:bg-gray-800 dark:text-gray-100"
       >
-        <DialogHeader className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <DialogTitle className="text-xl font-semibold dark:text-white">{t('settings.titleApi')}</DialogTitle>
+        <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
+          <DialogTitle className="text-lg sm:text-xl font-semibold dark:text-white">{t('settings.titleApi')}</DialogTitle>
           <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             <X className="h-4 w-4" />
           </DialogClose>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-6 dark:text-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 dark:text-gray-200">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* General Settings */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">{t('settings.general')}</h4>              <div>
+              <h4 className="font-medium text-base sm:text-lg">{t('settings.general')}</h4>              
+              <div>
                 <Label className="block text-sm font-medium mb-1">{t('settings.theme.title')}</Label>
-                <div className="flex space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroup 
-                      value={theme}
-                      onValueChange={setTheme}
-                      className="flex space-x-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="light" id="light" />
-                        <Label htmlFor="light">{t('settings.theme.light')}</Label>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="dark" id="dark" />
-                        <Label htmlFor="dark">{t('settings.theme.dark')}</Label>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="system" id="system" />
-                        <Label htmlFor="system">{t('settings.theme.system')}</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
+                <div className="flex flex-wrap gap-4">
+                  <RadioGroup 
+                    value={theme}
+                    onValueChange={setTheme}
+                    className="flex flex-wrap gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="light" id="light" />
+                      <Label htmlFor="light">{t('settings.theme.light')}</Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="dark" id="dark" />
+                      <Label htmlFor="dark">{t('settings.theme.dark')}</Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="system" id="system" />
+                      <Label htmlFor="system">{t('settings.theme.system')}</Label>
+                    </div>
+                  </RadioGroup>
                 </div>
-              </div>              <div>
+              </div>              
+              <div>
                 <Label className="block text-sm font-medium mb-1">
                   {t('settings.requestTimeout')}
                 </Label>
@@ -282,19 +282,20 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
 
             {/* Default Headers */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">{t('settings.defaultHeaders')}</h4>
+              <h4 className="font-medium text-base sm:text-lg">{t('settings.defaultHeaders')}</h4>
 
               <div className="space-y-2">
                 {defaultHeaders.map((header, index) => (
-                  <div key={header.id} className="grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-5">                      <Input
+                  <div key={header.id} className="grid grid-cols-[1fr_1fr_auto] sm:grid-cols-[5fr_6fr_1fr] gap-2 items-center">
+                    <div className="col-span-1">                     
+                      <Input
                         type="text"
                         placeholder={t('settings.headerName')}
                         value={header.name}
                         onChange={(e) => updateHeader(header.id, 'name', e.target.value)}
                       />
                     </div>
-                    <div className="col-span-6">
+                    <div className="col-span-1">
                       <Input
                         type="text"
                         placeholder={t('settings.headerValue')}
@@ -302,7 +303,7 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
                         onChange={(e) => updateHeader(header.id, 'value', e.target.value)}
                       />
                     </div>
-                    <div className="col-span-1 flex justify-center">
+                    <div className="flex justify-center">
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -329,7 +330,7 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
 
             {/* Proxy Settings */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">{t('settings.proxySettings')}</h4>
+              <h4 className="font-medium text-base sm:text-lg">{t('settings.proxySettings')}</h4>
 
               <div>
                 <div className="flex items-center mb-2">
@@ -343,7 +344,8 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
                   </Label>
                 </div>
 
-                <div className="space-y-2">                  <div>
+                <div className="space-y-2">                  
+                  <div>
                     <Label className="block text-sm font-medium mb-1">
                       {t('settings.proxyUrl')}
                     </Label>
@@ -356,7 +358,7 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <Label className="block text-sm font-medium mb-1">
                         {t('settings.username')}
@@ -386,19 +388,20 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
 
             {/* API Key Management */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">{t('settings.apiKeyManagement')}</h4>
+              <h4 className="font-medium text-base sm:text-lg">{t('settings.apiKeyManagement')}</h4>
 
               <div className="space-y-2">
                 {apiKeys.map((key, index) => (
-                  <div key={key.id} className="grid grid-cols-12 gap-2 items-center">
-                    <div className="col-span-4">                      <Input
+                  <div key={key.id} className="grid grid-cols-[1fr_1fr_auto] sm:grid-cols-[4fr_7fr_1fr] gap-2 items-center">
+                    <div className="col-span-1">                      
+                      <Input
                         type="text"
                         placeholder={t('settings.keyName')}
                         value={key.name}
                         onChange={(e) => updateApiKey(key.id, 'name', e.target.value)}
                       />
                     </div>
-                    <div className="col-span-7">
+                    <div className="col-span-1">
                       <Input
                         type="password"
                         placeholder={t('settings.apiKeyValue')}
@@ -406,7 +409,7 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
                         onChange={(e) => updateApiKey(key.id, 'value', e.target.value)}
                       />
                     </div>
-                    <div className="col-span-1 flex justify-center">
+                    <div className="flex justify-center">
                       <Button 
                         variant="ghost" 
                         size="icon" 
@@ -433,12 +436,13 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
 
             {/* Response Formatting */}
             <div className="space-y-4">
-              <h4 className="font-medium text-lg">{t('settings.responseFormatting')}</h4>
+              <h4 className="font-medium text-base sm:text-lg">{t('settings.responseFormatting')}</h4>
 
               <div>
                 <Label className="block text-sm font-medium mb-1">
                   {t('settings.jsonIndentation')}
-                </Label>                <Select 
+                </Label>                
+                <Select 
                   value={jsonIndentation} 
                   onValueChange={setJsonIndentation}
                 >
@@ -456,7 +460,8 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
               <div>
                 <Label className="block text-sm font-medium mb-1">
                   {t('settings.defaultResponseView')}
-                </Label>                <Select 
+                </Label>                
+                <Select 
                   value={defaultResponseView} 
                   onValueChange={setDefaultResponseView}
                 >
@@ -496,11 +501,18 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
           </div>
         </div>
 
-        <DialogFooter className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-          <Button variant="outline" onClick={() => setOpen(false)} className="dark:text-gray-200 dark:hover:bg-gray-700">
+        <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-2 sm:gap-0">
+          <Button 
+            variant="outline" 
+            onClick={() => setOpen(false)} 
+            className="w-full sm:w-auto dark:text-gray-200 dark:hover:bg-gray-700"
+          >
             {t('general.cancel', 'Cancel')}
           </Button>
-          <Button onClick={handleSaveChanges} className="dark:hover:bg-blue-600">
+          <Button 
+            onClick={handleSaveChanges} 
+            className="w-full sm:w-auto dark:hover:bg-blue-600"
+          >
             {t('settings.saveChanges', 'Save Changes')}
           </Button>
         </DialogFooter>

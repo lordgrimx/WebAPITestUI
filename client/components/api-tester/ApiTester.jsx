@@ -20,7 +20,7 @@ import RequestBuilder from "./RequestBuilder";
 import ResponseDisplay from "./ResponseDisplay";
 import Header from "../Header";
 import ImportDataModal from "../ImportDataModal";
-
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export default function ApiTester() {
   const { isAuthenticated } = useAuth(); // Get authentication status
@@ -49,6 +49,26 @@ export default function ApiTester() {
   const [importData, setImportData] = useState(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // Add state for mobile detection
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeTab, setActiveTab] = useState("request"); // For mobile tabs: "request" or "response"
+  
+  // Effect to detect screen size and set mobile state
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Set initial size on mount
+    handleResize();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Listen for history updates to refresh environment if needed
   useEffect(() => {
@@ -766,11 +786,11 @@ export default function ApiTester() {
   }, [environments, setCurrentEnvironmentById, setCurrentRequestData, setCollections, setHistory]); // Add dependencies for state updates
   return (
     <>
-    <Header
+      <Header
         currentRequestData={currentRequestData}
         onRequestSaved={handleRequestSaved}
-        collections={collections} // Pass collections data
-        history={history} // Pass history data
+        collections={collections}
+        history={history}
       />
       
       <ImportDataModal
@@ -780,8 +800,8 @@ export default function ApiTester() {
         onImportConfirm={handleImportConfirm}
         darkMode={isDarkMode}
       />
-      <div className="flex flex-col h-screen overflow-hidden"> {/* Use flex-col for vertical layout */}
-        
+
+      <div className="flex flex-col h-screen overflow-hidden">
         {/* Environment Loading Overlay */}
         {isEnvironmentLoading && (
           <div className="absolute inset-0 bg-black/50 dark:bg-black/70 z-50 flex items-center justify-center">
@@ -797,42 +817,94 @@ export default function ApiTester() {
           </div>
         )}
         
-        {/* Rest of the layout */}
-        <div className="flex-1 min-h-0"> {/* Add min-h-0 to allow proper flex shrinking */}
-          <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]">{/* Adjust height to account for header and monitor panel */}
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+        <div className="flex-1 min-h-0">
+          {/* Conditional rendering based on screen size */}
+          {isMobile ? (
+            // Mobile stack layout with tabs
+            <div className="h-[calc(100vh-13rem)] flex flex-col">
+              {/* CollectionsSidebar is already toggled via its internal state */}
               <CollectionsSidebar
-                setSelectedRequestId={handleRequestSelect} // For collection requests
-                onHistorySelect={handleHistorySelect}     // For history items
+                setSelectedRequestId={handleRequestSelect}
+                onHistorySelect={handleHistorySelect}
                 hasError={!!sidebarError}
                 onError={setSidebarError}
-                darkMode={isDarkMode} // Pass isDarkMode instead
-                historyUpdated={historyUpdated} // Add this prop
-                currentEnvironment={currentEnvironment} // Pass the current environment from context
-                environmentChangedTimestamp={environmentChangedTimestamp} // Pass the timestamp
+                darkMode={isDarkMode}
+                historyUpdated={historyUpdated}
+                currentEnvironment={currentEnvironment}
+                environmentChangedTimestamp={environmentChangedTimestamp}
               />
-            </ResizablePanel>
-            <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={30}>              <RequestBuilder
-                key={selectedRequestId || initialDataFromHistory?.url} // Add key to force re-render/reset on selection change
-                selectedRequestId={selectedRequestId}
-                initialData={initialDataFromHistory} // Pass history data
-                onSendRequest={handleSendRequest}
-                onRequestDataChange={handleRequestDataChange}
-                authToken={authToken}
-                onUpdateAuthToken={updateAuthToken}
-                darkMode={isDarkMode} // Pass isDarkMode instead
-                apiKeys={settings.apiKeys || []} // Pass apiKeys from settings
-                testResults={responseData?.testResults} // Pass test results
-              />
-            </ResizablePanel>
-            <ResizableHandle withHandle />            <ResizablePanel defaultSize={40} minSize={25}>
-              <ResponseDisplay responseData={responseData} darkMode={isDarkMode} /> 
-            </ResizablePanel>
-          </ResizablePanelGroup>
+              
+              {/* Mobile tabs for switching between request builder and response */}
+              <Tabs 
+                value={activeTab} 
+                onValueChange={setActiveTab} 
+                className="flex-1 flex flex-col"
+              >
+                <TabsList className="w-full flex z-10 sticky top-0">
+                  <TabsTrigger value="request" className="flex-1">Request</TabsTrigger>
+                  <TabsTrigger value="response" className="flex-1">Response</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="request" className="flex-1 overflow-auto m-0 border-0 p-0">
+                  <RequestBuilder
+                    key={selectedRequestId || initialDataFromHistory?.url}
+                    selectedRequestId={selectedRequestId}
+                    initialData={initialDataFromHistory}
+                    onSendRequest={(requestData) => {
+                      handleSendRequest(requestData);
+                      setActiveTab("response"); // Switch to response tab after sending
+                    }}
+                    onRequestDataChange={handleRequestDataChange}
+                    authToken={authToken}
+                    onUpdateAuthToken={updateAuthToken}
+                    darkMode={isDarkMode}
+                    apiKeys={settings.apiKeys || []}
+                    testResults={responseData?.testResults}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="response" className="flex-1 overflow-auto m-0 border-0 p-0">
+                  <ResponseDisplay responseData={responseData} darkMode={isDarkMode} />
+                </TabsContent>
+              </Tabs>
+            </div>
+          ) : (
+            // Desktop resizable panels layout
+            <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]">
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+                <CollectionsSidebar
+                  setSelectedRequestId={handleRequestSelect}
+                  onHistorySelect={handleHistorySelect}
+                  hasError={!!sidebarError}
+                  onError={setSidebarError}
+                  darkMode={isDarkMode}
+                  historyUpdated={historyUpdated}
+                  currentEnvironment={currentEnvironment}
+                  environmentChangedTimestamp={environmentChangedTimestamp}
+                />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={40} minSize={30}>
+                <RequestBuilder
+                  key={selectedRequestId || initialDataFromHistory?.url}
+                  selectedRequestId={selectedRequestId}
+                  initialData={initialDataFromHistory}
+                  onSendRequest={handleSendRequest}
+                  onRequestDataChange={handleRequestDataChange}
+                  authToken={authToken}
+                  onUpdateAuthToken={updateAuthToken}
+                  darkMode={isDarkMode}
+                  apiKeys={settings.apiKeys || []}
+                  testResults={responseData?.testResults}
+                />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={40} minSize={25}>
+                <ResponseDisplay responseData={responseData} darkMode={isDarkMode} /> 
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          )}
         </div>
-        
-        {/* Fixed height for monitor panel */}
-        
       </div>
     </>
   );

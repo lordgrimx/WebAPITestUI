@@ -59,7 +59,7 @@ const methodColors = {
 };
 
 // Params Tab Content
-function ParamsTab({ params, setParams, darkMode }) { // Add darkMode prop
+function ParamsTab({ params, setParams, darkMode, isMobile }) { // Add isMobile prop
   const { t } = useTranslation('common');
   
   const handleParamChange = (id, field, value) => {
@@ -99,7 +99,7 @@ function ParamsTab({ params, setParams, darkMode }) { // Add darkMode prop
 
 
   return (
-    <div className={`p-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+    <div className={`${isMobile ? 'p-2 text-xs' : 'p-4 text-sm'} ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
       <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center mb-2">
         <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}></div> {/* Checkbox space */}
         <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('requests.key')}</div>
@@ -118,36 +118,36 @@ function ParamsTab({ params, setParams, darkMode }) { // Add darkMode prop
             placeholder={t('requests.keyPlaceholder')}
             value={param.key}
             onChange={(e) => handleParamChange(param.id, 'key', e.target.value)}
-            className={`h-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
+            className={`${isMobile ? 'h-7 text-xs' : 'h-8'} ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
           />
           <Input
             placeholder={t('requests.valuePlaceholder')}
             value={param.value}
             onChange={(e) => handleParamChange(param.id, 'value', e.target.value)}
-            className={`h-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
+            className={`${isMobile ? 'h-7 text-xs' : 'h-8'} ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
           />
           <Button
             variant="ghost"
             size="icon"
-            className={`h-8 w-8 ${darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-500'}`}
+            className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} ${darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-500'}`}
             onClick={() => removeParamRow(param.id)}
             // Disable delete for the last row
             disabled={params.length <= 1}
             aria-label={t('requests.removeParameter')}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className={isMobile ? "h-3 w-3" : "h-4 w-4"} />
           </Button>
         </div>
       ))}
-       <Button variant="outline" size="sm" onClick={addParamRow} className={`mt-2 ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}>
-         <Plus className="h-4 w-4 mr-1" /> {t('requests.addParam')}
+       <Button variant="outline" size="sm" onClick={addParamRow} className={`mt-2 ${isMobile ? 'text-xs py-0 h-7' : ''} ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}>
+         <Plus className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} mr-1`} /> {t('requests.addParam')}
        </Button>
     </div>
   );
 }
 
 // Headers Tab Content
-function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
+function HeadersTab({ headers, setHeaders, darkMode, isMobile }) { // Add isMobile prop
   const { t } = useTranslation('common');
   
   const handleHeaderChange = (id, field, value) => {
@@ -187,7 +187,7 @@ function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
 
 
   return (
-    <div className={`p-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+    <div className={`${isMobile ? 'p-2 text-xs' : 'p-4 text-sm'} ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
       <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center mb-2">
         <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}></div>
         <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('requests.key')}</div>
@@ -206,29 +206,29 @@ function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
             placeholder={t('requests.keyPlaceholder')}
             value={header.key}
             onChange={(e) => handleHeaderChange(header.id, 'key', e.target.value)}
-            className={`h-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
+            className={`${isMobile ? 'h-7 text-xs' : 'h-8'} ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
           />
           <Input
             placeholder={t('requests.valuePlaceholder')}
             value={header.value}
             onChange={(e) => handleHeaderChange(header.id, 'value', e.target.value)}
-            className={`h-8 ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
+            className={`${isMobile ? 'h-7 text-xs' : 'h-8'} ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-black'}`}
           />
           <Button
             variant="ghost"
             size="icon"
-            className={`h-8 w-8 ${darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-500'}`}
+            className={`${isMobile ? 'h-6 w-6' : 'h-8 w-8'} ${darkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-500'}`}
             onClick={() => removeHeaderRow(header.id)}
             // Disable delete for the last row
             disabled={headers.length <= 1}
             aria-label={t('requests.removeHeader')}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className={isMobile ? "h-3 w-3" : "h-4 w-4"} />
           </Button>
         </div>
       ))}
-      <Button variant="outline" size="sm" onClick={addHeaderRow} className={`mt-2 ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}>
-        <Plus className="h-4 w-4 mr-1" /> {t('requests.addHeader')}
+      <Button variant="outline" size="sm" onClick={addHeaderRow} className={`mt-2 ${isMobile ? 'text-xs py-0 h-7' : ''} ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}>
+        <Plus className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} mr-1`} /> {t('requests.addHeader')}
       </Button>
     </div>
   );
@@ -236,7 +236,7 @@ function HeadersTab({ headers, setHeaders, darkMode }) { // Add darkMode prop
 
 
 // Auth Tab Content
-function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKeys = [] }) { // Add apiKeys prop with default value
+function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKeys = [], isMobile }) { // Add isMobile prop
   const { t } = useTranslation('common');
   
   const authTypes = [
@@ -326,13 +326,13 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
 
 
   return (
-    <div className={`p-4 space-y-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+    <div className={`${isMobile ? 'p-2 text-xs' : 'p-4 space-y-4'} ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
       <div>
         <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
           {t('requests.authType')}
         </label>
         <Select value={auth?.type || 'none'} onValueChange={handleAuthTypeChange}>
-          <SelectTrigger className={`w-[200px] ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
+          <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[200px]'} ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
             <SelectValue placeholder={t('requests.selectAuthType')} />
           </SelectTrigger>
           <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
@@ -467,7 +467,7 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
               value={auth.apiKeyLocation || "header"}
               onValueChange={(value) => handleAuthFieldChange('apiKeyLocation', value)}
             >
-              <SelectTrigger className={`w-[200px] ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
+              <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[200px]'} ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
                 <SelectValue placeholder={t('requests.selectLocation')} />
               </SelectTrigger>
               <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
@@ -552,7 +552,7 @@ function AuthTab({ auth, setAuth, authToken, onUpdateAuthToken, darkMode, apiKey
 
 
 // Tests Tab Content
-function TestsTab({ tests, setTests, darkMode, receivedTestResults = [] }) { // Add receivedTestResults prop
+function TestsTab({ tests, setTests, darkMode, receivedTestResults = [], isMobile }) { // Add isMobile prop
   const { t } = useTranslation('common');
 
   // Function to handle opening documentation
@@ -601,7 +601,7 @@ pm.test("Content-Type header is application/json", function () {
     : tests?.results || [];
 
   return (
-    <div className={`p-4 space-y-4 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+    <div className={`${isMobile ? 'p-2 text-xs' : 'p-4 space-y-4'} ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
       <div>
         <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'} mb-1 block`}>
           {t('requests.testScript')} <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('requests.testScriptInfo')}</span>
@@ -634,7 +634,7 @@ pm.test("Content-Type header is application/json", function () {
           <textarea
             value={tests?.script || ""} // Use optional chaining
             onChange={(e) => setTests({ ...tests, script: e.target.value })}
-            className={`w-full h-64 p-3 font-mono text-sm focus:outline-none ${darkMode ? 'bg-gray-900 text-white placeholder-gray-500' : 'bg-white text-black placeholder-gray-400'}`}
+            className={`w-full h-64 p-3 font-mono ${isMobile ? 'text-xs' : 'text-sm'} focus:outline-none ${darkMode ? 'bg-gray-900 text-white placeholder-gray-500' : 'bg-white text-black placeholder-gray-400'}`}
             placeholder={`// ${t('requests.tests')}...\npm.test("Status code is 200", function() {\n  pm.expect(pm.response.code).to.equal(200);\n});`}
           />
         </div>
@@ -698,6 +698,25 @@ export default function RequestBuilder({
 }) {
   const { t } = useTranslation('common'); // Initialize useTranslation
   const { settings } = useSettings();
+
+  // Add state for tracking mobile view
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Effect to detect screen size and set mobile state
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Set initial size on mount
+    handleResize();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Initialize state based on initialData if provided, otherwise default
   const [method, setMethod] = useState(initialData?.method || "GET");
@@ -1110,9 +1129,9 @@ export default function RequestBuilder({
       )}
 
       {/* Top Bar: Method, URL, Send Button */}
-      <div className={`flex items-center p-2 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'} space-x-2`}>
+      <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'flex-row items-center'} p-2 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'} ${isMobile ? 'space-x-0' : 'space-x-2'}`}>
         <Select value={method} onValueChange={setMethod}>
-          <SelectTrigger className={`w-[120px] flex-shrink-0 font-medium ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
+          <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[120px]'} flex-shrink-0 font-medium ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
             <SelectValue placeholder="Method" />
           </SelectTrigger>
           <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
@@ -1123,7 +1142,7 @@ export default function RequestBuilder({
             ))}
           </SelectContent>
         </Select>
-        <div className="flex-grow relative">
+        <div className={`${isMobile ? 'w-full' : 'flex-grow'} relative`}>
           <Input
             type="url"
             placeholder="https://api.example.com/v1/users"
@@ -1144,10 +1163,10 @@ export default function RequestBuilder({
             </div>
           )}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className={`flex ${isMobile ? 'w-full justify-between' : 'items-center space-x-2'}`}>
           <Button
             onClick={handleSendClick} // Opens the dialog after validation
-            className={`${methodColors[method]} text-white flex items-center`}
+            className={`${methodColors[method]} text-white flex items-center ${isMobile ? 'flex-1 mr-2' : ''}`}
             disabled={isValidatingUrl} // Disable while validating
           >
             <SendHorizontal className="h-4 w-4 mr-1" /> {t('requests.send')}
@@ -1158,10 +1177,10 @@ export default function RequestBuilder({
                 <Button
                   onClick={() => setShowLoadTestDialog(true)}
                   variant="outline"
-                  className={`flex items-center ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}
+                  className={`flex items-center ${isMobile ? 'flex-1' : ''} ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}
                   disabled={!url || !!urlError}
                 >
-                  <Activity className="h-4 w-4 mr-1" /> {t('requests.loadTest')}
+                  <Activity className="h-4 w-4 mr-1" /> {isMobile ? '' : t('requests.loadTest')}
                 </Button>
               </TooltipTrigger>
               <TooltipContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
@@ -1175,30 +1194,56 @@ export default function RequestBuilder({
 
       {/* Tabs: Params, Headers, Body, Auth, Tests */}
       <Tabs defaultValue="params" className="flex-1 flex flex-col min-h-0"> {/* Added min-h-0 */}
-        <TabsList className={`border-b rounded-none justify-start px-2 pt-2 bg-transparent flex-shrink-0 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}> {/* Added flex-shrink-0 */}
-          <TabsTrigger value="params" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.params')}</TabsTrigger>
-          <TabsTrigger value="headers" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.header')}</TabsTrigger>
-          <TabsTrigger value="body" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.body')}</TabsTrigger>
-          <TabsTrigger value="auth" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.auth')}</TabsTrigger>
-          <TabsTrigger value="tests" className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''}`}>{t('requests.tests')}</TabsTrigger>
+        <TabsList className={`border-b rounded-none ${isMobile ? 'overflow-x-auto' : 'justify-start'} px-2 pt-2 bg-transparent flex-shrink-0 ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}> {/* Added flex-shrink-0 */}
+          <TabsTrigger 
+            value="params" 
+            className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''} ${isMobile ? 'text-xs py-1 px-2' : ''}`}
+          >
+            {t('requests.params')}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="headers" 
+            className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''} ${isMobile ? 'text-xs py-1 px-2' : ''}`}
+          >
+            {t('requests.header')}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="body" 
+            className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''} ${isMobile ? 'text-xs py-1 px-2' : ''}`}
+          >
+            {t('requests.body')}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="auth" 
+            className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''} ${isMobile ? 'text-xs py-1 px-2' : ''}`}
+          >
+            {t('requests.auth')}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="tests" 
+            className={`${darkMode ? 'data-[state=active]:text-white data-[state=active]:border-white' : ''} ${isMobile ? 'text-xs py-1 px-2' : ''}`}
+          >
+            {t('requests.tests')}
+          </TabsTrigger>
         </TabsList>
         {/* Ensure TabsContent takes remaining space and scrolls */}
         <TabsContent value="params" className="flex-1 overflow-auto">
-          <ParamsTab params={params} setParams={setParams} darkMode={darkMode} />
+          <ParamsTab params={params} setParams={setParams} darkMode={darkMode} isMobile={isMobile} />
         </TabsContent>
         <TabsContent value="headers" className="flex-1 overflow-auto">
-          <HeadersTab headers={headers} setHeaders={setHeaders} darkMode={darkMode} />
+          <HeadersTab headers={headers} setHeaders={setHeaders} darkMode={darkMode} isMobile={isMobile} />
         </TabsContent>
-        <TabsContent value="body" className="p-4 text-sm flex-1 overflow-auto flex flex-col"> {/* Added flex flex-col */}          <div className="flex flex-col h-full flex-1"> {/* Added flex-1 */}
+        <TabsContent value="body" className={`${isMobile ? 'p-2' : 'p-4'} text-sm flex-1 overflow-auto flex flex-col`}>
+          <div className="flex flex-col h-full flex-1">
             <textarea
-              className={`w-full h-full flex-1 p-2 border rounded font-mono text-sm resize-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-black placeholder-gray-400'}`} // Added resize-none and dark mode
+              className={`w-full h-full flex-1 ${isMobile ? 'p-1 text-xs' : 'p-2 text-sm'} border rounded font-mono resize-none ${darkMode ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-black placeholder-gray-400'}`}
               placeholder={t('requests.bodyPlaceholder')}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              disabled={method === "GET" || method === "HEAD"} // Also disable for HEAD
+              disabled={method === "GET" || method === "HEAD"}
             />
             {(method === "GET" || method === "HEAD") && (
-              <p className={`${darkMode ? 'text-amber-400' : 'text-amber-600'} text-xs mt-2`}>{t('requests.noBodyForGetHead')}</p>
+              <p className={`${darkMode ? 'text-amber-400' : 'text-amber-600'} ${isMobile ? 'text-xs' : ''} mt-2`}>{t('requests.noBodyForGetHead')}</p>
             )}
           </div>
         </TabsContent>
@@ -1209,11 +1254,12 @@ export default function RequestBuilder({
             authToken={authToken}
             onUpdateAuthToken={onUpdateAuthToken}
             darkMode={darkMode}
-            apiKeys={apiKeys} // Pass apiKeys down
+            apiKeys={apiKeys}
+            isMobile={isMobile}
           />
         </TabsContent>        
         <TabsContent value="tests" className="flex-1 overflow-auto">
-          <TestsTab tests={tests} setTests={setTests} darkMode={darkMode} receivedTestResults={testResults} />
+          <TestsTab tests={tests} setTests={setTests} darkMode={darkMode} receivedTestResults={testResults} isMobile={isMobile} />
         </TabsContent>
       </Tabs>      {/* Dialog for advanced options */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
