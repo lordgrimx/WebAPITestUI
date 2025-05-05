@@ -27,6 +27,7 @@ import {
   ChevronDown,
   Activity,
   Home,
+  Trash2,
 } from "lucide-react";
 import SettingsModal from "@/components/SettingsModal";
 import GenerateCodeModal from "@/components/GenerateCodeModal";
@@ -55,14 +56,14 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   const { user, isAuthenticated, login, logout, isLoading: isAuthLoading } = useAuth(); // Renamed isLoading to avoid conflict
   const { updateSettings } = useSettings(); // updateSettings'i context'ten al
   const { theme, setTheme } = useTheme();
-  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
-  // Use the environment context
+  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz  // Use the environment context
   const {
     environments,
     currentEnvironment,
     setCurrentEnvironmentById,
     refreshEnvironments, // Use refreshEnvironments from context
-    isEnvironmentLoading // Use loading state from context
+    isEnvironmentLoading, // Use loading state from context
+    deleteEnvironment // Add the delete environment function
   } = useEnvironment();
 
   const isDarkMode = theme === 'dark';
@@ -345,7 +346,14 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
       });
     }
   };
-
+  // Function to handle environment deletion with confirmation
+  const handleDeleteEnvironment = (env) => {
+    // Confirm before deleting
+    if (window.confirm(t('header.environmentDelete.confirmMessage', 
+      `Are you sure you want to delete the environment "${env.name}"? This will also delete all associated collections, requests, and history for this environment.`))) {
+      deleteEnvironment(env.id);
+    }
+  };
 
   // Use isAuthLoading for auth check
   if (isAuthLoading) {
@@ -567,36 +575,47 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Ortamlar</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('header.environmentList.title', 'Environments')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* Use environments from context */}
-              {environments.length > 0 ? (
+              {/* Use environments from context */}              {environments.length > 0 ? (
                 environments.map(env => (
-                  <DropdownMenuItem key={env.id} className="flex justify-between cursor-pointer" onClick={() => activateEnvironment(env.id)}>
-                    <span className="flex items-center">
-                      {/* Check against currentEnvironment from context */}
+                  <div key={env.id} className="px-2 py-1.5 flex items-center justify-between">
+                    <div 
+                      className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-2 py-1 flex-1"
+                      onClick={() => activateEnvironment(env.id)}
+                    >
                       <Check className={`h-4 w-4 ${currentEnvironment?.id === env.id ? 'text-green-500' : 'text-transparent' } mr-2`} />
                       {env.name}
-                    </span>
-                    <span onClick={(e) => openEditEnvironmentModal(env, e)}>
-                      <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
-                    </span>
-                  </DropdownMenuItem>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        onClick={(e) => openEditEnvironmentModal(env, e)} 
+                        className="cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                      </button>
+                      <button 
+                        onClick={(e) => handleDeleteEnvironment(env, e)} 
+                        className="cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        <Trash2 className="h-3 w-3 text-red-400 hover:text-red-600" />
+                      </button>
+                    </div>
+                  </div>
                 ))
               ) : (
                 <DropdownMenuItem disabled>
                   {t('header.environmentList.none', 'No environments found')}
                 </DropdownMenuItem>
               )}
-              <DropdownMenuSeparator />
-              <Button
+              <DropdownMenuSeparator />              <Button
                 variant="ghost"
                 size="sm"
                 className="w-full justify-center"
                 onClick={openCreateEnvironmentModal}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                Ortam Ekle
+                {t('header.environmentList.add', 'Add Environment')}
               </Button>
             </DropdownMenuContent>
           </DropdownMenu>          <DropdownMenu>

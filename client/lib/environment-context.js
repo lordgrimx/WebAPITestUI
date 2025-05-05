@@ -186,6 +186,63 @@ export const EnvironmentProvider = ({ children }) => {
         return result;
     }, [environmentState.currentEnvironment, processVariables]);
 
+    // Function to delete an environment by ID
+    const deleteEnvironment = useCallback(async (environmentId) => {
+        try {
+            setIsEnvironmentLoading(true);
+
+            // Delete the environment in the backend
+            await authAxios.delete(`/environments/${environmentId}`);
+
+            // Update the frontend state
+            setEnvironmentState(prevState => {
+                // Get new environments list without the deleted one
+                const updatedEnvironments = prevState.environments.filter(env => env.id !== environmentId);
+
+                // Check if we're deleting the current environment
+                const isCurrentEnvironmentDeleted = prevState.currentEnvironmentId === environmentId;
+
+                // If we deleted the current environment, set a new current environment (first one or null)
+                let newCurrentEnvironment = prevState.currentEnvironment;
+                let newCurrentEnvironmentId = prevState.currentEnvironmentId;
+
+                if (isCurrentEnvironmentDeleted) {
+                    newCurrentEnvironment = updatedEnvironments.length > 0 ? updatedEnvironments[0] : null;
+                    newCurrentEnvironmentId = newCurrentEnvironment?.id || null;
+
+                    // Update localStorage
+                    if (typeof window !== 'undefined') {
+                        if (newCurrentEnvironmentId) {
+                            localStorage.setItem('currentEnvironmentId', newCurrentEnvironmentId);
+                        } else {
+                            localStorage.removeItem('currentEnvironmentId');
+                        }
+                    }
+                }
+
+                return {
+                    environments: updatedEnvironments,
+                    currentEnvironmentId: newCurrentEnvironmentId,
+                    currentEnvironment: newCurrentEnvironment
+                };
+            });
+
+            toast.success("Environment deleted successfully");
+
+            // If there are no environments left, or current environment was deleted, refresh to get default environment
+            const currentState = environmentState;
+            if (currentState.environments.length <= 1 || currentState.currentEnvironmentId === environmentId) {
+                await loadEnvironments();
+            }
+
+        } catch (error) {
+            console.error("Error deleting environment:", error);
+            toast.error("Failed to delete environment: " + (error.response?.data?.message || error.message));
+        } finally {
+            setIsEnvironmentLoading(false);
+        }
+    }, [environmentState, loadEnvironments]);
+
     return (
         <EnvironmentContext.Provider value={{
             ...environmentState,
@@ -194,7 +251,8 @@ export const EnvironmentProvider = ({ children }) => {
             triggerEnvironmentChange,
             refreshEnvironments: loadEnvironments,
             processVariables,
-            applyEnvironmentToRequest
+            applyEnvironmentToRequest,
+            deleteEnvironment
         }}>
             {children}
         </EnvironmentContext.Provider>

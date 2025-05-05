@@ -129,10 +129,10 @@ namespace WebTestUI.Backend.Services
                 }
 
                 // model.Variables is now a string (JSON string from frontend)
-                if (model.Variables != null) 
+                if (model.Variables != null)
                 {
                     // Directly assign the JSON string, no need to re-serialize
-                    environment.Variables = model.Variables; 
+                    environment.Variables = model.Variables;
                 }
 
                 if (model.IsActive.HasValue && model.IsActive.Value && !environment.IsActive)
@@ -159,12 +159,14 @@ namespace WebTestUI.Backend.Services
                 throw;
             }
         }
-
         public async Task<bool> DeleteEnvironmentAsync(int id, string userId)
         {
             try
             {
-                var environment = await _dbContext.Environments // Corrected DbSet name
+                var environment = await _dbContext.Environments
+                    .Include(e => e.Collections)
+                    .Include(e => e.Requests)
+                    .Include(e => e.HistoryEntries)
                     .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
                 if (environment == null)
@@ -172,7 +174,29 @@ namespace WebTestUI.Backend.Services
                     return false;
                 }
 
-                _dbContext.Environments.Remove(environment); // Corrected DbSet name
+                // Önce bağlı koleksiyonları silelim
+                foreach (var collection in environment.Collections.ToList())
+                {
+                    // Koleksiyona bağlı istekleri de silelim
+                    foreach (var request in collection.Requests.ToList())
+                    {
+                        _dbContext.Requests.Remove(request);
+                    }
+                    _dbContext.Collections.Remove(collection);
+                }                // Doğrudan ortama bağlı istekleri silelim
+                foreach (var request in environment.Requests.ToList())
+                {
+                    _dbContext.Requests.Remove(request);
+                }
+
+                // Geçmiş kayıtları silelim
+                foreach (var historyEntry in environment.HistoryEntries.ToList())
+                {
+                    _dbContext.HistoryEntries.Remove(historyEntry);
+                }
+
+                // Şimdi ortamı silebiliriz
+                _dbContext.Environments.Remove(environment);
                 await _dbContext.SaveChangesAsync();
 
                 return true;
