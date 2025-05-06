@@ -170,22 +170,37 @@ namespace WebTestUI.Backend.Services
                 var environment = await _dbContext.Environments
                     .Include(e => e.Collections)
                         .ThenInclude(c => c.Requests)
+                            .ThenInclude(r => r.HistoryEntries)
                     .Include(e => e.Requests)
+                        .ThenInclude(r => r.HistoryEntries)
                     .Include(e => e.HistoryEntries)
                     .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
 
                 if (environment == null)
                 {
                     return false;
-                }                // Store whether the deleted environment was active
+                }
+                // Store whether the deleted environment was active
                 bool wasActive = environment.IsActive;
 
-                // First delete requests from collections to avoid FK constraint violations
+                // First delete all history entries that reference requests in collections
                 foreach (var collection in environment.Collections.ToList())
                 {
-                    // Make sure requests are loaded
                     if (collection.Requests != null)
                     {
+                        foreach (var request in collection.Requests.ToList())
+                        {
+                            // Delete history entries for this request first
+                            foreach (var historyEntry in request.HistoryEntries.ToList())
+                            {
+                                _logger.LogInformation("Removing history entry {HistoryId} for request {RequestId}", historyEntry.Id, request.Id);
+                                _dbContext.HistoryEntries.Remove(historyEntry);
+                            }
+                        }
+                        // Save changes after removing request history entries
+                        await _dbContext.SaveChangesAsync();
+
+                        // Now we can safely delete the requests
                         foreach (var request in collection.Requests.ToList())
                         {
                             _logger.LogInformation("Removing request {RequestId} from collection {CollectionId}", request.Id, collection.Id);
@@ -203,7 +218,21 @@ namespace WebTestUI.Backend.Services
                     _dbContext.Collections.Remove(collection);
                 }
                 // Save changes after removing collections
-                await _dbContext.SaveChangesAsync();                // Delete direct requests linked to the environment
+                await _dbContext.SaveChangesAsync();
+
+                // Delete history entries for direct requests first
+                foreach (var request in environment.Requests.ToList())
+                {
+                    foreach (var historyEntry in request.HistoryEntries.ToList())
+                    {
+                        _logger.LogInformation("Removing history entry {HistoryId} for direct request {RequestId}", historyEntry.Id, request.Id);
+                        _dbContext.HistoryEntries.Remove(historyEntry);
+                    }
+                }
+                // Save changes after removing direct request history entries
+                await _dbContext.SaveChangesAsync();
+
+                // Now delete direct requests linked to the environment
                 foreach (var request in environment.Requests.ToList())
                 {
                     _logger.LogInformation("Removing direct request {RequestId}", request.Id);
@@ -212,10 +241,10 @@ namespace WebTestUI.Backend.Services
                 // Save changes after removing direct requests
                 await _dbContext.SaveChangesAsync();
 
-                // Delete history entries
+                // Delete remaining history entries associated with the environment but not with any request
                 foreach (var historyEntry in environment.HistoryEntries.ToList())
                 {
-                    _logger.LogInformation("Removing history entry {HistoryId}", historyEntry.Id);
+                    _logger.LogInformation("Removing environment history entry {HistoryId}", historyEntry.Id);
                     _dbContext.HistoryEntries.Remove(historyEntry);
                 }
                 // Save changes after removing history entries
