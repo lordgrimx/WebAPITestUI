@@ -504,20 +504,33 @@ namespace WebTestUI.Backend.Services
                         Console.WriteLine($"Processing {collectionDto.Requests.Count} requests for collection '{importerCollection.Name}' (ID: {currentImporterCollectionId})");
                         foreach (var requestDto in collectionDto.Requests)
                         {
-                            bool requestHandledAsStandalone = false;
-                            if (preparedStandaloneRequestEntity != null &&
-                                sharedDataDto.Request != null &&
-                                requestDto.Id > 0 && sharedDataDto.Request.Id > 0 &&
-                                requestDto.Id == sharedDataDto.Request.Id)
+                            // Check if this requestDto matches the prepared standalone request by properties
+                            // This is a more robust check than relying on potentially unstable IDs from shared data.
+                            bool matchesStandalone = preparedStandaloneRequestEntity != null &&
+                                                     requestDto.Name == preparedStandaloneRequestEntity.Name &&
+                                                     requestDto.Method == preparedStandaloneRequestEntity.Method &&
+                                                     requestDto.Url == preparedStandaloneRequestEntity.Url &&
+                                                     requestDto.Body == preparedStandaloneRequestEntity.Body &&
+                                                     requestDto.AuthType == preparedStandaloneRequestEntity.AuthType &&
+                                                     // Compare serialized JSON strings for complex types.
+                                                     // Note: This assumes consistent serialization order/formatting.
+                                                     // A more robust comparison might involve deserializing and comparing dictionaries/objects.
+                                                     JsonSerializer.Serialize(requestDto.AuthConfig) == JsonSerializer.Serialize(preparedStandaloneRequestEntity.AuthConfig) &&
+                                                     JsonSerializer.Serialize(requestDto.Headers) == JsonSerializer.Serialize(preparedStandaloneRequestEntity.Headers) &&
+                                                     JsonSerializer.Serialize(requestDto.Params) == JsonSerializer.Serialize(preparedStandaloneRequestEntity.Params) &&
+                                                     requestDto.Tests == preparedStandaloneRequestEntity.Tests; // Assuming Tests is a simple type or string
+
+                            if (matchesStandalone)
                             {
+                                // If it's the standalone request, update its collection/environment info
                                 preparedStandaloneRequestEntity.CollectionId = currentImporterCollectionId;
                                 preparedStandaloneRequestEntity.EnvironmentId = importerCollection.EnvironmentId;
-                                requestHandledAsStandalone = true;
+                                // No need to add to context again, it was added when prepared
                                 Console.WriteLine($"Linked prepared standalone request '{preparedStandaloneRequestEntity.Name}' to collection ID {currentImporterCollectionId}");
                             }
-
-                            if (!requestHandledAsStandalone)
+                            else
                             {
+                                // If it's not the standalone request (or no standalone was prepared), create and add a new one
                                 var newApiRequest = new Request
                                 {
                                     UserId = userId,
