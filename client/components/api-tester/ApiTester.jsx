@@ -723,13 +723,19 @@ export default function ApiTester() {
   }, []);  // Callback to update UI when a request is saved
   const handleRequestSaved = useCallback(() => {
     // Update historyUpdated state to trigger a refresh of the collections sidebar
-    setHistoryUpdated(prev => prev + 1);
-  }, []);
+    setHistoryUpdated(prev => prev + 1);  }, []);
   
   // Paylaşılan verileri içe aktarma işlemini gerçekleştiren fonksiyon
   // Backend'in GET /SharedData/{shareId} endpoint'inin veriyi kullanıcıyla ilişkilendirdiği varsayılır.
   const handleImportConfirm = useCallback((data) => {
     try {
+      // First, handle environment if present
+      if (data.environment && data.environment.id) {
+        console.log("Setting environment from imported data:", data.environment);
+        // Set the environment ID from the imported data
+        setCurrentEnvironmentById(data.environment.id);
+      }
+      
       // Paylaşılan isteği RequestBuilder'a yükle
       if (data.request) {
         const requestData = {
@@ -740,6 +746,8 @@ export default function ApiTester() {
           body: data.request.body || '',
           auth: data.request.auth || { type: 'none' },
           tests: data.request.tests || { script: '', results: [] },
+          // Ensure we include the environment ID in the imported request
+          environmentId: data.request.environmentId || (data.environment ? data.environment.id : null),
         };
         
         console.log("Importing request data to RequestBuilder:", requestData);

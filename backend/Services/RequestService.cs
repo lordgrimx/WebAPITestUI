@@ -484,6 +484,7 @@ namespace WebTestUI.Backend.Services
                 Id = request.Id,
                 UserId = request.UserId,
                 CollectionId = request.CollectionId,
+                EnvironmentId = request.EnvironmentId, // Ortam ID'sini ekle
                 CollectionName = request.Collection?.Name,
                 Name = request.Name,
                 Description = request.Description,

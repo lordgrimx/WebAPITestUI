@@ -7,6 +7,7 @@ namespace WebTestUI.Backend.DTOs
         public int Id { get; set; }
         public string? UserId { get; set; } // Added UserId
         public int? CollectionId { get; set; }
+        public int? EnvironmentId { get; set; } // Added EnvironmentId
         public string? CollectionName { get; set; }
         public string? Name { get; set; }
         public string? Description { get; set; }

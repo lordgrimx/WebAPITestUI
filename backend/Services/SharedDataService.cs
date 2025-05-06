@@ -63,6 +63,7 @@ namespace WebTestUI.Backend.Services
                         {
                             Id = r.Id,
                             CollectionId = r.CollectionId,
+                            EnvironmentId = c.EnvironmentId, // Added to populate EnvironmentId from the parent collection
                             Name = r.Name ?? "Unnamed Request",
                             Description = r.Description,
                             Method = r.Method ?? "GET",
@@ -124,6 +125,7 @@ namespace WebTestUI.Backend.Services
                         {
                             Id = r.Id,
                             CollectionId = r.CollectionId,
+                            EnvironmentId = fullCollection.EnvironmentId ?? targetEnvironmentId, // MODIFIED: Fallback to targetEnvironmentId
                             Name = r.Name ?? "Unnamed Request",
                             Description = r.Description,
                             Method = r.Method ?? "GET",
@@ -211,10 +213,25 @@ namespace WebTestUI.Backend.Services
 
                 if (fullRequest != null)
                 {
+                    int? requestEnvironmentId = null;
+                    if (fullRequest.CollectionId.HasValue)
+                    {
+                        var parentCollectionForEnv = await _context.Collections
+                                                        .AsNoTracking()
+                                                        .FirstOrDefaultAsync(c => c.Id == fullRequest.CollectionId.Value);
+                        if (parentCollectionForEnv != null && parentCollectionForEnv.EnvironmentId.HasValue)
+                        {
+                            requestEnvironmentId = parentCollectionForEnv.EnvironmentId;
+                        }
+                    }
+                    // Fallback to the sharer's current environment ID if not found from collection
+                    requestEnvironmentId = requestEnvironmentId ?? targetEnvironmentId;
+
                     comprehensiveDataDto.Request = new RequestDto
                     {
                         Id = fullRequest.Id,
                         CollectionId = fullRequest.CollectionId,
+                        EnvironmentId = requestEnvironmentId, // MODIFIED: Set determined EnvironmentId
                         Name = fullRequest.Name ?? "Unnamed Request",
                         Description = fullRequest.Description,
                         Method = fullRequest.Method ?? "GET",
@@ -272,6 +289,25 @@ namespace WebTestUI.Backend.Services
                                     };
                                 }
                             }
+                        }
+                    }
+                    // Ensure the top-level Environment DTO is populated if not already and we have a requestEnvironmentId
+                    if (comprehensiveDataDto.Environment == null && requestEnvironmentId.HasValue)
+                    {
+                        var envToSetForDto = await _context.Environments.AsNoTracking().FirstOrDefaultAsync(e => e.Id == requestEnvironmentId.Value);
+                        if (envToSetForDto != null)
+                        {
+                            comprehensiveDataDto.Environment = new EnvironmentDto
+                            {
+                                Id = envToSetForDto.Id,
+                                Name = envToSetForDto.Name ?? "Unnamed Environment",
+                                IsActive = envToSetForDto.IsActive,
+                                Variables = !string.IsNullOrEmpty(envToSetForDto.Variables)
+                                            ? JsonSerializer.Deserialize<Dictionary<string, string>>(envToSetForDto.Variables) ?? new Dictionary<string, string>()
+                                            : new Dictionary<string, string>(),
+                                CreatedAt = envToSetForDto.CreatedAt,
+                                UpdatedAt = envToSetForDto.UpdatedAt
+                            };
                         }
                     }
                 }
@@ -363,141 +399,159 @@ namespace WebTestUI.Backend.Services
 
             if (user == null)
             {
-                // Handle case where user is not found
                 return;
             }
 
-            // First, save environment if available (to get its ID for collections)
             int? newEnvironmentId = null;
+            EnvironmentConfig? importerEnvironment = null;
+
             if (sharedDataDto.Environment != null)
             {
-                // Check if user already has an environment with this name to avoid duplicates
-                var existingEnv = await _context.Environments
+                importerEnvironment = await _context.Environments
                     .FirstOrDefaultAsync(e => e.UserId == userId && e.Name == sharedDataDto.Environment.Name);
 
-                if (existingEnv == null)
+                if (importerEnvironment == null)
                 {
-                    var newEnvironment = new EnvironmentConfig
+                    var newEnvironmentEntity = new EnvironmentConfig
                     {
                         UserId = userId,
                         Name = sharedDataDto.Environment.Name,
-                        IsActive = true, // Set as active since it's the current environment being imported
+                        IsActive = true,
                         Variables = sharedDataDto.Environment.Variables != null
                             ? JsonSerializer.Serialize(sharedDataDto.Environment.Variables)
                             : null,
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
-
-                    _context.Environments.Add(newEnvironment);
-                    await _context.SaveChangesAsync(); // Save immediately to get the ID
-                    newEnvironmentId = newEnvironment.Id;
+                    _context.Environments.Add(newEnvironmentEntity);
+                    await _context.SaveChangesAsync();
+                    newEnvironmentId = newEnvironmentEntity.Id;
+                    importerEnvironment = newEnvironmentEntity;
                 }
                 else
                 {
-                    newEnvironmentId = existingEnv.Id;
+                    newEnvironmentId = importerEnvironment.Id;
                 }
-            }            // Process and save shared data based on its content
+            }
+
+            Request? preparedStandaloneRequestEntity = null;
+
             if (sharedDataDto.Request != null)
             {
-                Console.WriteLine($"Creating standalone request: '{sharedDataDto.Request.Name}' ({sharedDataDto.Request.Method} {sharedDataDto.Request.Url})");
-                var newRequest = new Request
+                preparedStandaloneRequestEntity = new Request
                 {
                     UserId = userId,
-                    // Make sure CollectionId is properly set if it exists
-                    CollectionId = sharedDataDto.Request.CollectionId,
-                    Method = sharedDataDto.Request.Method,
-                    Url = sharedDataDto.Request.Url,
+                    CollectionId = null,
+                    EnvironmentId = newEnvironmentId,
                     Name = sharedDataDto.Request.Name,
                     Description = sharedDataDto.Request.Description,
+                    Method = sharedDataDto.Request.Method,
+                    Url = sharedDataDto.Request.Url,
                     Headers = sharedDataDto.Request.Headers != null ? JsonSerializer.Serialize(sharedDataDto.Request.Headers) : null,
                     Body = sharedDataDto.Request.Body,
                     AuthType = sharedDataDto.Request.AuthType,
                     AuthConfig = sharedDataDto.Request.AuthConfig != null ? JsonSerializer.Serialize(sharedDataDto.Request.AuthConfig) : null,
                     Params = sharedDataDto.Request.Params != null ? JsonSerializer.Serialize(sharedDataDto.Request.Params) : null,
                     Tests = sharedDataDto.Request.Tests,
-                    IsFavorite = false, // Default to not favorite for imported requests
+                    IsFavorite = false,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-                _context.Requests.Add(newRequest);
-                await _context.SaveChangesAsync(); // Save immediately
-                Console.WriteLine($"Saved standalone request with ID: {newRequest.Id}");
+                _context.Requests.Add(preparedStandaloneRequestEntity);
+                Console.WriteLine($"Prepared standalone request: '{preparedStandaloneRequestEntity.Name}' (Original Shared ID: {sharedDataDto.Request.Id})");
             }
+
             if (sharedDataDto.Collections != null && sharedDataDto.Collections.Any())
             {
-                Console.WriteLine($"Processing {sharedDataDto.Collections.Count} collections");
+                Console.WriteLine($"Processing {sharedDataDto.Collections.Count} collections for user {userId}");
 
                 foreach (var collectionDto in sharedDataDto.Collections)
                 {
-                    // Check if this collection already exists for this user
-                    var existingCollection = await _context.Collections
+                    Collection? importerCollection = await _context.Collections
                         .FirstOrDefaultAsync(c => c.UserId == userId && c.Name == collectionDto.Name);
+                    int currentImporterCollectionId;
 
-                    if (existingCollection != null)
+                    if (importerCollection == null)
                     {
-                        Console.WriteLine($"Collection {collectionDto.Name} already exists, updating environment ID");
-                        // Update the existing collection to use the new environment ID
-                        if (newEnvironmentId.HasValue)
+                        importerCollection = new Collection
                         {
-                            existingCollection.EnvironmentId = newEnvironmentId;
-                            _context.Collections.Update(existingCollection);
-                            await _context.SaveChangesAsync();
+                            UserId = userId,
+                            Name = collectionDto.Name,
+                            Description = collectionDto.Description,
+                            EnvironmentId = newEnvironmentId,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow,
+                            Requests = new List<Request>()
+                        };
+                        _context.Collections.Add(importerCollection);
+                        await _context.SaveChangesAsync();
+                        currentImporterCollectionId = importerCollection.Id;
+                        Console.WriteLine($"Created new collection '{importerCollection.Name}' with ID {currentImporterCollectionId} for user {userId}");
+                    }
+                    else
+                    {
+                        currentImporterCollectionId = importerCollection.Id;
+                        if (newEnvironmentId.HasValue && importerCollection.EnvironmentId != newEnvironmentId)
+                        {
+                            importerCollection.EnvironmentId = newEnvironmentId;
+                            _context.Collections.Update(importerCollection);
                         }
-                        continue; // Skip the rest of creation
+                        Console.WriteLine($"Using existing collection '{importerCollection.Name}' with ID {currentImporterCollectionId} for user {userId}");
                     }
 
-                    Console.WriteLine($"Creating new collection {collectionDto.Name}");
-                    var newCollection = new Collection
-                    {
-                        UserId = userId,
-                        Name = collectionDto.Name,
-                        Description = collectionDto.Description,
-                        // Use the newly created environment ID instead of the original one
-                        EnvironmentId = newEnvironmentId,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow,
-                        Requests = new List<Request>() // Initialize Requests list
-                    };
-
-                    _context.Collections.Add(newCollection);
-                    await _context.SaveChangesAsync(); // Save to get the collection ID                    
-                    // Add requests to this collection
                     if (collectionDto.Requests != null && collectionDto.Requests.Any())
                     {
-                        Console.WriteLine($"Adding {collectionDto.Requests.Count} requests to collection {newCollection.Id}");
+                        Console.WriteLine($"Processing {collectionDto.Requests.Count} requests for collection '{importerCollection.Name}' (ID: {currentImporterCollectionId})");
                         foreach (var requestDto in collectionDto.Requests)
                         {
-                            Console.WriteLine($"Creating request: '{requestDto.Name}' ({requestDto.Method} {requestDto.Url}) for collection {newCollection.Id}");
-                            var newRequest = new Request
+                            bool requestHandledAsStandalone = false;
+                            if (preparedStandaloneRequestEntity != null &&
+                                sharedDataDto.Request != null &&
+                                requestDto.Id > 0 && sharedDataDto.Request.Id > 0 &&
+                                requestDto.Id == sharedDataDto.Request.Id)
                             {
-                                CollectionId = newCollection.Id,
-                                UserId = userId,
-                                Name = requestDto.Name,
-                                Description = requestDto.Description,
-                                Method = requestDto.Method,
-                                Url = requestDto.Url,
-                                Headers = requestDto.Headers != null ? JsonSerializer.Serialize(requestDto.Headers) : null,
-                                AuthType = requestDto.AuthType,
-                                AuthConfig = requestDto.AuthConfig != null ? JsonSerializer.Serialize(requestDto.AuthConfig) : null,
-                                Params = requestDto.Params != null ? JsonSerializer.Serialize(requestDto.Params) : null,
-                                Body = requestDto.Body,
-                                Tests = requestDto.Tests,
-                                IsFavorite = false, // Default to not favorite
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow
-                            }; _context.Requests.Add(newRequest);
+                                preparedStandaloneRequestEntity.CollectionId = currentImporterCollectionId;
+                                preparedStandaloneRequestEntity.EnvironmentId = importerCollection.EnvironmentId;
+                                requestHandledAsStandalone = true;
+                                Console.WriteLine($"Linked prepared standalone request '{preparedStandaloneRequestEntity.Name}' to collection ID {currentImporterCollectionId}");
+                            }
+
+                            if (!requestHandledAsStandalone)
+                            {
+                                var newApiRequest = new Request
+                                {
+                                    UserId = userId,
+                                    CollectionId = currentImporterCollectionId,
+                                    EnvironmentId = importerCollection.EnvironmentId,
+                                    Name = requestDto.Name,
+                                    Description = requestDto.Description,
+                                    Method = requestDto.Method,
+                                    Url = requestDto.Url,
+                                    Headers = requestDto.Headers != null ? JsonSerializer.Serialize(requestDto.Headers) : null,
+                                    AuthType = requestDto.AuthType,
+                                    AuthConfig = requestDto.AuthConfig != null ? JsonSerializer.Serialize(requestDto.AuthConfig) : null,
+                                    Params = requestDto.Params != null ? JsonSerializer.Serialize(requestDto.Params) : null,
+                                    Body = requestDto.Body,
+                                    Tests = requestDto.Tests,
+                                    IsFavorite = requestDto.IsFavorite,
+                                    CreatedAt = DateTime.UtcNow,
+                                    UpdatedAt = DateTime.UtcNow
+                                };
+                                _context.Requests.Add(newApiRequest);
+                                Console.WriteLine($"Prepared new request '{newApiRequest.Name}' for collection ID {currentImporterCollectionId}");
+                            }
                         }
-                        // Save requests for this collection immediately to ensure they are persisted
-                        await _context.SaveChangesAsync();
-                        Console.WriteLine($"Saved {collectionDto.Requests.Count} requests for collection {newCollection.Id}");
                     }
                 }
             }
 
-            // Save any remaining changes
+            if (preparedStandaloneRequestEntity != null && preparedStandaloneRequestEntity.CollectionId == null)
+            {
+                Console.WriteLine($"Standalone request '{preparedStandaloneRequestEntity.Name}' was not linked to any imported collection.");
+            }
+
             await _context.SaveChangesAsync();
-            Console.WriteLine("Data association completed successfully");
+            Console.WriteLine("Data association completed with batched saves.");
         }
     }
 }
