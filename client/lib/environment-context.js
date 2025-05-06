@@ -71,9 +71,7 @@ export const EnvironmentProvider = ({ children }) => {
         } finally {
             setIsEnvironmentLoading(false);
         }
-    }, []);
-
-    // Load available environments from the backend
+    }, []);    // Load available environments from the backend
     const loadEnvironments = useCallback(async () => {
         try {
             setIsEnvironmentLoading(true);
@@ -99,9 +97,15 @@ export const EnvironmentProvider = ({ children }) => {
             }
 
             // Find the current environment object
-            const currentEnvironment = currentId
-                ? environments.find(env => env.id === currentId)
+            let currentEnvironment = currentId
+                ? environments.find(env => env.id === parseInt(currentId))
                 : environments[0]; // Default to first environment if none set
+
+            // Handle case where saved environment ID no longer exists
+            if (!currentEnvironment && environments.length > 0) {
+                currentEnvironment = environments[0];
+                currentId = currentEnvironment.id;
+            }
 
             // Set the loaded state
             setEnvironmentState({
@@ -111,13 +115,19 @@ export const EnvironmentProvider = ({ children }) => {
             });
 
             // Update localStorage
-            if (typeof window !== 'undefined' && currentEnvironment) {
-                localStorage.setItem('currentEnvironmentId', currentEnvironment.id);
+            if (typeof window !== 'undefined') {
+                if (currentEnvironment) {
+                    localStorage.setItem('currentEnvironmentId', currentEnvironment.id);
+                } else {
+                    localStorage.removeItem('currentEnvironmentId');
+                }
             }
 
         } catch (error) {
             console.error("Error loading environments:", error);
             toast.error("Failed to load environments: " + (error.response?.data?.message || error.message));
+            // Clear state to avoid stale data
+            setEnvironmentState(defaultEnvironmentState);
         } finally {
             setIsEnvironmentLoading(false);
         }
@@ -184,64 +194,45 @@ export const EnvironmentProvider = ({ children }) => {
         }
 
         return result;
-    }, [environmentState.currentEnvironment, processVariables]);
-
-    // Function to delete an environment by ID
+    }, [environmentState.currentEnvironment, processVariables]);    // Function to delete an environment by ID
     const deleteEnvironment = useCallback(async (environmentId) => {
         try {
             setIsEnvironmentLoading(true);
 
             // Delete the environment in the backend
-            await authAxios.delete(`/environments/${environmentId}`);
+            const response = await authAxios.delete(`/environments/${environmentId}`);
 
-            // Update the frontend state
-            setEnvironmentState(prevState => {
-                // Get new environments list without the deleted one
-                const updatedEnvironments = prevState.environments.filter(env => env.id !== environmentId);
+            // The API now returns the newly activated environment and updated environments list
+            const { activeEnvironment, environments: updatedEnvironments } = response.data;
 
-                // Check if we're deleting the current environment
-                const isCurrentEnvironmentDeleted = prevState.currentEnvironmentId === environmentId;
-
-                // If we deleted the current environment, set a new current environment (first one or null)
-                let newCurrentEnvironment = prevState.currentEnvironment;
-                let newCurrentEnvironmentId = prevState.currentEnvironmentId;
-
-                if (isCurrentEnvironmentDeleted) {
-                    newCurrentEnvironment = updatedEnvironments.length > 0 ? updatedEnvironments[0] : null;
-                    newCurrentEnvironmentId = newCurrentEnvironment?.id || null;
-
-                    // Update localStorage
-                    if (typeof window !== 'undefined') {
-                        if (newCurrentEnvironmentId) {
-                            localStorage.setItem('currentEnvironmentId', newCurrentEnvironmentId);
-                        } else {
-                            localStorage.removeItem('currentEnvironmentId');
-                        }
-                    }
-                }
-
-                return {
-                    environments: updatedEnvironments,
-                    currentEnvironmentId: newCurrentEnvironmentId,
-                    currentEnvironment: newCurrentEnvironment
-                };
+            // Update the frontend state with the data from the backend
+            setEnvironmentState({
+                environments: updatedEnvironments || [],
+                currentEnvironmentId: activeEnvironment?.id || null,
+                currentEnvironment: activeEnvironment || null
             });
 
-            toast.success("Environment deleted successfully");
-
-            // If there are no environments left, or current environment was deleted, refresh to get default environment
-            const currentState = environmentState;
-            if (currentState.environments.length <= 1 || currentState.currentEnvironmentId === environmentId) {
-                await loadEnvironments();
+            // Update localStorage
+            if (typeof window !== 'undefined') {
+                if (activeEnvironment?.id) {
+                    localStorage.setItem('currentEnvironmentId', activeEnvironment.id);
+                } else {
+                    localStorage.removeItem('currentEnvironmentId');
+                }
             }
+
+            toast.success("Environment deleted successfully");
 
         } catch (error) {
             console.error("Error deleting environment:", error);
             toast.error("Failed to delete environment: " + (error.response?.data?.message || error.message));
+
+            // If there was an error, refresh environments to ensure UI is in sync
+            await loadEnvironments();
         } finally {
             setIsEnvironmentLoading(false);
         }
-    }, [environmentState, loadEnvironments]);
+    }, [loadEnvironments]);
 
     return (
         <EnvironmentContext.Provider value={{

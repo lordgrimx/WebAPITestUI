@@ -109,7 +109,15 @@ export async function DELETE(request, { params }) {
             );
         }
 
-        return NextResponse.json({ success: true, message: 'Environment deleted successfully' });
+        // Parse the response to get the new active environment and updated environment list
+        const responseData = await response.json();
+
+        return NextResponse.json({
+            success: true,
+            message: responseData.message || 'Environment deleted successfully',
+            activeEnvironment: responseData.activeEnvironment || null,
+            environments: responseData.environments || []
+        });
     } catch (error) {
         console.error('Delete environment API error:', error);
         return NextResponse.json(

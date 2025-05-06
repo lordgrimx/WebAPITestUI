@@ -4,6 +4,7 @@ using WebTestUI.Backend.Data;
 using WebTestUI.Backend.Data.Entities;
 using WebTestUI.Backend.DTOs;
 using WebTestUI.Backend.Services.Interfaces;
+using WebTestUI.Backend.DTOs; // Added for CreateNotificationDto
 
 namespace WebTestUI.Backend.Services
 {
@@ -11,13 +12,16 @@ namespace WebTestUI.Backend.Services
     {
         private readonly ApplicationDbContext _dbContext;
         private readonly ILogger<EnvironmentService> _logger;
+        private readonly INotificationService _notificationService;
 
         public EnvironmentService(
             ApplicationDbContext dbContext,
-            ILogger<EnvironmentService> logger)
+            ILogger<EnvironmentService> logger,
+            INotificationService notificationService) // Added notificationService
         {
             _dbContext = dbContext;
             _logger = logger;
+            _notificationService = notificationService; // Added
         }
 
         public async Task<IEnumerable<EnvironmentDto>> GetUserEnvironmentsAsync(string userId)
@@ -220,13 +224,22 @@ namespace WebTestUI.Backend.Services
                 // Finally, delete the environment itself
                 _logger.LogInformation("Removing environment {EnvironmentId}", environment.Id);
                 _dbContext.Environments.Remove(environment);
-                await _dbContext.SaveChangesAsync(); _logger.LogInformation("Successfully deleted environment {EnvironmentId}", id);
+                await _dbContext.SaveChangesAsync();
+                _logger.LogInformation("Successfully deleted environment {EnvironmentId}", id);
 
                 // If the deleted environment was active, activate another environment
                 if (wasActive)
                 {
                     await ActivateAnotherEnvironmentAsync(userId);
-                }
+                }                // Send notification to the user that environments have been updated and indicate that page should reload
+                await _notificationService.CreateNotificationAsync(new CreateNotificationDto
+                {
+                    UserId = userId,
+                    Title = "Ortam Silindi",
+                    Message = "Bir ortam silindi. Sayfa otomatik olarak yenilenecek.",
+                    Type = "EnvironmentsUpdated",
+                    RelatedEntityType = "AutoReload" // Use this field to trigger auto-reload on client
+                });
 
                 return true;
             }

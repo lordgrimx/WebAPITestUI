@@ -53,7 +53,7 @@ export function useNotifications() {
         if (connection.state === signalR.HubConnectionState.Disconnected) {
           await connection.start();
           console.log('SignalR connection established successfully');
-          
+
           // Load initial notifications
           await fetchNotifications();
           await fetchNotificationStats();
@@ -63,9 +63,7 @@ export function useNotifications() {
         console.error('Error establishing SignalR connection:', err);
         setTimeout(startConnection, 5000);
       }
-    };
-
-    // Only register handlers once
+    };    // Only register handlers once
     if (!handlersRegistered.current) {
       // Register handlers for real-time updates
       connection.on('ReceiveNotification', (notification) => {
@@ -73,21 +71,28 @@ export function useNotifications() {
         if (!processedNotifications.current.has(notification.id)) {
           console.log('Received notification:', notification);
           processedNotifications.current.add(notification.id);
-          
+
+          // Check if this notification requires page reload
+          if (notification.relatedEntityType === 'AutoReload') {
+            console.log('Auto-reload notification received, reloading page...');
+            // Add a small delay to ensure notification is shown before reload
+            setTimeout(() => window.location.reload(), 500);
+          }
+
           // Update notifications state but prevent duplicates
           setNotifications(prev => {
             if (prev.some(n => n.id === notification.id)) return prev;
             return [notification, ...prev];
           });
-          
+
           setUnreadCount(prev => prev + 1);
         }
       });
 
       connection.on('NotificationRead', (notificationId) => {
-        setNotifications(prev => 
-          prev.map(n => n.id === notificationId 
-            ? { ...n, isRead: true } 
+        setNotifications(prev =>
+          prev.map(n => n.id === notificationId
+            ? { ...n, isRead: true }
             : n
           )
         );
@@ -116,7 +121,6 @@ export function useNotifications() {
       connection.onclose(error => {
         console.log('SignalR connection closed:', error);
       });
-
       // Mark that we've registered the handlers
       handlersRegistered.current = true;
     }
@@ -127,7 +131,7 @@ export function useNotifications() {
   // Fetch notifications from the API
   const fetchNotifications = useCallback(async (page = 1, pageSize = 20) => {
     if (!token) return;
-    
+
     try {
       setIsLoading(true);
       const response = await fetch(
@@ -154,7 +158,7 @@ export function useNotifications() {
   // Fetch notification stats (unread count)
   const fetchNotificationStats = useCallback(async () => {
     if (!token) return;
-    
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/notifications/stats`,
@@ -178,7 +182,7 @@ export function useNotifications() {
   // Fetch user notification preferences
   const fetchPreferences = useCallback(async () => {
     if (!token) return;
-    
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/notifications/preferences`,
@@ -202,7 +206,7 @@ export function useNotifications() {
   // Mark notification as read
   const markAsRead = useCallback(async (notificationId) => {
     if (!token) return;
-    
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/notifications/${notificationId}/read`,
@@ -216,9 +220,9 @@ export function useNotifications() {
       );
 
       if (response.ok) {
-        setNotifications(prev => 
-          prev.map(n => n.id === notificationId 
-            ? { ...n, isRead: true } 
+        setNotifications(prev =>
+          prev.map(n => n.id === notificationId
+            ? { ...n, isRead: true }
             : n
           )
         );
@@ -232,7 +236,7 @@ export function useNotifications() {
   // Mark all notifications as read
   const markAllAsRead = useCallback(async () => {
     if (!token) return;
-    
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/notifications/mark-all-read`,
@@ -257,7 +261,7 @@ export function useNotifications() {
   // Delete notification
   const deleteNotification = useCallback(async (notificationId) => {
     if (!token) return;
-    
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/notifications/${notificationId}`,
@@ -283,7 +287,7 @@ export function useNotifications() {
   // Update notification preferences
   const updatePreferences = useCallback(async (updatedPreferences) => {
     if (!token) return;
-    
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/notifications/preferences`,
