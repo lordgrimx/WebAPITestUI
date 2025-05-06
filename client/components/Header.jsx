@@ -1,9 +1,8 @@
 "use client"
 import { authAxios } from "@/lib/auth-context";
-import { useState, useEffect } from "react"; // Added useEffect for responsive design
+import { useState, useEffect } from "react"; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useTranslation } from "react-i18next"; 
 import { useTheme } from "next-themes";
 import {
   DropdownMenu,
@@ -26,9 +25,8 @@ import {
   Pencil,
   ChevronDown,
   Activity,
-  Home,
-  Menu, // Added Menu icon for mobile
-  X, // Added X icon for closing mobile menu
+  Menu,
+  X,
 } from "lucide-react";
 import SettingsModal from "@/components/SettingsModal";
 import GenerateCodeModal from "@/components/GenerateCodeModal";
@@ -39,12 +37,8 @@ import NotificationBell from "@/components/NotificationBell";
 import { useAuth } from "@/lib/auth-context";
 import { useSettings } from "@/lib/settings-context"; 
 import { useEnvironment } from "@/lib/environment-context"; 
-import { toast } from "sonner"; 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useRequest } from "@/lib/request-context";
 
-// Accept currentRequestData prop from ApiTester
 export default function Header({ currentRequestData, openSignupModal, openLoginModal, onRequestSaved, collections, history }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
@@ -54,8 +48,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   const { user, isAuthenticated, login, logout, isLoading: isAuthLoading } = useAuth();
   const { updateSettings } = useSettings();
   const { theme, setTheme } = useTheme();
-  const { t } = useTranslation("common");
-  // Use the environment context
   const {
     environments,
     currentEnvironment,
@@ -64,80 +56,54 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     isEnvironmentLoading
   } = useEnvironment();
 
-  // State for mobile menu
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  // State to track screen width
   const [isMobile, setIsMobile] = useState(false);
 
-  // Effect to handle screen resize
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
-      // Close mobile menu when screen is resized to larger size
       if (window.innerWidth >= 768) {
         setIsMobileMenuOpen(false);
       }
     };
-    
-    // Set initial value
     handleResize();
-    
-    // Add listener
     window.addEventListener('resize', handleResize);
-    
-    // Clean up
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const isDarkMode = theme === 'dark';
 
-  // Modify activateEnvironment to use context function
   const activateEnvironment = async (environmentId) => {
-    // Call context function to set the environment
     await setCurrentEnvironmentById(environmentId);
-    // No need to fetch manually, context handles updates
   };
 
-  // Function to open the environment modal for editing
   const openEditEnvironmentModal = (env, e) => {
-    e.stopPropagation(); // Prevent triggering the parent onClick (activating the environment)
+    e.stopPropagation();
     setEnvironmentToEdit(env);
     setShowEnvironmentModal(true);
   };
 
-  // Function to open environment modal for creating a new environment
   const openCreateEnvironmentModal = () => {
-    setEnvironmentToEdit(null); // Reset any previously selected environment
+    setEnvironmentToEdit(null);
     setShowEnvironmentModal(true);
   };
 
-  // Modify handleEnvironmentSaved to use context refresh
   const handleEnvironmentSaved = () => {
-    refreshEnvironments(); // Refresh the list via context
+    refreshEnvironments();
   };
 
-  const handleSaveRequest = async (requestData) => {
-    // ...existing code...
-  };
+  const handleSaveRequest = async (requestData) => {};
 
-  const handleCopyLink = async () => {
-    // ...existing code...
-  };
+  const handleCopyLink = async () => {};
 
-  const handleShareToWorkspace = () => {
-    // ...existing code...
-  };
+  const handleShareToWorkspace = () => {};
 
-  const handleExportRequest = () => {
-    // ...existing code...
-  };
+  const handleExportRequest = () => {};
 
-  // Helper function to close mobile menu
   const closeMobileMenu = () => {
     setIsMobileMenuOpen(false);
   };
 
-  // Use isAuthLoading for auth check
   if (isAuthLoading) {
     return (
       <header
@@ -176,7 +142,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>API Testing Tool</h1>
           </div>
 
-          {/* Mobile menu button */}
           {isMobile && (
             <Button 
               variant="ghost" 
@@ -188,7 +153,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             </Button>
           )}
 
-          {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-6">
             <a
               href="#features"
@@ -240,7 +204,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
           </div>
         </nav>
 
-        {/* Mobile menu dropdown */}
         {isMobile && isMobileMenuOpen && (
           <div className={`fixed inset-0 z-50 ${isDarkMode ? 'bg-gray-900/90' : 'bg-gray-100/90'}`}>
             <div className={`flex flex-col p-5 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} h-full`}>
@@ -387,7 +350,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             </h1>
           </div>
           
-          {/* Mobile menu button */}
           {isMobile && (
             <Button 
               variant="ghost" 
@@ -399,7 +361,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             </Button>
           )}
           
-          {/* Desktop actions */}
           <div className="hidden md:flex space-x-2 ml-6">
             <Button
               variant="ghost"
@@ -408,7 +369,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowSaveRequest(true)}
             >
               <Save className="h-4 w-4" />
-              <span>{t('general.save')}</span>
+              <span>Kaydet</span>
             </Button>
             <Button
               variant="ghost"
@@ -417,7 +378,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowGenerateCode(true)}
             >
               <Code className="h-4 w-4" />
-              <span>{t('header.generateCode')}</span>
+              <span>Kod Üret</span>
             </Button>
             <Button
               variant="ghost"
@@ -426,7 +387,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowSettings(true)}
             >
               <Settings className="h-4 w-4" />
-              <span>{t('header.settings')}</span>
+              <span>Ayarlar</span>
             </Button>            
             <Link href="/loadtests">
               <Button
@@ -435,7 +396,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4 mr-1" />
-                <span>{t('header.loadTests', 'Load Tests')}</span>
+                <span>Yük Testleri</span>
               </Button>
             </Link>
             <Link href="/monitor">
@@ -445,19 +406,18 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4 mr-1" />
-                <span>{t('header.monitoring')}</span>
+                <span>İzleme</span>
               </Button>
             </Link>
           </div>
         </div>
         
-        {/* Desktop header right section */}
         <div className="hidden md:flex items-center space-x-4">          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`} disabled={isEnvironmentLoading}>
                 <Globe className="h-4 w-4" />
-                <span className="hidden sm:inline">{isEnvironmentLoading ? t('header.environmentLoading', 'Loading...') : currentEnvironment?.name || t('header.environmentList.none', 'No Environment')}</span>
+                <span className="hidden sm:inline">{isEnvironmentLoading ? "Yükleniyor..." : currentEnvironment?.name || "Ortam Yok"}</span>
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -478,7 +438,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 ))
               ) : (
                 <DropdownMenuItem disabled>
-                  {t('header.environmentList.none', 'No environments found')}
+                  Ortam Bulunamadı
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
@@ -531,7 +491,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
           />
         </div>
         
-        {/* Mobile view, only show theme toggle and profile on main header when menu is closed */}
         {isMobile && !isMobileMenuOpen && (
           <div className="flex items-center space-x-2">
             <Button
@@ -551,7 +510,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
           </div>
         )}
         
-        {/* Mobile menu dropdown */}
         {isMobile && isMobileMenuOpen && (
           <div className={`fixed inset-0 z-50 ${isDarkMode ? 'bg-gray-900/90' : 'bg-gray-100/90'}`}>
             <div className={`flex flex-col p-5 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} h-full`}>
@@ -583,7 +541,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   }}
                 >
                   <Save className="h-4 w-4" />
-                  <span>{t('general.save')}</span>
+                  <span>Kaydet</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -594,7 +552,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   }}
                 >
                   <Code className="h-4 w-4" />
-                  <span>{t('header.generateCode')}</span>
+                  <span>Kod Üret</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -605,7 +563,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   }}
                 >
                   <Settings className="h-4 w-4" />
-                  <span>{t('header.settings')}</span>
+                  <span>Ayarlar</span>
                 </Button>
                 
                 <Link href="/loadtests" onClick={closeMobileMenu}>
@@ -614,7 +572,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     className={`w-full justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
                   >
                     <Activity className="h-4 w-4" />
-                    <span>{t('header.loadTests', 'Load Tests')}</span>
+                    <span>Yük Testleri</span>
                   </Button>
                 </Link>
                 <Link href="/monitor" onClick={closeMobileMenu}>
@@ -623,12 +581,12 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     className={`w-full justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
                   >
                     <Activity className="h-4 w-4" />
-                    <span>{t('header.monitoring')}</span>
+                    <span>İzleme</span>
                   </Button>
                 </Link>
                 
                 <div className="py-2">
-                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Environment</div>
+                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Ortam</div>
                   <Button
                     variant="outline"
                     className="w-full justify-between mb-2"
@@ -639,7 +597,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   >
                     <div className="flex items-center">
                       <Globe className="h-4 w-4 mr-2" />
-                      <span>{isEnvironmentLoading ? t('header.environmentLoading', 'Loading...') : currentEnvironment?.name || t('header.environmentList.none', 'No Environment')}</span>
+                      <span>{isEnvironmentLoading ? "Yükleniyor..." : currentEnvironment?.name || "Ortam Yok"}</span>
                     </div>
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -677,7 +635,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 </div>
                 
                 <div className="py-2">
-                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Share</div>
+                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Paylaş</div>
                   <div className="space-y-2">
                     <Button
                       variant="ghost"

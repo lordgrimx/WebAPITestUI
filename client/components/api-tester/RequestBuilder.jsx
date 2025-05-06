@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from 'react-i18next'; // useTranslation hook'unu ekle
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -698,6 +698,8 @@ export default function RequestBuilder({
 }) {
   const { t } = useTranslation('common'); // Initialize useTranslation
   const { settings } = useSettings();
+  // Add ref to track if component has mounted
+  const isMounted = useRef(false);
 
   // Add state for tracking mobile view
   const [isMobile, setIsMobile] = useState(false);
@@ -722,27 +724,10 @@ export default function RequestBuilder({
   const [method, setMethod] = useState(initialData?.method || "GET");
   const [url, setUrl] = useState(initialData?.url || ""); // Initialize URL
   const [debouncedUrl, setDebouncedUrl] = useState(url);
-  // Initialize with a single default row
-  const [params, setParams] = useState([createDefaultRow()]);  // Initialize headers from settings.defaultHeaders if available
-  const [headers, setHeaders] = useState(() => {
-    // Check if settings and defaultHeaders exist
-    console.log("Settings in headers initialization:", settings);
-    if (settings?.defaultHeaders && Array.isArray(settings.defaultHeaders) && settings.defaultHeaders.length > 0) {
-      // Map default headers to the format expected by our component
-      console.log("Using default headers from settings:", settings.defaultHeaders);
-      const mappedHeaders = settings.defaultHeaders.map(header => ({
-        id: header.id || Date.now() + Math.random(),
-        key: header.name || "", // Map name to key
-        value: header.value || "",
-        enabled: true
-      }));
-      console.log("Mapped headers:", mappedHeaders);
-      return mappedHeaders;
-    }
-    // Fallback to a single empty row if no default headers
-    console.log("No default headers found in settings, using empty row");
-    return [createDefaultRow()];
-  });
+  // Initialize with a single default row - simplified
+  const [params, setParams] = useState([createDefaultRow()]);
+  // Simplify headers initialization to prevent duplicate operations
+  const [headers, setHeaders] = useState([createDefaultRow()]);
   const [body, setBody] = useState(initialData?.body || "");
   const [auth, setAuth] = useState(initialData?.auth || { type: "none" }); // Initialize auth from initialData
   const [tests, setTests] = useState(initialData?.tests || { script: "", results: [] }); // Initialize tests from initialData
@@ -980,22 +965,42 @@ export default function RequestBuilder({
       onRequestDataChange(currentData);
     }
   }, [currentData, onRequestDataChange]);
-  // Update headers when settings change
+  // Update headers when settings change or on mount - optimized
   useEffect(() => {
-    if (settings?.defaultHeaders && Array.isArray(settings.defaultHeaders) && settings.defaultHeaders.length > 0) {
-      console.log("Settings changed, updating headers with default headers");
-      const mappedHeaders = settings.defaultHeaders.map(header => ({
-        id: header.id || Date.now() + Math.random(),
-        key: header.name || "", // Map name to key
-        value: header.value || "",
-        enabled: true
-      }));
-      
-      // Update headers regardless of current state to ensure they are always populated
-      console.log("Updating headers with default values:", mappedHeaders);
+    if (!settings?.defaultHeaders || !Array.isArray(settings.defaultHeaders) || settings.defaultHeaders.length === 0) {
+      return; // Exit early if no default headers
+    }
+    
+    // Skip the first run if we already set headers from initialData or selectedRequest
+    if (initialData || selectedRequestId || requestDataFromBackend) {
+      // Only update if component has already been mounted (not first render)
+      if (!isMounted.current) {
+        isMounted.current = true;
+        return;
+      }
+    } else {
+      // Mark component as mounted
+      isMounted.current = true;
+    }
+    
+    console.log("Updating headers with default values from settings");
+    
+    const mappedHeaders = settings.defaultHeaders.map(header => ({
+      id: header.id || `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+      key: header.name || "",
+      value: header.value || "",
+      enabled: true
+    }));
+    
+    // Compare current headers with mapped headers to avoid unnecessary updates
+    const currentHeaderKeys = headers.map(h => h.key).filter(k => k.trim()).sort().join(',');
+    const mappedHeaderKeys = mappedHeaders.map(h => h.key).filter(k => k.trim()).sort().join(',');
+    
+    // Only update if different
+    if (currentHeaderKeys !== mappedHeaderKeys || headers.length === 1 && !headers[0].key) {
       setHeaders(mappedHeaders);
     }
-  }, [settings]); // Only depend on settings, not headers
+  }, [settings, initialData, selectedRequestId, requestDataFromBackend, headers]);
 
   const handleSendClick = useCallback(() => {
      // Validate URL one last time before opening dialog or sending

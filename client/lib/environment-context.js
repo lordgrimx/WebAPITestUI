@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authAxios } from './auth-context';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { authAxios, useAuth } from './auth-context';
 import { toast } from 'sonner';
 
 // Initial default environment state
@@ -13,12 +13,30 @@ const defaultEnvironmentState = {
 
 const EnvironmentContext = createContext(null);
 
+// Add a debounce utility function at the top of the file
+function debounce(func, wait) {
+    let timeout;
+    const debouncedFunction = function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+    
+    debouncedFunction.cancel = function() {
+        clearTimeout(timeout);
+    };
+    
+    return debouncedFunction;
+}
+
 export const EnvironmentProvider = ({ children }) => {
+    const { isAuthenticated } = useAuth();
     const [environmentState, setEnvironmentState] = useState(defaultEnvironmentState);
     const [isEnvironmentLoading, setIsEnvironmentLoading] = useState(true);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [hasAuthError, setHasAuthError] = useState(false);
 
-    // Function to process variables and apply them to string values
+    // Memoize processVariables to prevent recreation on each render
     const processVariables = useCallback((text, variables = {}) => {
         if (!text || typeof text !== 'string' || !variables || Object.keys(variables).length === 0) {
             return text;
@@ -38,11 +56,13 @@ export const EnvironmentProvider = ({ children }) => {
 
     // Set the current environment by ID
     const setCurrentEnvironmentById = useCallback(async (environmentId) => {
+        if (!isAuthenticated || hasAuthError) return; // Prevent API calls if not authenticated
+        
         try {
             setIsEnvironmentLoading(true);
 
             // Update in backend using the correct endpoint and method
-            await authAxios.put(`/environments/${environmentId}/activate`); // Changed from POST to PUT and updated URL
+            await authAxios.put(`/environments/${environmentId}/activate`);
 
             // Update in frontend state
             setEnvironmentState(prevState => {
@@ -67,14 +87,23 @@ export const EnvironmentProvider = ({ children }) => {
             toast.success("Environment updated successfully");
         } catch (error) {
             console.error("Error setting environment:", error);
-            toast.error("Failed to update environment: " + (error.response?.data?.message || error.message));
+            if (error.response?.status === 401) {
+                setHasAuthError(true); // Set flag to prevent more API calls
+            } else {
+                toast.error("Failed to update environment: " + (error.response?.data?.message || error.message));
+            }
         } finally {
             setIsEnvironmentLoading(false);
         }
-    }, []);
+    }, [isAuthenticated, hasAuthError]);
 
     // Load available environments from the backend
     const loadEnvironments = useCallback(async () => {
+        if (!isAuthenticated || hasAuthError) {
+            setIsEnvironmentLoading(false);
+            return; // Skip API calls if not authenticated
+        }
+        
         try {
             setIsEnvironmentLoading(true);
 
@@ -117,16 +146,44 @@ export const EnvironmentProvider = ({ children }) => {
 
         } catch (error) {
             console.error("Error loading environments:", error);
-            toast.error("Failed to load environments: " + (error.response?.data?.message || error.message));
+            if (error.response?.status === 401) {
+                setHasAuthError(true); // Set flag to prevent more API calls
+            } else {
+                toast.error("Failed to load environments: " + (error.response?.data?.message || error.message));
+            }
         } finally {
             setIsEnvironmentLoading(false);
         }
-    }, []);
+    }, [isAuthenticated, hasAuthError]);
 
-    // Load environments on initial render and when refresh is triggered
+    // Add a debounce for environment changes
+    const debouncedLoadEnvironments = useCallback(
+        debounce(() => {
+            if (isAuthenticated && !hasAuthError) {
+                loadEnvironments();
+            }
+        }, 300),
+        [loadEnvironments, isAuthenticated, hasAuthError]
+    );
+
+    // Reset auth error state when authentication status changes
     useEffect(() => {
-        loadEnvironments();
-    }, [loadEnvironments, refreshTrigger]);    // Function to apply environment variables to a request
+        if (isAuthenticated) {
+            setHasAuthError(false);
+        } else {
+            // Reset state when user is not authenticated
+            setEnvironmentState(defaultEnvironmentState);
+        }
+    }, [isAuthenticated]);
+
+    // Load environments on initial render and when refresh is triggered or auth state changes
+    useEffect(() => {
+        debouncedLoadEnvironments();
+        // Clean up the debounce on unmount
+        return () => debouncedLoadEnvironments.cancel();
+    }, [debouncedLoadEnvironments, refreshTrigger]);
+
+    // Function to apply environment variables to a request
     const applyEnvironmentToRequest = useCallback((requestData) => {
         if (!environmentState.currentEnvironment?.variables || Object.keys(environmentState.currentEnvironment.variables).length === 0) {
             return requestData;
@@ -186,16 +243,27 @@ export const EnvironmentProvider = ({ children }) => {
         return result;
     }, [environmentState.currentEnvironment, processVariables]);
 
+    // Memoize the context value to prevent unnecessary re-renders
+    const contextValue = useMemo(() => ({
+        ...environmentState,
+        isEnvironmentLoading,
+        setCurrentEnvironmentById,
+        triggerEnvironmentChange,
+        refreshEnvironments: loadEnvironments,
+        processVariables,
+        applyEnvironmentToRequest
+    }), [
+        environmentState, 
+        isEnvironmentLoading, 
+        setCurrentEnvironmentById, 
+        triggerEnvironmentChange, 
+        loadEnvironments,
+        processVariables, 
+        applyEnvironmentToRequest
+    ]);
+
     return (
-        <EnvironmentContext.Provider value={{
-            ...environmentState,
-            isEnvironmentLoading,
-            setCurrentEnvironmentById,
-            triggerEnvironmentChange,
-            refreshEnvironments: loadEnvironments,
-            processVariables,
-            applyEnvironmentToRequest
-        }}>
+        <EnvironmentContext.Provider value={contextValue}>
             {children}
         </EnvironmentContext.Provider>
     );

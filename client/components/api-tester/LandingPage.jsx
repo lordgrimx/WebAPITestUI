@@ -4,21 +4,21 @@ import { Button } from '../ui/button'
 import Image from 'next/image'
 import { Zap, Code, ChartLine, Users, Shield, BookMarked, Check } from 'lucide-react'
 
-// Destructure openLoginModal from props
 export default function LandingPage({ darkMode, setDarkMode, openSignupModal, openLoginModal }) {
   return (
     <div className="min-h-screen bg-gray-50 font-sans m-0 p-0">
       {/* Hero */}
       <div className="relative overflow-hidden min-h-screen m-0 p-0">
-        <div className="z-10 relative">
-          {/* Pass openLoginModal down to the Header component */}
+        {/* Fix header positioning - give it a proper z-index and background color */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-transparent">
           <Header 
             darkMode={darkMode} 
             setDarkMode={setDarkMode} 
             openSignupModal={openSignupModal} 
-            openLoginModal={openLoginModal} // Pass it down
+            openLoginModal={openLoginModal}
           />
         </div>
+        
         <div className="absolute inset-0 z-0">
           <Image
             src={"/landingpage.jpeg"}
@@ -28,7 +28,9 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
             className="w-full h-full object-cover object-top"
           />
         </div>
-        <div className="z-10 relative mt-20 w-full px-6 flex flex-col md:flex-row justify-start items-center">
+
+        {/* Add padding-top to push content below fixed header */}
+        <div className="z-10 relative pt-20 mt-20 w-full px-6 flex flex-col md:flex-row justify-start items-center">
           <div className="w-full md:w-1/2">
             <div className="mt-5">
               <h1 className="text-3xl md:text-5xl text-gray-100">
