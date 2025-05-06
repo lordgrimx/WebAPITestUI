@@ -39,10 +39,11 @@ export const EnvironmentProvider = ({ children }) => {
     // Set the current environment by ID
     const setCurrentEnvironmentById = useCallback(async (environmentId) => {
         try {
-            setIsEnvironmentLoading(true);
-
-            // Update in backend using the correct endpoint and method
+            setIsEnvironmentLoading(true);            // Update in backend using the correct endpoint and method
             await authAxios.put(`/environments/${environmentId}/activate`); // Changed from POST to PUT and updated URL
+
+            // Explicitly sync history with the newly activated environment
+            await authAxios.post(`/environments/${environmentId}/sync-history`);
 
             // Update in frontend state
             setEnvironmentState(prevState => {
@@ -232,7 +233,29 @@ export const EnvironmentProvider = ({ children }) => {
         } finally {
             setIsEnvironmentLoading(false);
         }
-    }, [loadEnvironments]);
+    }, [loadEnvironments]);    // Function to synchronize history entries with an environment
+    const syncHistoryWithEnvironment = useCallback(async (environmentId) => {
+        try {
+            setIsEnvironmentLoading(true);
+
+            // Call the sync endpoint
+            const response = await authAxios.post(`/environments/${environmentId}/sync-history`);
+
+            if (response.status === 200) {
+                toast.success("History entries synchronized successfully with environment");
+                return true;
+            } else {
+                toast.error("Failed to synchronize history entries with environment");
+                return false;
+            }
+        } catch (error) {
+            console.error("Error syncing history with environment:", error);
+            toast.error("Failed to sync history: " + (error.response?.data?.message || error.message));
+            return false;
+        } finally {
+            setIsEnvironmentLoading(false);
+        }
+    }, []);
 
     return (
         <EnvironmentContext.Provider value={{
@@ -243,7 +266,8 @@ export const EnvironmentProvider = ({ children }) => {
             refreshEnvironments: loadEnvironments,
             processVariables,
             applyEnvironmentToRequest,
-            deleteEnvironment
+            deleteEnvironment,
+            syncHistoryWithEnvironment
         }}>
             {children}
         </EnvironmentContext.Provider>

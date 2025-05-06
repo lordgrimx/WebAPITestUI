@@ -13,6 +13,11 @@ namespace WebTestUI.Backend.DTOs
         public string? RequestName { get; set; }
         public Dictionary<string, string>? RequestHeaders { get; set; }
         public string? RequestBody { get; set; }
+        public int StatusCode { get; set; }
+        public int Duration { get; set; }
+        public int Size { get; set; }
+        public string? ResponseBody { get; set; }
+        public DateTime Timestamp { get; set; }
     }
 
     // DTO for the data payload to be shared

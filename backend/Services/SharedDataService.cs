@@ -461,6 +461,31 @@ namespace WebTestUI.Backend.Services
                 Console.WriteLine($"Prepared standalone request: '{preparedStandaloneRequestEntity.Name}' (Original Shared ID: {sharedDataDto.Request.Id})");
             }
 
+            if (sharedDataDto.History != null && sharedDataDto.History.Any())
+            {
+                Console.WriteLine($"Processing {sharedDataDto.History.Count} history entries for user {userId}");
+                foreach (var historyDto in sharedDataDto.History)
+                {
+                    var historyEntity = new History
+                    {
+                        UserId = userId,
+                        RequestId = null, // Or try to find/link if necessary
+                        EnvironmentId = newEnvironmentId,
+                        Method = historyDto.Method,
+                        Url = historyDto.Url,
+                        Status = historyDto.StatusCode,
+                        Duration = historyDto.Duration,
+                        ResponseSize = historyDto.Size,
+                        Response = historyDto.ResponseBody,
+                        RequestHeaders = historyDto.RequestHeaders != null ? JsonSerializer.Serialize(historyDto.RequestHeaders) : null,
+                        RequestBody = historyDto.RequestBody,
+                        Timestamp = historyDto.Timestamp != default ? historyDto.Timestamp : DateTime.UtcNow // Ensure timestamp is valid
+                    };
+                    _context.HistoryEntries.Add(historyEntity);
+                    Console.WriteLine($"Prepared history entry: {historyEntity.Method} {historyEntity.Url} (Timestamp: {historyEntity.Timestamp})");
+                }
+            }
+
             if (sharedDataDto.Collections != null && sharedDataDto.Collections.Any())
             {
                 Console.WriteLine($"Processing {sharedDataDto.Collections.Count} collections for user {userId}");

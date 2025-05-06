@@ -15,6 +15,8 @@ namespace WebTestUI.Backend.DTOs
         public int? RequestId { get; set; }
         public string? RequestName { get; set; }
         public string? ResponseBody { get; set; } // Added ResponseBody
+        public Dictionary<string, string>? RequestHeaders { get; set; } // Added RequestHeaders
+        public string? RequestBody { get; set; } // Added RequestBody
     }
 
     public class RecordHistoryDto
@@ -72,7 +74,7 @@ namespace WebTestUI.Backend.DTOs
         public string? Name { get; set; }
 
         // Change Variables type from Dictionary<string, string> to string
-        public string? Variables { get; set; } 
+        public string? Variables { get; set; }
 
         public bool? IsActive { get; set; }
     }

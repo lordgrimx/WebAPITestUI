@@ -94,9 +94,7 @@ namespace WebTestUI.Backend.Services
                     UserId = userId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
-                };
-
-                if (environment.IsActive)
+                }; if (environment.IsActive)
                 {
                     // Aktif edilecekse diğerleri pasif olmalı
                     await DeactivateAllEnvironmentsAsync(userId);
@@ -104,6 +102,13 @@ namespace WebTestUI.Backend.Services
 
                 _dbContext.Environments.Add(environment); // Corrected DbSet name
                 await _dbContext.SaveChangesAsync();
+
+                // If this is the active environment, sync history entries
+                if (environment.IsActive)
+                {
+                    await SyncHistoryEntriesWithEnvironmentAsync(environment.Id, userId);
+                    await _dbContext.SaveChangesAsync();
+                }
 
                 // Map the created entity back to DTO using helper
                 return MapToDto(environment);
@@ -138,12 +143,14 @@ namespace WebTestUI.Backend.Services
                     // Directly assign the JSON string, no need to re-serialize
                     environment.Variables = model.Variables;
                 }
-
                 if (model.IsActive.HasValue && model.IsActive.Value && !environment.IsActive)
                 {
                     // Aktif edilecekse diğerleri pasif olmalı
                     await DeactivateAllEnvironmentsAsync(userId);
                     environment.IsActive = true;
+
+                    // Sync history entries when environment is activated through an update
+                    await SyncHistoryEntriesWithEnvironmentAsync(environment.Id, userId);
                 }
                 else if (model.IsActive.HasValue)
                 {
@@ -303,6 +310,9 @@ namespace WebTestUI.Backend.Services
                 environment.IsActive = true;
                 environment.UpdatedAt = DateTime.UtcNow;
 
+                // Sync history entries with this environment (Fix for history synchronization)
+                await SyncHistoryEntriesWithEnvironmentAsync(id, userId);
+
                 await _dbContext.SaveChangesAsync();
 
                 return true;
@@ -325,6 +335,67 @@ namespace WebTestUI.Backend.Services
                 env.IsActive = false;
                 env.UpdatedAt = DateTime.UtcNow;
             }
+        }        // Implementation of interface method for explicit synchronization
+        public async Task<bool> SyncHistoryWithEnvironmentAsync(int environmentId, string userId)
+        {
+            try
+            {
+                // Check if the environment exists and belongs to the user
+                var environment = await _dbContext.Environments
+                    .FirstOrDefaultAsync(e => e.Id == environmentId && e.UserId == userId);
+
+                if (environment == null)
+                {
+                    _logger.LogWarning("Cannot sync history - environment {EnvironmentId} not found for user {UserId}",
+                        environmentId, userId);
+                    return false;
+                }
+
+                // Call the internal implementation
+                await SyncHistoryEntriesWithEnvironmentAsync(environmentId, userId);
+                await _dbContext.SaveChangesAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing history with environment {EnvironmentId} for user {UserId}",
+                    environmentId, userId);
+                throw;
+            }
+        }
+
+        // Internal method to synchronize history entries with the active environment
+        private async Task SyncHistoryEntriesWithEnvironmentAsync(int environmentId, string userId)
+        {
+            try
+            {
+                // Get all history entries for this user that don't have an environment ID set
+                // or have a different environment ID
+                var historyEntries = await _dbContext.HistoryEntries
+                    .Where(h => h.UserId == userId &&
+                               (h.EnvironmentId == null || h.EnvironmentId != environmentId))
+                    .ToListAsync();
+
+                if (historyEntries.Any())
+                {
+                    _logger.LogInformation("Syncing {Count} history entries with environment {EnvironmentId}",
+                        historyEntries.Count, environmentId);
+
+                    // Update all these entries to link them to this environment
+                    foreach (var entry in historyEntries)
+                    {
+                        entry.EnvironmentId = environmentId;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error syncing history entries with environment {EnvironmentId} for user {UserId}",
+                    environmentId, userId);
+                // Log but don't rethrow - this is a supplementary operation
+                // that shouldn't prevent the main environment activation
+            }
         }
 
         private async Task<bool> ActivateAnotherEnvironmentAsync(string userId)
@@ -345,11 +416,12 @@ namespace WebTestUI.Backend.Services
                     _logger.LogInformation("Activating environment {EnvironmentId} after deletion", environmentToActivate.Id);
 
                     // Make sure all environments are inactive first
-                    await DeactivateAllEnvironmentsAsync(userId);
-
-                    // Activate the selected environment
+                    await DeactivateAllEnvironmentsAsync(userId);                    // Activate the selected environment
                     environmentToActivate.IsActive = true;
                     environmentToActivate.UpdatedAt = DateTime.UtcNow;
+
+                    // Also sync history entries with this newly activated environment
+                    await SyncHistoryEntriesWithEnvironmentAsync(environmentToActivate.Id, userId);
 
                     await _dbContext.SaveChangesAsync();
                     return true;

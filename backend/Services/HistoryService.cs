@@ -55,7 +55,7 @@ namespace WebTestUI.Backend.Services
                     .Include(h => h.Request)
                     .Where(h => h.RequestId == requestId && h.UserId == userId);
 
-                 if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
+                if (!string.IsNullOrEmpty(currentEnvironmentId) && int.TryParse(currentEnvironmentId, out int envId))
                 {
                     query = query.Where(h => h.EnvironmentId == envId);
                 }
@@ -95,7 +95,7 @@ namespace WebTestUI.Backend.Services
         // Combined DeleteHistoryAsync and DeleteHistoryEntryAsync
         public async Task<bool> DeleteHistoryAsync(int id, string userId)
         {
-             try
+            try
             {
                 var historyEntry = await _dbContext.HistoryEntries
                     .FirstOrDefaultAsync(h => h.Id == id && h.UserId == userId);
@@ -165,14 +165,16 @@ namespace WebTestUI.Backend.Services
                 var historyEntry = new History
                 {
                     UserId = userId,
-                    RequestId = model.RequestId, // Keep RequestId even if validation fails, or set to null based on requirements
-                    EnvironmentId = model.EnvironmentId, // Save EnvironmentId from DTO
+                    RequestId = model.RequestId,
+                    EnvironmentId = model.EnvironmentId,
                     Method = model.Method,
                     Url = model.Url,
-                    Status = model.StatusCode, // Fix: Use StatusCode from DTO
+                    Status = model.StatusCode,
                     Duration = model.Duration,
-                    ResponseSize = model.Size, // Fix: Use Size from DTO
-                    Response = model.ResponseBody, // Fix: Use ResponseBody from DTO
+                    ResponseSize = model.Size,
+                    Response = model.ResponseBody,
+                    RequestHeaders = model.RequestHeaders != null ? JsonSerializer.Serialize(model.RequestHeaders) : null, // Serialize RequestHeaders
+                    RequestBody = model.RequestBody, // Assign RequestBody
                     Timestamp = DateTime.UtcNow
                 };
 
@@ -185,13 +187,13 @@ namespace WebTestUI.Backend.Services
                     // Use explicit loading to avoid potential N+1 issues if called in a loop elsewhere
                     await _dbContext.Entry(historyEntry).Reference(h => h.Request).LoadAsync();
                 }
-                 _logger.LogInformation("Geçmiş kaydı başarıyla oluşturuldu: ID {HistoryId}, Kullanıcı: {UserId}", historyEntry.Id, userId);
+                _logger.LogInformation("Geçmiş kaydı başarıyla oluşturuldu: ID {HistoryId}, Kullanıcı: {UserId}", historyEntry.Id, userId);
                 return MapToHistoryDto(historyEntry);
             }
             catch (DbUpdateException dbEx) // More specific exception handling
             {
-                 _logger.LogError(dbEx, "Veritabanı güncelleme hatası oluştu geçmiş kaydı oluşturulurken (Kullanıcı: {UserId})", userId);
-                 throw; // Re-throw or handle appropriately
+                _logger.LogError(dbEx, "Veritabanı güncelleme hatası oluştu geçmiş kaydı oluşturulurken (Kullanıcı: {UserId})", userId);
+                throw; // Re-throw or handle appropriately
             }
             catch (Exception ex) // Catch broader exceptions
             {
@@ -237,11 +239,13 @@ namespace WebTestUI.Backend.Services
                 RequestName = history.Request?.Name,
                 Method = history.Method,
                 Url = history.Url,
-                StatusCode = history.Status ?? 0, // Handle potential null with default value
-                Duration = history.Duration ?? 0, // Handle potential null with default value
-                Size = history.ResponseSize ?? 0, // Handle potential null with default value
+                StatusCode = history.Status ?? 0,
+                Duration = history.Duration ?? 0,
+                Size = history.ResponseSize ?? 0,
                 Timestamp = history.Timestamp,
-                ResponseBody = history.Response // Changed Response to ResponseBody
+                ResponseBody = history.Response,
+                RequestHeaders = !string.IsNullOrEmpty(history.RequestHeaders) ? JsonSerializer.Deserialize<Dictionary<string, string>>(history.RequestHeaders) : null, // Deserialize RequestHeaders
+                RequestBody = history.RequestBody // Assign RequestBody
             };
         }
     }

@@ -16,6 +16,8 @@ namespace WebTestUI.Backend.Data.Entities
         public int? ResponseSize { get; set; }  // in bytes
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
         public string? Response { get; set; }  // JSON stringified response
+        public string? RequestHeaders { get; set; } // JSON stringified request headers
+        public string? RequestBody { get; set; } // Request body
 
         // Navigation properties
         public virtual ApplicationUser? User { get; set; }
