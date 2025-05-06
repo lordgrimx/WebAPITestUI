@@ -172,7 +172,6 @@ namespace WebTestUI.Backend.Controllers
                 return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
             }
         }
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEnvironment(int id)
         {
@@ -190,7 +189,18 @@ namespace WebTestUI.Backend.Controllers
                     return NotFound(new { message = "Ortam bulunamadı veya bu işlem için yetkiniz yok." });
                 }
 
-                return NoContent();
+                // Fetch the active environment after deletion
+                var activeEnvironment = await _environmentService.GetActiveEnvironmentAsync(userId);
+
+                // Get all environments for the user
+                var environments = await _environmentService.GetUserEnvironmentsAsync(userId);
+
+                return Ok(new
+                {
+                    message = "Ortam başarıyla silindi.",
+                    activeEnvironment = activeEnvironment,
+                    environments = environments
+                });
             }
             catch (Exception ex)
             {

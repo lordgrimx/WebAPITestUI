@@ -165,6 +165,7 @@ namespace WebTestUI.Backend.Services
             {
                 var environment = await _dbContext.Environments
                     .Include(e => e.Collections)
+                        .ThenInclude(c => c.Requests)
                     .Include(e => e.Requests)
                     .Include(e => e.HistoryEntries)
                     .FirstOrDefaultAsync(e => e.Id == id && e.UserId == userId);
@@ -172,38 +173,71 @@ namespace WebTestUI.Backend.Services
                 if (environment == null)
                 {
                     return false;
-                }
+                }                // Store whether the deleted environment was active
+                bool wasActive = environment.IsActive;
 
-                // Önce bağlı koleksiyonları silelim
+                // First delete requests from collections to avoid FK constraint violations
                 foreach (var collection in environment.Collections.ToList())
                 {
-                    // Koleksiyona bağlı istekleri de silelim
-                    foreach (var request in collection.Requests.ToList())
+                    // Make sure requests are loaded
+                    if (collection.Requests != null)
                     {
-                        _dbContext.Requests.Remove(request);
+                        foreach (var request in collection.Requests.ToList())
+                        {
+                            _logger.LogInformation("Removing request {RequestId} from collection {CollectionId}", request.Id, collection.Id);
+                            _dbContext.Requests.Remove(request);
+                        }
+                        // Save changes after removing requests but before removing collections to avoid constraint violations
+                        await _dbContext.SaveChangesAsync();
                     }
+                }
+
+                // Now it's safe to delete collections
+                foreach (var collection in environment.Collections.ToList())
+                {
+                    _logger.LogInformation("Removing collection {CollectionId}", collection.Id);
                     _dbContext.Collections.Remove(collection);
-                }                // Doğrudan ortama bağlı istekleri silelim
+                }
+                // Save changes after removing collections
+                await _dbContext.SaveChangesAsync();                // Delete direct requests linked to the environment
                 foreach (var request in environment.Requests.ToList())
                 {
+                    _logger.LogInformation("Removing direct request {RequestId}", request.Id);
                     _dbContext.Requests.Remove(request);
                 }
+                // Save changes after removing direct requests
+                await _dbContext.SaveChangesAsync();
 
-                // Geçmiş kayıtları silelim
+                // Delete history entries
                 foreach (var historyEntry in environment.HistoryEntries.ToList())
                 {
+                    _logger.LogInformation("Removing history entry {HistoryId}", historyEntry.Id);
                     _dbContext.HistoryEntries.Remove(historyEntry);
                 }
-
-                // Şimdi ortamı silebiliriz
-                _dbContext.Environments.Remove(environment);
+                // Save changes after removing history entries
                 await _dbContext.SaveChangesAsync();
+
+                // Finally, delete the environment itself
+                _logger.LogInformation("Removing environment {EnvironmentId}", environment.Id);
+                _dbContext.Environments.Remove(environment);
+                await _dbContext.SaveChangesAsync(); _logger.LogInformation("Successfully deleted environment {EnvironmentId}", id);
+
+                // If the deleted environment was active, activate another environment
+                if (wasActive)
+                {
+                    await ActivateAnotherEnvironmentAsync(userId);
+                }
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Ortam silinirken bir hata oluştu: {EnvironmentId}, {UserId}", id, userId);
+                _logger.LogError(ex, "Error deleting environment {EnvironmentId} for user {UserId}: {ErrorMessage}", id, userId, ex.Message);
+                // Log inner exception if available for better diagnostics
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError("Inner exception: {InnerErrorMessage}", ex.InnerException.Message);
+                }
                 throw;
             }
         }
@@ -248,6 +282,44 @@ namespace WebTestUI.Backend.Services
             {
                 env.IsActive = false;
                 env.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
+        private async Task<bool> ActivateAnotherEnvironmentAsync(string userId)
+        {
+            try
+            {
+                // Find all environments for this user
+                var environments = await _dbContext.Environments
+                    .Where(e => e.UserId == userId)
+                    .OrderByDescending(e => e.UpdatedAt) // Get most recently updated first
+                    .ToListAsync();
+
+                if (environments.Any())
+                {
+                    // Select the most recently updated environment
+                    var environmentToActivate = environments.First();
+
+                    _logger.LogInformation("Activating environment {EnvironmentId} after deletion", environmentToActivate.Id);
+
+                    // Make sure all environments are inactive first
+                    await DeactivateAllEnvironmentsAsync(userId);
+
+                    // Activate the selected environment
+                    environmentToActivate.IsActive = true;
+                    environmentToActivate.UpdatedAt = DateTime.UtcNow;
+
+                    await _dbContext.SaveChangesAsync();
+                    return true;
+                }
+
+                _logger.LogInformation("No environments found to activate for user {UserId}", userId);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error activating another environment for user {UserId}: {ErrorMessage}", userId, ex.Message);
+                return false;
             }
         }
 

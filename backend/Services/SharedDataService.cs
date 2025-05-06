@@ -397,14 +397,15 @@ namespace WebTestUI.Backend.Services
                 {
                     newEnvironmentId = existingEnv.Id;
                 }
-            }
-
-            // Process and save shared data based on its content
+            }            // Process and save shared data based on its content
             if (sharedDataDto.Request != null)
             {
+                Console.WriteLine($"Creating standalone request: '{sharedDataDto.Request.Name}' ({sharedDataDto.Request.Method} {sharedDataDto.Request.Url})");
                 var newRequest = new Request
                 {
                     UserId = userId,
+                    // Make sure CollectionId is properly set if it exists
+                    CollectionId = sharedDataDto.Request.CollectionId,
                     Method = sharedDataDto.Request.Method,
                     Url = sharedDataDto.Request.Url,
                     Name = sharedDataDto.Request.Name,
@@ -420,6 +421,8 @@ namespace WebTestUI.Backend.Services
                     UpdatedAt = DateTime.UtcNow
                 };
                 _context.Requests.Add(newRequest);
+                await _context.SaveChangesAsync(); // Save immediately
+                Console.WriteLine($"Saved standalone request with ID: {newRequest.Id}");
             }
             if (sharedDataDto.Collections != null && sharedDataDto.Collections.Any())
             {
@@ -465,6 +468,7 @@ namespace WebTestUI.Backend.Services
                         Console.WriteLine($"Adding {collectionDto.Requests.Count} requests to collection {newCollection.Id}");
                         foreach (var requestDto in collectionDto.Requests)
                         {
+                            Console.WriteLine($"Creating request: '{requestDto.Name}' ({requestDto.Method} {requestDto.Url}) for collection {newCollection.Id}");
                             var newRequest = new Request
                             {
                                 CollectionId = newCollection.Id,
@@ -482,9 +486,11 @@ namespace WebTestUI.Backend.Services
                                 IsFavorite = false, // Default to not favorite
                                 CreatedAt = DateTime.UtcNow,
                                 UpdatedAt = DateTime.UtcNow
-                            };
-                            _context.Requests.Add(newRequest);
+                            }; _context.Requests.Add(newRequest);
                         }
+                        // Save requests for this collection immediately to ensure they are persisted
+                        await _context.SaveChangesAsync();
+                        Console.WriteLine($"Saved {collectionDto.Requests.Count} requests for collection {newCollection.Id}");
                     }
                 }
             }
