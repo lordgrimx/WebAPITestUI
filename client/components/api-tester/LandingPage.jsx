@@ -3,17 +3,21 @@ import Header from '../Header'
 import { Button } from '../ui/button'
 import Image from 'next/image'
 import { Zap, Code, ChartLine, Users, Shield, BookMarked, Check } from 'lucide-react'
+import { useTheme } from 'next-themes'
 
-export default function LandingPage({ darkMode, setDarkMode, openSignupModal, openLoginModal }) {
+export default function LandingPage({ openSignupModal, openLoginModal }) {
+  const { theme, setTheme } = useTheme();
+  const isDarkMode = theme === 'dark';
+  
   return (
-    <div className="min-h-screen bg-gray-50 font-sans m-0 p-0">
+    <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'} font-sans m-0 p-0`}>
       {/* Hero */}
-      <div className="relative overflow-hidden min-h-screen m-0 p-0">
-        {/* Fix header positioning - give it a proper z-index and background color */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-transparent">
+      <div className={`relative overflow-hidden min-h-screen m-0 p-0 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        {/* Header with solid background and shadow */}
+        <div className={`fixed top-0 left-0 right-0 z-50 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} shadow-lg`}>
           <Header 
-            darkMode={darkMode} 
-            setDarkMode={setDarkMode} 
+            darkMode={isDarkMode} 
+            setDarkMode={(dark) => setTheme(dark ? 'dark' : 'light')} 
             openSignupModal={openSignupModal} 
             openLoginModal={openLoginModal}
           />
@@ -25,7 +29,7 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
             alt="Hero Image"
             width={500}
             height={300}
-            className="w-full h-full object-cover object-top"
+            className={`w-full h-full object-cover object-top ${isDarkMode ? 'opacity-80' : 'opacity-100'}`}
           />
         </div>
 
@@ -52,13 +56,14 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
               >
                 Get Started Free
               </Button>
-              <Button variant={"outline"} className="h-12 hover:bg-gray-400">
+              <Button variant={"outline"} className={`h-12 ${isDarkMode ? 'text-white border-white hover:bg-gray-800' : 'hover:bg-gray-400'}`}>
                 Watch Demo
               </Button>
             </div>
           </div>
           <div className="w-full md:w-1/2 flex justify-center md:justify-end mt-10 md:mt-0">
-            <div className="w-full md:w-2xl h-auto bg-white rounded-lg shadow-lg p-5">
+          {console.log("DarkMode: ", isDarkMode)}
+            <div className={`w-full md:w-2xl h-auto ${isDarkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-lg p-5`}>
               <Image
                 src={"/document.png"}
                 alt="landingSum"
@@ -71,81 +76,81 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
         </div>
       </div>
       {/* Features */}
-      <div className="min-h-screen bg-white font-sans m-0 p-0">
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-800' : 'bg-white'} font-sans m-0 p-0`}>
         <div className="flex flex-col justify-start items-center mt-20 px-6">
-          <h2 className="text-3xl md:text-5xl text-gray-800">Powerful Features</h2>
-          <h3 className="text-lg md:text-2xl mt-7 font-light text-gray-500 tracking-wide">
+          <h2 className={`text-3xl md:text-5xl ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Powerful Features</h2>
+          <h3 className={`text-lg md:text-2xl mt-7 font-light ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} tracking-wide`}>
             Everything you need to test, document, and monitor your APIs
           </h3>
         </div>
         <div className="flex flex-wrap justify-center items-start mt-20 px-6">
-          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
-            <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
-              <Zap className="h-8 w-8 text-blue-500" />
+          <div className={`flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-1 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-150'}`}>
+            <div className={`flex justify-center items-center p-4 ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'} rounded-lg`}>
+              <Zap className={`h-8 w-8 ${isDarkMode ? 'text-blue-300' : 'text-blue-500'}`} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl mt-5">Fast & Reliable</h2>
-              <p className="text-sm md:text-lg font-light text-gray-800">
+              <h2 className={`text-xl md:text-2xl mt-5 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Fast & Reliable</h2>
+              <p className={`text-sm md:text-lg font-light ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>
                 Test your APIs with lightning speed and get instant, reliable
                 results every time.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
-            <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
-              <Code className="h-8 w-8 text-blue-500" />
+          <div className={`flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-1 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-150'}`}>
+            <div className={`flex justify-center items-center p-4 ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'} rounded-lg`}>
+              <Code className={`h-8 w-8 ${isDarkMode ? 'text-blue-300' : 'text-blue-500'}`} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl mt-5">Code Generation</h2>
-              <p className="text-sm md:text-lg font-light text-gray-800">
+              <h2 className={`text-xl md:text-2xl mt-5 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Code Generation</h2>
+              <p className={`text-sm md:text-lg font-light ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>
                 Automatically generate code snippets in multiple programming
                 languages.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
-            <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
-              <ChartLine className="h-8 w-8 text-blue-500" />
+          <div className={`flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-1 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-150'}`}>
+            <div className={`flex justify-center items-center p-4 ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'} rounded-lg`}>
+              <ChartLine className={`h-8 w-8 ${isDarkMode ? 'text-blue-300' : 'text-blue-500'}`} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl mt-5">Monitoring</h2>
-              <p className="text-sm md:text-lg font-light text-gray-800">
+              <h2 className={`text-xl md:text-2xl mt-5 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Monitoring</h2>
+              <p className={`text-sm md:text-lg font-light ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>
                 Monitor your API performance and get alerts when something goes
                 wrong.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
-            <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
-              <Users className="h-8 w-8 text-blue-500" />
+          <div className={`flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-1 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-150'}`}>
+            <div className={`flex justify-center items-center p-4 ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'} rounded-lg`}>
+              <Users className={`h-8 w-8 ${isDarkMode ? 'text-blue-300' : 'text-blue-500'}`} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl mt-5">Team Collaboration</h2>
-              <p className="text-sm md:text-lg font-light text-gray-800">
+              <h2 className={`text-xl md:text-2xl mt-5 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Team Collaboration</h2>
+              <p className={`text-sm md:text-lg font-light ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>
                 Work together with your team in real-time with shared
                 collections and workspaces.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
-            <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
-              <Shield className="h-8 w-8 text-blue-500" />
+          <div className={`flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-1 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-150'}`}>
+            <div className={`flex justify-center items-center p-4 ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'} rounded-lg`}>
+              <Shield className={`h-8 w-8 ${isDarkMode ? 'text-blue-300' : 'text-blue-500'}`} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl mt-5">Security Testing</h2>
-              <p className="text-sm md:text-lg font-light text-gray-800">
+              <h2 className={`text-xl md:text-2xl mt-5 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Security Testing</h2>
+              <p className={`text-sm md:text-lg font-light ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>
                 Identify and fix security vulnerabilities in your APIs before
                 they become problems.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
-            <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
-              <BookMarked className="h-8 w-8 text-blue-500" />
+          <div className={`flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} border-1 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-150'}`}>
+            <div className={`flex justify-center items-center p-4 ${isDarkMode ? 'bg-blue-900' : 'bg-blue-100'} rounded-lg`}>
+              <BookMarked className={`h-8 w-8 ${isDarkMode ? 'text-blue-300' : 'text-blue-500'}`} />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl mt-5">Documentation</h2>
-              <p className="text-sm md:text-lg font-light text-gray-800">
+              <h2 className={`text-xl md:text-2xl mt-5 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Documentation</h2>
+              <p className={`text-sm md:text-lg font-light ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>
                 Automatically generate and maintain comprehensive API
                 documentation.
               </p>
@@ -154,77 +159,78 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
         </div>
       </div>
       {/* Pricing */}
-      <div className="min-h-screen bg-gray-50 font-sans m-0 p-0">
+      <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'} font-sans m-0 p-0`}>
         <div className="flex flex-col justify-start items-center mt-20">
           <div className="px-6 text-center">
-            <h2 className="text-3xl md:text-5xl text-gray-800">Simple, Transparent Pricing</h2>
-            <h3 className="text-lg md:text-2xl mt-4 font-light text-gray-500 tracking-wide">
+            <h2 className={`text-3xl md:text-5xl ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Simple, Transparent Pricing</h2>
+            <h3 className={`text-lg md:text-2xl mt-4 font-light ${isDarkMode ? 'text-gray-300' : 'text-gray-500'} tracking-wide`}>
               Choose the plan that works best for you and your team
             </h3>
           </div>
           <div className="flex justify-center items-center mt-20 flex-wrap mb-20 w-full max-w-7xl mx-auto px-4 sm:px-6">
             {/* Free Plan */}
-            <div className="flex flex-col justify-between bg-white border border-gray-200 w-full sm:w-[90%] md:w-[45%] lg:w-[30%] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-6 lg:p-8 m-3 sm:m-4 lg:m-5">
+            <div className={`flex flex-col justify-between ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border w-full sm:w-[90%] md:w-[45%] lg:w-[30%] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-6 lg:p-8 m-3 sm:m-4 lg:m-5`}>
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Free</h2>
+                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Free</h2>
                 <div className="flex items-baseline mb-6">
-                  <span className="text-4xl font-bold text-gray-900">$0</span>
-                  <span className="text-gray-600 ml-2">/month</span>
+                  <span className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>$0</span>
+                  <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>/month</span>
                 </div>
                 <ul className="space-y-3 mb-8">
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>50 API calls per day</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Basic request builder</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Response validation</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>API documentation</span>
                   </li>
                 </ul>
-              </div>              <Button 
-                className="w-full py-3 bg-gray-100 text-gray-800 hover:bg-gray-200"
+              </div>              
+              <Button 
+                className={`w-full py-3 ${isDarkMode ? 'bg-gray-700 text-gray-100 hover:bg-gray-600' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}
                 onClick={openSignupModal}
               >
                 Get Started Free
               </Button>
             </div>
             {/* Pro Plan - Popular */}
-            <div className="flex flex-col justify-between bg-white border-2 border-blue-500 w-full sm:w-[90%] md:w-[45%] lg:w-[30%] rounded-xl shadow-lg transform lg:-translate-y-4 relative p-4 sm:p-6 lg:p-8 m-3 sm:m-4 lg:m-5">
+            <div className={`flex flex-col justify-between ${isDarkMode ? 'bg-gray-800' : 'bg-white'} border-2 border-blue-500 w-full sm:w-[90%] md:w-[45%] lg:w-[30%] rounded-xl shadow-lg transform lg:-translate-y-4 relative p-4 sm:p-6 lg:p-8 m-3 sm:m-4 lg:m-5`}>
               <div className="absolute top-0 right-0 bg-blue-500 text-white px-3 py-1 rounded-bl-lg rounded-tr-lg text-xs sm:text-sm font-medium">
                 Popular
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">Pro</h2>
+                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>Pro</h2>
                 <div className="flex items-baseline mb-6">
-                  <span className="text-4xl font-bold text-gray-900">$19</span>
-                  <span className="text-gray-600 ml-2">/month</span>
+                  <span className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>$19</span>
+                  <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>/month</span>
                 </div>
                 <ul className="space-y-3 mb-8">
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Unlimited API calls</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Advanced request builder</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Team collaboration (up to 5)</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>API monitoring</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Code generation</span>
                   </li>
@@ -235,39 +241,39 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
               </Button>
             </div>
             {/* Enterprise Plan */}
-            <div className="flex flex-col justify-between bg-white border border-gray-200 w-full sm:w-[90%] md:w-[45%] lg:w-[30%] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-6 lg:p-8 m-3 sm:m-4 lg:m-5">
+            <div className={`flex flex-col justify-between ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border w-full sm:w-[90%] md:w-[45%] lg:w-[30%] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-6 lg:p-8 m-3 sm:m-4 lg:m-5`}>
               <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4">
+                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4`}>
                   Enterprise
                 </h2>
                 <div className="flex items-baseline mb-6">
-                  <span className="text-4xl font-bold text-gray-900">$49</span>
-                  <span className="text-gray-600 ml-2">/month</span>
+                  <span className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>$49</span>
+                  <span className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} ml-2`}>/month</span>
                 </div>
                 <ul className="space-y-3 mb-8">
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Everything in Pro</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Unlimited team members</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Advanced security testing</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Priority support</span>
                   </li>
-                  <li className="flex items-center text-gray-600">
+                  <li className={`flex items-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                     <Check className="h-5 w-5 text-green-500 mr-2" />
                     <span>Custom integrations</span>
                   </li>
                 </ul>
               </div>
-              <Button className="w-full py-3 bg-gray-800 text-white hover:bg-gray-900">
+              <Button className={`w-full py-3 ${isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-800 text-white hover:bg-gray-900'}`}>
                 Contact Sales
               </Button>
             </div>
@@ -276,7 +282,7 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
       </div>
 
       {/* CTA Section */}
-      <div className="py-16 bg-blue-600">
+      <div className={`py-16 ${isDarkMode ? 'bg-blue-800' : 'bg-blue-600'}`}>
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-white mb-6">
             Ready to simplify your API testing?
@@ -285,15 +291,16 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
             Join thousands of developers who trust our platform for their API
             testing needs.
           </p>
-          <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">            <Button 
-              className="px-8 py-6 bg-white text-blue-600 hover:bg-gray-100"
+          <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">            
+            <Button 
+              className={`px-8 py-6 ${isDarkMode ? 'bg-gray-100 text-blue-800 hover:bg-gray-200' : 'bg-white text-blue-600 hover:bg-gray-100'}`}
               onClick={openSignupModal}
             >
               Sign Up Free
             </Button>
             <Button
               variant="outline"
-              className="px-8 py-6 bg-blue-700 text-white hover:bg-blue-800 border-white"
+              className={`px-8 py-6 ${isDarkMode ? 'bg-blue-900 hover:bg-blue-950' : 'bg-blue-700 hover:bg-blue-800'} text-white border-white`}
             >
               Schedule Demo
             </Button>
