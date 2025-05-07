@@ -334,7 +334,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
 
   if (hasError || !collections) {
     return (
-      <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'} p-4`}>
+      <div className={`h-full flex flex-col border-r ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'} p-2 sm:p-3`}>
         <Input
           type="search"
           placeholder={t('collections.searchPlaceholder', "Search collections...")}
@@ -348,7 +348,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
         >
           <Plus className="mr-2 h-4 w-4" /> {t('collections.newCollection', "New Collection")}
         </Button>
-        <div className="p-4 text-center">
+        <div className="p-2 text-center">
           <p className={`${darkMode ? 'text-red-400' : 'text-red-500'}`}>{t('collections.loadError', "Error loading collections")}</p>
           <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.tryAgain', "Please try again later or check the console for details")}</p>
         </div>
@@ -364,7 +364,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
         className={`${isMobile ? 'fixed inset-y-0 left-0 z-40 w-72 transition-transform duration-300 transform shadow-2xl ' + (isSidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'h-full flex flex-col border-r'} ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'}`}
         style={{ top: isMobile ? '56px' : 0 }}
       >
-        <div className={`p-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`p-2 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <Input
             type="search"
             placeholder={t('collections.searchPlaceholder', "Search collections...")}
@@ -406,17 +406,17 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
 
         <div className="flex-1 overflow-auto">
           <ScrollArea className="h-full">
-            <div className="p-2">
-              <h3 className={`px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.title', "Collections")}</h3>
+            <div className="px-1 py-1">
+              <h3 className={`px-1 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.title', "Collections")}</h3>
               <Accordion type="multiple" className="w-full">
                 {isLoading && (
-                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.loading', "Loading collections...")}</p>
+                  <p className={`px-1 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.loading', "Loading collections...")}</p>
                 )}
                 {!isLoading && filteredCollections.length === 0 && searchTerm && (
-                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.notFound', "No collections found matching")} "{searchTerm}".</p>
+                  <p className={`px-1 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.notFound', "No collections found matching")} "{searchTerm}".</p>
                 )}
                 {!isLoading && filteredCollections.length === 0 && !searchTerm && (
-                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.empty', "No collections yet. Click \"+ New Collection\" to add one.")}</p>
+                  <p className={`px-1 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.empty', "No collections yet. Click \"+ New Collection\" to add one.")}</p>
                 )}
                 {!isLoading && filteredCollections.map((collection, index) => (
                   <CollectionItem
@@ -432,13 +432,13 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
                 ))}
               </Accordion>
 
-              <h3 className={`mt-4 px-2 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.history', "History")}</h3>
+              <h3 className={`mt-2 px-1 py-1 text-xs font-semibold ${darkMode ? 'text-gray-400' : 'text-gray-500'} uppercase tracking-wider`}>{t('collections.history', "History")}</h3>
               <Accordion type="multiple" className="w-full">
                 {historyItems === null && (
-                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-500'}`}>{t('collections.historyError', "Error loading history.")}</p>
+                  <p className={`px-1 py-2 text-sm ${darkMode ? 'text-red-400' : 'text-red-500'}`}>{t('collections.historyError', "Error loading history.")}</p>
                 )}
                 {historyItems && historyItems.length === 0 && (
-                  <p className={`px-2 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.noHistory', "No recent requests.")}</p>
+                  <p className={`px-1 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.noHistory', "No recent requests.")}</p>
                 )}
                 {historyItems && historyItems.map((item) => (
                   <HistoryItem
@@ -500,15 +500,15 @@ const CollectionItem = function CollectionItem({
     <AccordionItem value={collection.id} className="border-b-0 mb-1">
       <div className="flex items-center">
         <AccordionTrigger
-          className={`flex-1 flex justify-between items-center w-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} px-2 py-1.5 rounded text-sm font-medium text-left [&[data-state=open]>span>svg:last-child]:rotate-90`}
+          className={`flex-1 flex justify-between items-center w-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} px-1 py-1.5 rounded text-sm font-medium text-left [&[data-state=open]>span>svg:last-child]:rotate-90`}
         >
-          <span className="flex items-center flex-1 truncate mr-2">
-            <Folder className={`h-4 w-4 mr-2 ${darkMode ? 'text-gray-500' : 'text-gray-500'} flex-shrink-0`} />
+          <span className="flex items-center flex-1 truncate mr-1">
+            <Folder className={`h-4 w-4 mr-1.5 ${darkMode ? 'text-gray-500' : 'text-gray-500'} flex-shrink-0`} />
             <span className="truncate">{collection.name}</span>
           </span>
         </AccordionTrigger>
         <div
-          className={`px-2 py-1.5 cursor-pointer ${darkMode ? 'hover:text-red-400' : 'hover:text-red-500'}`}
+          className={`px-1 py-1.5 cursor-pointer ${darkMode ? 'hover:text-red-400' : 'hover:text-red-500'}`}
           onClick={(e) => {
             e.stopPropagation();
             onDeleteCollection(e, collection.id);
@@ -517,10 +517,10 @@ const CollectionItem = function CollectionItem({
           <Trash2 className="h-4 w-4" />
         </div>
       </div>
-      <AccordionContent className="pl-6 pr-2 pt-1 pb-1">
-        {isLoading && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>{t('collections.loadingRequests', "Loading requests...")}</p>}
+      <AccordionContent className="pl-5 pr-1 pt-1 pb-1">
+        {isLoading && <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-1`}>{t('collections.loadingRequests', "Loading requests...")}</p>}
         {!isLoading && (!requests || requests.length === 0) && (
-          <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-2`}>{t('collections.noRequests', "No requests in this collection.")}</p>
+          <p className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} py-1 px-1`}>{t('collections.noRequests', "No requests in this collection.")}</p>
         )}
         {!isLoading && requests && requests.map((request) => {          
           const style = getMethodStyle(request.method);
@@ -529,13 +529,13 @@ const CollectionItem = function CollectionItem({
           return (
             <div
               key={request.id}
-              className={`flex items-center justify-between group ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} px-2 py-1.5 rounded cursor-pointer text-sm`}
+              className={`flex items-center justify-between group ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} px-1 py-1.5 rounded cursor-pointer text-sm`}
             >
               <div
-                className="flex items-center truncate flex-1 mr-2"
+                className="flex items-center truncate flex-1 mr-1"
                 onClick={() => setSelectedRequestId(request.id)}
               >
-                <Badge variant={style.variant} className={`mr-2 w-14 justify-center flex-shrink-0 ${badgeClassName}`}>
+                <Badge variant={style.variant} className={`mr-1.5 w-14 justify-center flex-shrink-0 ${badgeClassName}`}>
                   {request.method.toUpperCase()}
                 </Badge>
                 <span className="truncate">{request.name}</span>
@@ -578,17 +578,17 @@ const HistoryItem = function HistoryItem({
   return (
     <AccordionItem value={itemId || 'no-id'} className="border-b-0 mb-1">
       <div
-        className={`flex items-center justify-between group ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} px-2 py-1.5 rounded cursor-pointer text-sm`}
+        className={`flex items-center justify-between group ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} px-1 py-1.5 rounded cursor-pointer text-sm`}
         onClick={() => onHistorySelect(item)}
       >
-        <div className="flex items-center truncate flex-1 mr-2">
-          <Badge variant={style.variant} className={`mr-2 w-14 justify-center flex-shrink-0 ${badgeClassName}`}>
+        <div className="flex items-center truncate flex-1 mr-1">
+          <Badge variant={style.variant} className={`mr-1.5 w-14 justify-center flex-shrink-0 ${badgeClassName}`}>
             {item.method.toUpperCase()}
           </Badge>
           <span className="truncate">{displayPath}</span>
         </div>
         <div className="flex items-center">
-          <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} flex-shrink-0 mr-2`}>{timeAgo}</span>
+          <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} flex-shrink-0 mr-1`}>{timeAgo}</span>
           <Button
             variant="ghost"
             size="icon"
