@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
+import { useTranslation } from 'react-i18next';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -81,6 +82,7 @@ const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
 
 // Accept currentRequestData prop from ApiTester
 export default function Header({ currentRequestData, openSignupModal, openLoginModal, onRequestSaved, collections, history, onCloseSettingsModal }) {
+  const { t } = useTranslation('common');
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
@@ -478,25 +480,25 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               href="#features"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
-              Özellikler
+              {t('header.features', 'Özellikler')}
             </a>
             <a
               href="#pricing"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
-              Fiyatlandırma
+              {t('header.pricing', 'Fiyatlandırma')}
             </a>
             <a
               href="#docs"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
-              Dokümantasyon
+              {t('header.documentation', 'Dokümantasyon')}
             </a>
             <a
               href="#about"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
             >
-              Hakkında
+              {t('header.about', 'Hakkında')}
             </a>
           </div>
 
@@ -513,13 +515,13 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               className="px-4 py-2 text-blue-600 bg-white rounded-lg font-medium hover:bg-gray-100 transition-colors"
               onClick={openLoginModal}
             >
-              Giriş Yap
+              {t('auth.login')}
             </Button>
             <Button
               className="px-4 py-2 text-white bg-blue-600 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               onClick={openSignupModal}
             >
-              Kayıt Ol
+              {t('auth.register')}
             </Button>
           </div>
         </nav>
@@ -545,28 +547,28 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
                   onClick={closeMobileMenu}
                 >
-                  Özellikler
+                  {t('header.features', 'Özellikler')}
                 </a>
                 <a
                   href="#pricing"
                   className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
                   onClick={closeMobileMenu}
                 >
-                  Fiyatlandırma
+                  {t('header.pricing', 'Fiyatlandırma')}
                 </a>
                 <a
                   href="#docs"
                   className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
                   onClick={closeMobileMenu}
                 >
-                  Dokümantasyon
+                  {t('header.documentation', 'Dokümantasyon')}
                 </a>
                 <a
                   href="#about"
                   className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
                   onClick={closeMobileMenu}
                 >
-                  Hakkında
+                  {t('header.about', 'Hakkında')}
                 </a>
               </div>
               
@@ -580,7 +582,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     closeMobileMenu();
                   }}
                 >
-                  Giriş Yap
+                  {t('auth.login')}
                 </Button>
                 <Button
                   className="w-full"
@@ -589,7 +591,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     closeMobileMenu();
                   }}
                 >
-                  Kayıt Ol
+                  {t('auth.register')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -598,7 +600,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   className={`w-full ${isDarkMode ? "text-white" : "text-gray-600"}`}
                 >
                   {isDarkMode ? <Sun className="h-5 w-5 mr-2" /> : <Moon className="h-5 w-5 mr-2" />}
-                  {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                  {isDarkMode ? t('header.theme.lightMode', 'Light Mode') : t('header.theme.darkMode', 'Dark Mode')}
                 </Button>
               </div>
             </div>
@@ -699,7 +701,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowSaveRequest(true)}
             >
               <Save className="h-4 w-4" />
-              <span>Kaydet</span>
+              <span>{t('header.saveRequest', 'Kaydet')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -708,7 +710,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowGenerateCode(true)}
             >
               <Code className="h-4 w-4" />
-              <span>Kod Üret</span>
+              <span>{t('header.generateCode', 'Kod Üret')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -717,7 +719,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowSettings(true)}
             >
               <Settings className="h-4 w-4" />
-              <span>Ayarlar</span>
+              <span>{t('header.settings', 'Ayarlar')}</span>
             </Button>            
             <Link href="/loadtests">
               <Button
@@ -726,7 +728,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4 mr-1" />
-                <span>Yük Testleri</span>
+                <span>{t('loadTests.title', 'Yük Testleri')}</span>
               </Button>
             </Link>
             <Link href="/monitor">
@@ -736,7 +738,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4 mr-1" />
-                <span>İzleme</span>
+                <span>{t('header.monitoring', 'İzleme')}</span>
               </Button>
             </Link>
           </div>
@@ -747,12 +749,12 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`} disabled={isEnvironmentLoading}>
                 <Globe className="h-4 w-4" />
-                <span className="hidden sm:inline">{isEnvironmentLoading ? "Yükleniyor..." : currentEnvironment?.name || "Ortam Yok"}</span>
+                <span className="hidden sm:inline">{isEnvironmentLoading ? t('general.loading', 'Yükleniyor...') : currentEnvironment?.name || t('header.environmentList.noEnv', 'Ortam Yok')}</span>
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>Environments</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('header.environments', 'Environments')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {/* Use environments from context */}              
               {environments.length > 0 ? (
@@ -782,7 +784,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 ))
               ) : (
                 <DropdownMenuItem disabled>
-                  Ortam Bulunamadı
+                  {t('header.environmentList.notFound', 'Ortam Bulunamadı')}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />              <Button
@@ -792,7 +794,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 onClick={openCreateEnvironmentModal}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                Add Environment
+                {t('header.environmentList.add', 'Add Environment')}
               </Button>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -801,19 +803,19 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`}>
                 <Share2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Paylaş</span>
+                <span className="hidden sm:inline">{t('header.share', 'Paylaş')}</span>
                 <ChevronDown className="h-3 w-3 sm:ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleCopyLink}>
-                Bağlantıyı Kopyala
+                {t('header.shareList.copyLink', 'Bağlantıyı Kopyala')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleShareToWorkspace}>
-                Çalışma Alanına Paylaş
+                {t('header.shareList.toWorkspace', 'Çalışma Alanına Paylaş')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportRequest}>
-                Dışa Aktar
+                {t('header.shareList.export', 'Dışa Aktar')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>          
@@ -889,7 +891,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   }}
                 >
                   <Save className="h-4 w-4" />
-                  <span>Kaydet</span>
+                  <span>{t('header.saveRequest', 'Kaydet')}</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -900,7 +902,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   }}
                 >
                   <Code className="h-4 w-4" />
-                  <span>Kod Üret</span>
+                  <span>{t('header.generateCode', 'Kod Üret')}</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -911,7 +913,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   }}
                 >
                   <Settings className="h-4 w-4" />
-                  <span>Ayarlar</span>
+                  <span>{t('header.settings', 'Ayarlar')}</span>
                 </Button>
                 
                 <Link href="/loadtests" onClick={closeMobileMenu}>
@@ -920,7 +922,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     className={`w-full justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
                   >
                     <Activity className="h-4 w-4" />
-                    <span>Yük Testleri</span>
+                    <span>{t('loadTests.title', 'Yük Testleri')}</span>
                   </Button>
                 </Link>
                 <Link href="/monitor" onClick={closeMobileMenu}>
@@ -929,12 +931,12 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     className={`w-full justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
                   >
                     <Activity className="h-4 w-4" />
-                    <span>İzleme</span>
+                    <span>{t('header.monitoring', 'İzleme')}</span>
                   </Button>
                 </Link>
                 
                 <div className="py-2">
-                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Ortam</div>
+                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>{t('header.environment', 'Ortam')}</div>
                   <Button
                     variant="outline"
                     className="w-full justify-between mb-2"
@@ -945,7 +947,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   >
                     <div className="flex items-center">
                       <Globe className="h-4 w-4 mr-2" />
-                      <span>{isEnvironmentLoading ? "Yükleniyor..." : currentEnvironment?.name || "Ortam Yok"}</span>
+                      <span>{isEnvironmentLoading ? t('general.loading', 'Yükleniyor...') : currentEnvironment?.name || t('header.environmentList.noEnv', 'Ortam Yok')}</span>
                     </div>
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -997,7 +999,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 </div>
                 
                 <div className="py-2">
-                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Paylaş</div>
+                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>{t('header.share', 'Paylaş')}</div>
                   <div className="space-y-2">
                     <Button
                       variant="ghost"
@@ -1008,7 +1010,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                       }}
                     >
                       <Share2 className="h-4 w-4" />
-                      <span>Bağlantıyı Kopyala</span>
+                      <span>{t('header.shareList.copyLink', 'Bağlantıyı Kopyala')}</span>
                     </Button>
                     <Button
                       variant="ghost"
@@ -1019,7 +1021,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                       }}
                     >
                       <Share2 className="h-4 w-4" />
-                      <span>Çalışma Alanına Paylaş</span>
+                      <span>{t('header.shareList.toWorkspace', 'Çalışma Alanına Paylaş')}</span>
                     </Button>
                     <Button
                       variant="ghost"
@@ -1030,7 +1032,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                       }}
                     >
                       <Share2 className="h-4 w-4" />
-                      <span>Dışa Aktar</span>
+                      <span>{t('header.shareList.export', 'Dışa Aktar')}</span>
                     </Button>
                   </div>
                 </div>
@@ -1044,7 +1046,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     }}
                   >
                     <NotificationBell darkMode={isDarkMode} isMobile={true} onClick={() => setShowNotificationsModal(true)}/>
-                    <span className={`ml-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}>Bildirimler</span>
+                    <span className={`ml-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}>{t('profile.notifications', 'Bildirimler')}</span>
                   </div>
                 </div>
               </div>
@@ -1057,7 +1059,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   className={`w-full justify-start ${isDarkMode ? "text-white" : "text-gray-600"}`}
                 >
                   {isDarkMode ? <Sun className="h-5 w-5 mr-2" /> : <Moon className="h-5 w-5 mr-2" />}
-                  {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                  {isDarkMode ? t('header.theme.lightMode', 'Light Mode') : t('header.theme.darkMode', 'Dark Mode')}
                 </Button>
                 
                 <div className="flex justify-between items-center mt-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -1082,7 +1084,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                       closeMobileMenu();
                     }}
                   >
-                    Logout
+                    {t('auth.logout', 'Logout')}
                   </Button>
                 </div>
               </div>
