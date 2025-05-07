@@ -831,7 +831,7 @@ export default function ApiTester() {
           {/* Conditional rendering based on screen size */}
           {isMobile ? (
             // Mobile stack layout with tabs
-            <div className="h-[calc(100vh-13rem)] flex flex-col">
+            <div className="h-full flex flex-col">
               {/* CollectionsSidebar is already toggled via its internal state */}
               <CollectionsSidebar
                 setSelectedRequestId={handleRequestSelect}
@@ -874,7 +874,7 @@ export default function ApiTester() {
                   />
                 </TabsContent>
                 
-                <TabsContent value="response" className="flex-1 overflow-auto m-0 border-0 p-0">
+                <TabsContent value="response" className="flex-1 h-full m-0 border-0 p-0 overflow-auto">
                   <ResponseDisplay responseData={responseData} darkMode={isDarkMode} />
                 </TabsContent>
               </Tabs>

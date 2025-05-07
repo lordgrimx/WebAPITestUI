@@ -31,6 +31,13 @@ export default function ResponseDisplay({ responseData, darkMode }) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Style for fixing overflow issues in mobile view
+  const mobileScrollFixStyle = isMobile ? {
+    maxHeight: 'none',
+    minHeight: '100%',
+    overflow: 'visible'
+  } : {};
+
   // Determine JSON indentation based on settings
   const getJsonIndentation = () => {
     if (settings.jsonIndentation === 'tab') {
@@ -120,7 +127,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
         
         {/* Tab Content with improved ScrollArea for scrollable content and mobile handling */}
         <TabsContent value="pretty" className="flex-1 p-0 mt-0 h-full">
-          <ScrollArea className="h-full w-full">
+          <ScrollArea className="h-full w-full" type="always" style={mobileScrollFixStyle}>
             {responseData.isTruncated && (
               <div className={`${darkMode ? 'text-yellow-400 bg-yellow-900/30 border-yellow-800' : 'text-yellow-600 bg-yellow-50 border-yellow-200'} mb-2 p-2 rounded border mx-4 mt-4 ${isMobile ? 'text-xs' : ''}`}>
                 ⚠️ {t('response.truncatedWarning')} ({responseData.size}). {t('response.someMissingData')}
@@ -139,6 +146,8 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                     lineHeight: '1.5',
                     whiteSpace: settings.wrapLines ? 'pre-wrap' : 'pre', // Apply wrapLines setting
                     wordBreak: settings.wrapLines ? 'break-all' : 'normal', // Ensure word breaking works with wrapping
+                    maxHeight: 'none', // Kaldır sabit yüksekliği
+                    overflow: 'visible', // Görünür yap taşan içeriği
                   }}
                   showLineNumbers={!isMobile} // Hide line numbers on mobile to save space
                   wrapLines={isMobile || settings.wrapLines} // Always wrap lines on mobile
@@ -147,7 +156,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                   {JSON.stringify(responseData.data, null, jsonIndent)}
                 </SyntaxHighlighter>
               ) : (
-                <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-2' : 'p-4'} rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`}>
+                <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-2' : 'p-4'} rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} overflow-visible max-h-none`}>
                   {JSON.stringify(responseData.data, null, jsonIndent)}
                 </pre>
               )}
@@ -155,10 +164,10 @@ export default function ResponseDisplay({ responseData, darkMode }) {
           </ScrollArea>
         </TabsContent>
         <TabsContent value="raw" className="flex-1 mt-0 h-full">
-          <ScrollArea className="h-full w-full">
+          <ScrollArea className="h-full w-full" type="always" style={mobileScrollFixStyle}>
             <div className={`${isMobile ? 'p-2' : 'p-4'}`}>
               {/* Raw view typically doesn't use indentation or syntax highlighting, but respects wrapping */}
-              <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-2' : 'p-4'} rounded font-mono ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`}>
+              <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-2' : 'p-4'} rounded font-mono ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} overflow-visible max-h-none`}>
                 {/* Stringify without indentation for raw view */}
                 {JSON.stringify(responseData.data)}
               </pre>
@@ -166,7 +175,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
           </ScrollArea>
         </TabsContent>
         <TabsContent value="preview" className="flex-1 mt-0 h-full">
-          <ScrollArea className="h-full w-full">
+          <ScrollArea className="h-full w-full overflow-visible" type="always" style={mobileScrollFixStyle}>
             <div className={`${isMobile ? 'p-2' : 'p-4'} ${isMobile ? 'text-xs' : 'text-sm'} ${darkMode ? 'text-gray-300' : 'text-gray-700'} w-full`}>
               {responseData.isTruncated && (
                 <div className={`${darkMode ? 'text-yellow-400 bg-yellow-900/30 border-yellow-800' : 'text-yellow-600 bg-yellow-50 border-yellow-200'} mb-4 p-2 rounded border ${isMobile ? 'text-xs' : ''}`}>
@@ -175,13 +184,13 @@ export default function ResponseDisplay({ responseData, darkMode }) {
               )}
               
               {typeof responseData.data === 'object' && Array.isArray(responseData.data) ? (
-                <div className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                <div className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'} overflow-visible`}>
                   {responseData.data.map((item, index) => (
-                    <div key={index} className="py-4 first:pt-0 last:pb-0">
-                      <details className="cursor-pointer">
+                    <div key={index} className="py-4 first:pt-0 last:pb-0 overflow-visible">
+                      <details className="cursor-pointer" open={item._truncated}>
                         <summary className={`font-semibold mb-2 flex justify-between items-center ${isMobile ? 'text-xs' : ''}`}>
                           <span>
-                            {item.name || item.id || item._truncated ? t('response.truncationInfo') : `${t('response.item')} ${index + 1}`}
+                            {item.name || item.id || item._truncated ? (item._truncated ? t('response.truncationInfo') : `${item.name || item.id || `${t('response.item')} ${index + 1}`}`) : `${t('response.item')} ${index + 1}`}
                             {item._truncated && (
                               <span className={`${darkMode ? 'text-yellow-400' : 'text-yellow-600'} ml-2`}>⚠️</span>
                             )}
@@ -190,15 +199,15 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                             {typeof item === 'object' ? Object.keys(item).length : 1} {t('response.fields')}
                           </Badge>
                         </summary>
-                        <div className={`${isMobile ? 'pl-2' : 'pl-4'} pt-2 space-y-2`}>
+                        <div className={`${isMobile ? 'pl-2' : 'pl-4'} pt-2 space-y-2 overflow-visible`}>
                           {typeof item === 'object' && Object.entries(item).map(([key, value]) => (
-                            <div key={key} className={`${isMobile ? 'grid grid-cols-[80px_1fr] gap-1' : 'grid grid-cols-[120px_1fr] gap-2'} ${key === '_truncated' ? (darkMode ? 'text-yellow-400 font-medium' : 'text-yellow-600 font-medium') : ''}`}>
+                            <div key={key} className={`${isMobile ? 'grid grid-cols-[80px_1fr] gap-1' : 'grid grid-cols-[120px_1fr] gap-2'} ${key === '_truncated' ? (darkMode ? 'text-yellow-400 font-medium' : 'text-yellow-600 font-medium') : ''} overflow-visible`}>
                               <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'} ${isMobile ? 'text-xs' : ''}`}>{key}:</div>
-                              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} break-all ${isMobile ? 'text-xs' : ''}`}>
+                              <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} break-all ${isMobile ? 'text-xs' : ''} overflow-visible`}>
                                 {typeof value === 'object' && value !== null ? (
                                   <details>
                                     <summary className={`cursor-pointer ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{t('response.object')}</summary>
-                                    <pre className={`mt-2 ${isMobile ? 'p-1 text-[10px]' : 'p-2 text-xs'} ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded overflow-auto`}>
+                                    <pre className={`mt-2 ${isMobile ? 'p-1 text-[10px]' : 'p-2 text-xs'} ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded overflow-visible max-h-none`}>
                                       {JSON.stringify(value, null, 2)}
                                     </pre>
                                   </details>
@@ -214,15 +223,15 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                   ))}
                 </div>
               ) : typeof responseData.data === 'object' && responseData.data !== null ? (
-                <div className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                <div className={`divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'} overflow-visible`}>
                   {Object.entries(responseData.data).map(([key, value]) => (
-                    <div key={key} className={`py-2 ${key === '_truncated' ? (darkMode ? 'text-yellow-400 bg-yellow-900/20 p-2 rounded' : 'text-yellow-600 bg-yellow-50 p-2 rounded') : ''}`}>
+                    <div key={key} className={`py-2 ${key === '_truncated' ? (darkMode ? 'text-yellow-400 bg-yellow-900/20 p-2 rounded' : 'text-yellow-600 bg-yellow-50 p-2 rounded') : ''} overflow-visible`}>
                       <div className={`font-semibold ${isMobile ? 'text-xs' : ''}`}>{key}</div>
-                      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} break-all ${isMobile ? 'text-xs' : ''}`}>
+                      <div className={`${darkMode ? 'text-gray-300' : 'text-gray-700'} break-all ${isMobile ? 'text-xs' : ''} overflow-visible`}>
                         {typeof value === 'object' && value !== null ? (
                           <details>
-                            <summary className={`cursor-pointer ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>Object</summary>
-                            <pre className={`mt-2 ${isMobile ? 'p-1 text-[10px]' : 'p-2 text-xs'} ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded overflow-auto`}>
+                            <summary className={`cursor-pointer ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>{t('response.object')}</summary>
+                            <pre className={`mt-2 ${isMobile ? 'p-1 text-[10px]' : 'p-2 text-xs'} ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded overflow-visible max-h-none`}>
                               {JSON.stringify(value, null, 2)}
                             </pre>
                           </details>
@@ -240,7 +249,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
           </ScrollArea>
         </TabsContent>
         <TabsContent value="headers" className="flex-1 mt-0 h-full">
-          <ScrollArea className="h-full w-full">
+          <ScrollArea className="h-full w-full" type="always" style={mobileScrollFixStyle}>
             <div className={`${isMobile ? 'p-2' : 'p-4'}`}>
               {settings.highlightSyntax ? (
                 <SyntaxHighlighter
@@ -254,6 +263,8 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                     lineHeight: '1.5',
                     whiteSpace: isMobile || settings.wrapLines ? 'pre-wrap' : 'pre', // Always wrap on mobile
                     wordBreak: isMobile || settings.wrapLines ? 'break-all' : 'normal',
+                    maxHeight: 'none',
+                    overflow: 'visible',
                   }}
                   wrapLines={isMobile || settings.wrapLines} // Always wrap on mobile
                   showLineNumbers={!isMobile} // Hide line numbers on mobile
@@ -262,7 +273,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                   {JSON.stringify(responseData.headers || {}, null, jsonIndent)}
                 </SyntaxHighlighter>
               ) : (
-                 <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-2' : 'p-4'} rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'}`}>
+                 <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-2' : 'p-4'} rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} overflow-visible max-h-none`}>
                   {JSON.stringify(responseData.headers || {}, null, jsonIndent)}
                 </pre>
               )}
