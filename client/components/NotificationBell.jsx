@@ -3,20 +3,20 @@
 import { useState, useEffect } from 'react';
 import { Bell } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
-import { NotificationsModal } from '@/components/modals/NotificationsModal';
+// import { NotificationsModal } from '@/components/modals/NotificationsModal'; // Modal'ı Header'da yöneteceğiz
 import { Button } from '@/components/ui/button';
 
-export default function NotificationBell({ darkMode }) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function NotificationBell({ darkMode, onClick }) { // onClick prop'u eklendi
+  // const [isOpen, setIsOpen] = useState(false); // State'i Header'a taşıdık
   const { unreadCount } = useNotifications();
 
   return (
-    <>
+    // <>
       <Button
         variant="ghost"
         size="sm"
         className="relative p-2"
-        onClick={() => setIsOpen(true)}
+        onClick={onClick} // Dışarıdan gelen onClick'i kullan
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -26,11 +26,11 @@ export default function NotificationBell({ darkMode }) {
         )}
       </Button>
 
-      <NotificationsModal 
+      /* <NotificationsModal 
         open={isOpen} 
         setOpen={setIsOpen}
         darkMode={darkMode}
-      />
-    </>
+      /> */
+    // </>
   );
 }

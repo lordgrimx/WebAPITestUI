@@ -194,6 +194,35 @@ export const EnvironmentProvider = ({ children }) => {
         return () => debouncedLoadEnvironments.cancel();
     }, [debouncedLoadEnvironments, refreshTrigger]);
 
+    const deleteEnvironment = useCallback(async (environmentId) => {
+        if (!isAuthenticated || hasAuthError) {
+            toast.error("Authentication error. Cannot delete environment.");
+            return;
+        }
+        setIsEnvironmentLoading(true);
+        try {
+            await authAxios.delete(`/environments/${environmentId}`);
+            toast.success("Environment deleted successfully");
+            triggerEnvironmentChange(); // Refresh the environments list
+            // If the deleted environment was the current one, reset current environment
+            if (environmentState.currentEnvironmentId === environmentId) {
+                setEnvironmentState(prevState => ({
+                    ...prevState,
+                    currentEnvironmentId: null,
+                    currentEnvironment: null
+                }));
+                if (typeof window !== 'undefined') {
+                    localStorage.removeItem('currentEnvironmentId');
+                }
+            }
+        } catch (error) {
+            console.error("Error deleting environment:", error);
+            toast.error("Failed to delete environment: " + (error.response?.data?.message || error.message));
+        } finally {
+            setIsEnvironmentLoading(false);
+        }
+    }, [isAuthenticated, hasAuthError, triggerEnvironmentChange, environmentState.currentEnvironmentId]);
+
     // Function to apply environment variables to a request
     const applyEnvironmentToRequest = useCallback((requestData) => {
         if (!environmentState.currentEnvironment?.variables || Object.keys(environmentState.currentEnvironment.variables).length === 0) {
@@ -252,85 +281,28 @@ export const EnvironmentProvider = ({ children }) => {
         }
 
         return result;
-    }, [environmentState.currentEnvironment, processVariables]);    // Function to delete an environment by ID
-    const deleteEnvironment = useCallback(async (environmentId) => {
-        try {
-            setIsEnvironmentLoading(true);
-
-            // Delete the environment in the backend
-            const response = await authAxios.delete(`/environments/${environmentId}`);
-
-            // The API now returns the newly activated environment and updated environments list
-            const { activeEnvironment, environments: updatedEnvironments } = response.data;
-
-            // Update the frontend state with the data from the backend
-            setEnvironmentState({
-                environments: updatedEnvironments || [],
-                currentEnvironmentId: activeEnvironment?.id || null,
-                currentEnvironment: activeEnvironment || null
-            });
-
-            // Update localStorage
-            if (typeof window !== 'undefined') {
-                if (activeEnvironment?.id) {
-                    localStorage.setItem('currentEnvironmentId', activeEnvironment.id);
-                } else {
-                    localStorage.removeItem('currentEnvironmentId');
-                }
-            }
-
-            toast.success("Environment deleted successfully");
-
-        } catch (error) {
-            console.error("Error deleting environment:", error);
-            toast.error("Failed to delete environment: " + (error.response?.data?.message || error.message));
-
-            // If there was an error, refresh environments to ensure UI is in sync
-            await loadEnvironments();
-        } finally {
-            setIsEnvironmentLoading(false);
-        }
-    }, [loadEnvironments]);    // Function to synchronize history entries with an environment
-    const syncHistoryWithEnvironment = useCallback(async (environmentId) => {
-        try {
-            setIsEnvironmentLoading(true);
-
-            // Call the sync endpoint
-            const response = await authAxios.post(`/environments/${environmentId}/sync-history`);
-
-            if (response.status === 200) {
-                toast.success("History entries synchronized successfully with environment");
-                return true;
-            } else {
-                toast.error("Failed to synchronize history entries with environment");
-                return false;
-            }
-        } catch (error) {
-            console.error("Error syncing history with environment:", error);
-            toast.error("Failed to sync history: " + (error.response?.data?.message || error.message));
-            return false;
-        } finally {
-            setIsEnvironmentLoading(false);
-        }
-    }, []);
+    }, [environmentState.currentEnvironment, processVariables]);
 
     // Memoize the context value to prevent unnecessary re-renders
     const contextValue = useMemo(() => ({
-        ...environmentState,
+        environments: environmentState.environments,
+        currentEnvironment: environmentState.currentEnvironment,
+        isEnvironmentLoading,
+        setCurrentEnvironmentById,
+        refreshEnvironments: triggerEnvironmentChange, // Expose trigger as refreshEnvironments
+        applyEnvironmentToRequest,
+        triggerEnvironmentChange, // also expose the original trigger if needed elsewhere
+        processVariables, // expose processVariables
+        deleteEnvironment // expose deleteEnvironment
+    }), [
+        environmentState.environments,
+        environmentState.currentEnvironment,
         isEnvironmentLoading,
         setCurrentEnvironmentById,
         triggerEnvironmentChange,
-        refreshEnvironments: loadEnvironments,
+        applyEnvironmentToRequest,
         processVariables,
-        applyEnvironmentToRequest
-    }), [
-        environmentState, 
-        isEnvironmentLoading, 
-        setCurrentEnvironmentById, 
-        triggerEnvironmentChange, 
-        loadEnvironments,
-        processVariables, 
-        applyEnvironmentToRequest
+        deleteEnvironment
     ]);
 
     return (

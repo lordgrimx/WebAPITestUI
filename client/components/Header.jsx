@@ -43,6 +43,7 @@ import SaveRequestModal from "@/components/SaveRequestModal";
 import EnvironmentModal from "@/components/EnvironmentModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import NotificationBell from "@/components/NotificationBell";
+import { NotificationsModal } from "@/components/modals/NotificationsModal";
 import { useAuth } from "@/lib/auth-context";
 import { useSettings } from "@/lib/settings-context"; 
 import { useEnvironment } from "@/lib/environment-context"; 
@@ -84,6 +85,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
   const [showEnvironmentModal, setShowEnvironmentModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [environmentToEdit, setEnvironmentToEdit] = useState(null);
   // Environment silme dialog'u için state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -613,6 +615,11 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         setOpen={handleSetShowSettings}
         currentEnvironment={currentEnvironment}
       />
+      <NotificationsModal
+        open={showNotificationsModal}
+        setOpen={setShowNotificationsModal}
+        darkMode={isDarkMode}
+      />
       <EnvironmentModal
         open={showEnvironmentModal}
         setOpen={setShowEnvironmentModal}
@@ -810,7 +817,10 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>          
-          <NotificationBell darkMode={isDarkMode} />
+          <NotificationBell 
+            darkMode={isDarkMode} 
+            onClick={() => setShowNotificationsModal(true)}
+          />
           <Button
             variant="ghost"
             size="icon"
@@ -954,18 +964,32 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                             <Check className={`h-4 w-4 ${currentEnvironment?.id === env.id ? 'text-green-500' : 'text-transparent' } mr-2`} />
                             {env.name}
                           </span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-6 w-6 p-0" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openEditEnvironmentModal(env, e);
-                              closeMobileMenu();
-                            }}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
+                          <div className="flex items-center">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 w-6 p-0" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditEnvironmentModal(env, e);
+                                closeMobileMenu();
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 ml-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDeleteDialog(env, e);
+                                closeMobileMenu();
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3 text-red-400 hover:text-red-600" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -1012,7 +1036,16 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 </div>
                 
                 <div className="py-2">
-                  <NotificationBell darkMode={isDarkMode} isMobile={true} />
+                  <div 
+                    className={`flex items-center p-2 rounded cursor-pointer ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'}`}
+                    onClick={() => {
+                      setShowNotificationsModal(true);
+                      closeMobileMenu(); 
+                    }}
+                  >
+                    <NotificationBell darkMode={isDarkMode} isMobile={true} onClick={() => setShowNotificationsModal(true)}/>
+                    <span className={`ml-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}>Bildirimler</span>
+                  </div>
                 </div>
               </div>
               
