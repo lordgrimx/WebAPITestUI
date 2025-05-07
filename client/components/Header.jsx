@@ -47,13 +47,10 @@ import { useAuth } from "@/lib/auth-context";
 import { useSettings } from "@/lib/settings-context"; 
 import { useEnvironment } from "@/lib/environment-context"; 
 import Image from "next/image";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 // DeleteConfirmDialog bileşeni - Environment silme onay dialog'u
 const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
-  const { t } = useTranslation("common");
-  
   const handleConfirm = () => {
     onConfirm(environment);
     setOpen(false);
@@ -63,18 +60,17 @@ const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{t('header.environmentDelete.title', 'Delete Environment')}</DialogTitle>
+          <DialogTitle>Delete Environment</DialogTitle>
           <DialogDescription>
-            {t('header.environmentDelete.confirmMessage', 
-              `Are you sure you want to delete the environment "${environment?.name}"? This will also delete all associated collections, requests, and history for this environment.`)}
+            Are you sure you want to delete the environment "${environment?.name}"? This will also delete all associated collections, requests, and history for this environment.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            {t('general.cancel', 'Cancel')}
+            Cancel
           </Button>
           <Button variant="destructive" onClick={handleConfirm}>
-            {t('general.delete', 'Delete')}
+            Delete
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -98,7 +94,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   const { user, isAuthenticated, login, logout, isLoading: isAuthLoading } = useAuth(); // Renamed isLoading to avoid conflict
   const { updateSettings } = useSettings(); // updateSettings'i context'ten al
   const { theme, setTheme } = useTheme();
-  const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz  // Use the environment context
   const {
     environments,
     currentEnvironment,
@@ -411,9 +406,9 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     if (env && env.id) {
       try {
         await deleteEnvironment(env.id);
-        toast.success(t('header.environmentDelete.success', 'Environment deleted successfully.'));
+        toast.success('Environment deleted successfully.');
       } catch (error) {
-        toast.error(t('header.environmentDelete.error', 'Failed to delete environment.'));
+        toast.error('Failed to delete environment.');
         console.error('Delete environment error:', error);
       }
     }
@@ -743,7 +738,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              <DropdownMenuLabel>{t('header.environmentList.title', 'Environments')}</DropdownMenuLabel>
+              <DropdownMenuLabel>Environments</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {/* Use environments from context */}              
               {environments.length > 0 ? (
@@ -783,7 +778,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 onClick={openCreateEnvironmentModal}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                {t('header.environmentList.add', 'Add Environment')}
+                Add Environment
               </Button>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -822,6 +817,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             setDarkMode={() => setTheme(isDarkMode ? 'light' : 'dark')}
             user={user}
             onLogout={logout}
+            closeMobileMenu={closeMobileMenu}
           />
         </div>
         
@@ -840,6 +836,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               setDarkMode={() => setTheme(isDarkMode ? 'light' : 'dark')}
               user={user}
               onLogout={logout}
+              closeMobileMenu={closeMobileMenu}
             />
           </div>
         )}

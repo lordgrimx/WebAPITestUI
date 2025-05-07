@@ -23,13 +23,22 @@ import AccountSettingsModal from "@/components/modals/AccountSettingsModal";
 import NotificationsModal from "@/components/modals/NotificationsModal";
 import HelpSupportModal from "@/components/modals/HelpSupportModal";
 
-export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout }) {
+export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout, closeMobileMenu }) {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAccountSettingsModal, setShowAccountSettingsModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showHelpSupportModal, setShowHelpSupportModal] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { t } = useTranslation("common"); // Çeviri fonksiyonunu elde ediyoruz
   
+  // Helper function to handle modal open/close and call closeMobileMenu
+  const handleModalOpenChange = (setter, isOpen) => {
+    setter(isOpen);
+    if (!isOpen && closeMobileMenu) { // Bu satırları tekrar aktif hale getiriyoruz
+      closeMobileMenu();
+    }
+  };
+
   // Get user initials for avatar
   const getInitials = () => {
     if (!user || !user.name) return "?";
@@ -45,29 +54,29 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
     <>
       <ProfileModal 
         open={showProfileModal} 
-        setOpen={setShowProfileModal} 
+        setOpen={(isOpen) => handleModalOpenChange(setShowProfileModal, isOpen)}
         darkMode={darkMode} 
       />
       
       <AccountSettingsModal 
         open={showAccountSettingsModal} 
-        setOpen={setShowAccountSettingsModal} 
+        setOpen={(isOpen) => handleModalOpenChange(setShowAccountSettingsModal, isOpen)}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
       />
       
       <NotificationsModal 
         open={showNotificationsModal} 
-        setOpen={setShowNotificationsModal} 
+        setOpen={(isOpen) => handleModalOpenChange(setShowNotificationsModal, isOpen)}
         darkMode={darkMode} 
       />
       
       <HelpSupportModal 
         open={showHelpSupportModal} 
-        setOpen={setShowHelpSupportModal} 
+        setOpen={(isOpen) => handleModalOpenChange(setShowHelpSupportModal, isOpen)}
         darkMode={darkMode} 
       />
-        <DropdownMenu>
+        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger asChild>
           {/* Display profile image if available, otherwise initials */}
           <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white cursor-pointer overflow-hidden">
@@ -110,43 +119,58 @@ export default function ProfileDropdown({ darkMode, setDarkMode, user, onLogout 
           
           <DropdownMenuItem 
             className="flex items-center px-4 py-2 cursor-pointer"
-            onClick={() => setShowProfileModal(true)}
+            onClick={() => {
+              setShowProfileModal(true);
+              setIsMenuOpen(false);
+            }}
           >
             <User className="mr-3 w-4 h-4" />
-            <span>{t('auth.profile')}</span>
+            <span>Profil</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem 
             className="flex items-center px-4 py-2 cursor-pointer"
-            onClick={() => setShowAccountSettingsModal(true)}
+            onClick={() => {
+              setShowAccountSettingsModal(true);
+              setIsMenuOpen(false);
+            }}
           >
             <Settings className="mr-3 w-4 h-4" />
-            <span>{t('settings.title')}</span>
+            <span>Ayarlar</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem 
             className="flex items-center px-4 py-2 cursor-pointer"
-            onClick={() => setShowNotificationsModal(true)}
+            onClick={() => {
+              setShowNotificationsModal(true);
+              setIsMenuOpen(false);
+            }}
           >
             <Bell className="mr-3 w-4 h-4" />
-            <span>{t('profile.notifications', 'Notifications')}</span>
+            <span>Bildirimler</span>
           </DropdownMenuItem>
           
           <DropdownMenuItem 
             className="flex items-center px-4 py-2 cursor-pointer"
-            onClick={() => setShowHelpSupportModal(true)}
+            onClick={() => {
+              setShowHelpSupportModal(true);
+              setIsMenuOpen(false);
+            }}
           >
             <HelpCircle className="mr-3 w-4 h-4" />
-            <span>{t('profile.helpSupport', 'Help & Support')}</span>
+            <span>Yardım & Destek</span>
           </DropdownMenuItem>
             <DropdownMenuSeparator />
           
           <DropdownMenuItem 
             className="flex items-center px-4 py-2 cursor-pointer text-red-600"
-            onClick={onLogout}
+            onClick={() => {
+              onLogout();
+              setIsMenuOpen(false);
+            }}
           >
             <LogOut className="mr-3 w-4 h-4" />
-            <span>{t('auth.logout')}</span>
+            <span>Çıkış Yap</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

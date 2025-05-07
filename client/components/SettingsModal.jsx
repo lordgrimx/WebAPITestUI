@@ -48,6 +48,13 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
   const [wrapLines, setWrapLines] = useState(settings.wrapLines);
   const [highlightSyntax, setHighlightSyntax] = useState(settings.highlightSyntax);
 
+  // Form sıfırlama fonksiyonu
+  const resetForm = () => {
+    // Formun değerlerini başlangıç değerlerine sıfırlıyoruz
+    // Burada sadece modal kapatıldığında gerçekleşmesi gereken işlemler yer almalı
+    // Değerleri sıfırlamaya gerek yok, modal açıldığında zaten güncel değerler yüklenecek
+  };
+
   // Sync local state with global settings or environment variables when modal opens
   useEffect(() => {
     if (open) {
@@ -205,6 +212,9 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
       >
         <DialogHeader className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700">
           <DialogTitle className="text-lg sm:text-xl font-semibold dark:text-white">{t('settings.titleApi')}</DialogTitle>
+          <DialogDescription className="text-sm text-gray-500 dark:text-gray-400">
+            {t('settings.description', 'Ayarları düzenleyin ve özelleştirin.')}
+          </DialogDescription>
           <DialogClose className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
             <X className="h-4 w-4" />
           </DialogClose>
@@ -491,7 +501,10 @@ export default function SettingsModal({ open, setOpen, currentEnvironment }) { /
         <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-2 sm:gap-0">
           <Button 
             variant="outline" 
-            onClick={() => setOpen(false)} 
+            onClick={() => {
+              setOpen(false);
+              // resetForm burada gerekmediği için kaldırıldı
+            }} 
             className="w-full sm:w-auto dark:text-gray-200 dark:hover:bg-gray-700"
           >
             {t('general.cancel', 'Cancel')}
