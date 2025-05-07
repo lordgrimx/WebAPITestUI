@@ -854,6 +854,7 @@ export default function ApiTester() {
                 historyUpdated={historyUpdated}
                 currentEnvironment={currentEnvironment}
                 environmentChangedTimestamp={environmentChangedTimestamp}
+                showMobileToggle={true}
               />
               
               {/* Mobile tabs for switching between request builder and response */}
@@ -903,6 +904,7 @@ export default function ApiTester() {
                   historyUpdated={historyUpdated}
                   currentEnvironment={currentEnvironment}
                   environmentChangedTimestamp={environmentChangedTimestamp}
+                  showMobileToggle={true}
                 />
               </ResizablePanel>
               <ResizableHandle withHandle />
