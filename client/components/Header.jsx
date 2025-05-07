@@ -1,9 +1,8 @@
 "use client"
 import { authAxios } from "@/lib/auth-context";
-import { useState } from "react";
+import { useState, useEffect } from "react"; 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useTranslation } from "react-i18next"; // Çeviri hook'u eklendi
 import { useTheme } from "next-themes";
 import {
   DropdownMenu,
@@ -26,8 +25,8 @@ import {
   Pencil,
   ChevronDown,
   Activity,
-  Home,
-  Trash2,
+  Menu,
+  X,
 } from "lucide-react";
 import {
   Dialog,
@@ -44,12 +43,9 @@ import EnvironmentModal from "@/components/EnvironmentModal";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import NotificationBell from "@/components/NotificationBell";
 import { useAuth } from "@/lib/auth-context";
-import { useSettings } from "@/lib/settings-context"; // useSettings hook'unu import et
-import { useEnvironment } from "@/lib/environment-context"; // Import useEnvironment
-import { toast } from "sonner"; // Import toast for notifications
+import { useSettings } from "@/lib/settings-context"; 
+import { useEnvironment } from "@/lib/environment-context"; 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { useRequest } from "@/lib/request-context";
 
 // DeleteConfirmDialog bileşeni - Environment silme onay dialog'u
 const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
@@ -109,35 +105,40 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     deleteEnvironment // Add the delete environment function
   } = useEnvironment();
 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const isDarkMode = theme === 'dark';
 
-  // Remove useEffect and fetchEnvironments - context handles loading
-  // useEffect(() => { ... });
-  // const fetchEnvironments = async () => { ... };
-
-  // Modify activateEnvironment to use context function
   const activateEnvironment = async (environmentId) => {
-    // Call context function to set the environment
     await setCurrentEnvironmentById(environmentId);
-    // No need to fetch manually, context handles updates
   };
 
-  // Function to open the environment modal for editing
   const openEditEnvironmentModal = (env, e) => {
-    e.stopPropagation(); // Prevent triggering the parent onClick (activating the environment)
+    e.stopPropagation();
     setEnvironmentToEdit(env);
     setShowEnvironmentModal(true);
   };
 
-  // Function to open environment modal for creating a new environment
   const openCreateEnvironmentModal = () => {
-    setEnvironmentToEdit(null); // Reset any previously selected environment
+    setEnvironmentToEdit(null);
     setShowEnvironmentModal(true);
   };
 
-  // Modify handleEnvironmentSaved to use context refresh
   const handleEnvironmentSaved = () => {
-    refreshEnvironments(); // Refresh the list via context
+    refreshEnvironments();
   };
 
   const handleSaveRequest = async (requestData) => {
@@ -159,7 +160,9 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     } catch (error) {
       console.error("Failed to save request:", error);
     }
-  };  const handleCopyLink = async () => { // Make the function async
+  };
+
+  const handleCopyLink = async () => { // Make the function async
     try {
       // Format data according to SwaggerUI example - using lowercase property names
       const exportData = {
@@ -332,6 +335,11 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     }
   };
 
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   const handleShareToWorkspace = () => {
     console.log("Sharing to workspace (placeholder)...", currentRequestData);
     toast.info("Share to Workspace", {
@@ -414,7 +422,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
       <header
         className={`${
           isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-        } border-b py-3 px-6 flex items-center justify-between`}
+        } border-b py-3 px-4 md:px-6 flex items-center justify-between`}
       >
         <div className="flex items-center space-x-2">
           <h1
@@ -441,15 +449,24 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
 
   if (!isAuthenticated) {
     return (
-      <header className="container mx-auto px-6 py-4">
+      <header className="container mx-auto px-4 md:px-6 py-4">
         <nav className="flex items-center justify-between">
           <div className="flex items-center">
-            {/* Light mode için text-gray-800, dark mode için text-white */}
             <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>API Testing Tool</h1>
           </div>
 
+          {isMobile && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={isDarkMode ? "text-white" : "text-gray-600"}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          )}
+
           <div className="hidden md:flex items-center space-x-6">
-            {/* Light mode için text-gray-600, dark mode için text-white */}
             <a
               href="#features"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
@@ -476,12 +493,11 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             </a>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className={`${isMobile ? 'hidden' : 'flex'} items-center space-x-4`}>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
-              // Light mode için text-gray-600, dark mode için text-white
               className={isDarkMode ? "text-white" : "text-gray-600"}
             >
               {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -500,6 +516,87 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             </Button>
           </div>
         </nav>
+
+        {isMobile && isMobileMenuOpen && (
+          <div className={`fixed inset-0 z-50 ${isDarkMode ? 'bg-gray-900/90' : 'bg-gray-100/90'}`}>
+            <div className={`flex flex-col p-5 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} h-full`}>
+              <div className="flex justify-between items-center mb-8">
+                <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>API Testing Tool</h1>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={isDarkMode ? "text-white" : "text-gray-600"}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <X className="h-6 w-6" />
+                </Button>
+              </div>
+              
+              <div className="flex flex-col space-y-6 text-lg">
+                <a
+                  href="#features"
+                  className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+                  onClick={closeMobileMenu}
+                >
+                  Özellikler
+                </a>
+                <a
+                  href="#pricing"
+                  className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+                  onClick={closeMobileMenu}
+                >
+                  Fiyatlandırma
+                </a>
+                <a
+                  href="#docs"
+                  className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+                  onClick={closeMobileMenu}
+                >
+                  Dokümantasyon
+                </a>
+                <a
+                  href="#about"
+                  className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+                  onClick={closeMobileMenu}
+                >
+                  Hakkında
+                </a>
+              </div>
+              
+              <div className="mt-auto flex flex-col space-y-4">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  onClick={() => {
+                    openLoginModal();
+                    closeMobileMenu();
+                  }}
+                >
+                  Giriş Yap
+                </Button>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    openSignupModal();
+                    closeMobileMenu();
+                  }}
+                >
+                  Kayıt Ol
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
+                  className={`w-full ${isDarkMode ? "text-white" : "text-gray-600"}`}
+                >
+                  {isDarkMode ? <Sun className="h-5 w-5 mr-2" /> : <Moon className="h-5 w-5 mr-2" />}
+                  {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
     );
   }
@@ -509,7 +606,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
       <SettingsModal
         open={showSettings}
         setOpen={setShowSettings}
-        currentEnvironment={currentEnvironment} // Pass environment from context
+        currentEnvironment={currentEnvironment}
       />
       <EnvironmentModal
         open={showEnvironmentModal}
@@ -526,7 +623,6 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
         open={showGenerateCode}
         setOpen={setShowGenerateCode}
         darkMode={isDarkMode}
-        // Pass data from currentRequestData to the modal
         selectedMethod={currentRequestData?.method || "GET"}
         url={currentRequestData?.url || ""}
         parameterRows={
@@ -546,33 +642,44 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               })()
             : []
         }
-      />      <SaveRequestModal
+      />      
+      <SaveRequestModal
         open={showSaveRequest}
         setOpen={setShowSaveRequest}
         darkMode={isDarkMode}
         onSaveRequest={handleSaveRequest}
-        onRequestSaved={onRequestSaved} // ApiTester'dan gelen callback'i ilet
+        onRequestSaved={onRequestSaved}
         initialData={currentRequestData}
         currentEnvironment={currentEnvironment}
       />
       <header
         className={`${
           isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-        } border-b py-3 px-6 flex items-center justify-between`}
+        } border-b py-3 px-4 md:px-6 flex items-center justify-between`}
       >
-        <div className="flex items-center space-x-2">
-          <div
-            className="flex gap-2 items-center cursor-pointer"
-          >
+        <div className="flex items-center">
+          <div className="flex gap-2 items-center cursor-pointer">
             <Image src={'icon.svg'} width={30} height={30} alt="icon"/> 
             <h1 className={`text-xl font-extrabold ${
-              isDarkMode ? "text-white" : "text-gray-800" // Ana başlık rengi zaten doğru
+              isDarkMode ? "text-white" : "text-gray-800"
             }`} >
-              <span className="text-blue-500">PUT</span> {/* PUT her zaman mavi */}
-              <span className={`${isDarkMode ? "text-white" : "text-gray-800"}`}>man</span> {/* man kısmı moda göre değişir, light modda daha koyu gri */}
+              <span className="text-blue-500">PUT</span>
+              <span className={`${isDarkMode ? "text-white" : "text-gray-800"}`}>man</span>
             </h1>
           </div>
-          <div className="flex space-x-2 ml-6">
+          
+          {isMobile && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={`ml-2 ${isDarkMode ? "text-white" : "text-gray-600"}`}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          )}
+          
+          <div className="hidden md:flex space-x-2 ml-6">
             <Button
               variant="ghost"
               size="sm"
@@ -580,7 +687,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowSaveRequest(true)}
             >
               <Save className="h-4 w-4" />
-              <span>{t('general.save')}</span>
+              <span>Kaydet</span>
             </Button>
             <Button
               variant="ghost"
@@ -589,7 +696,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowGenerateCode(true)}
             >
               <Code className="h-4 w-4" />
-              <span>{t('header.generateCode')}</span>
+              <span>Kod Üret</span>
             </Button>
             <Button
               variant="ghost"
@@ -598,7 +705,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowSettings(true)}
             >
               <Settings className="h-4 w-4" />
-              <span>{t('header.settings')}</span>
+              <span>Ayarlar</span>
             </Button>            
             <Link href="/loadtests">
               <Button
@@ -607,7 +714,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4 mr-1" />
-                <span>{t('header.loadTests', 'Load Tests')}</span>
+                <span>Yük Testleri</span>
               </Button>
             </Link>
             <Link href="/monitor">
@@ -617,25 +724,26 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4 mr-1" />
-                <span>{t('header.monitoring')}</span>
+                <span>İzleme</span>
               </Button>
             </Link>
           </div>
         </div>
-        <div className="flex items-center space-x-4">          
+        
+        <div className="hidden md:flex items-center space-x-4">          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`} disabled={isEnvironmentLoading}> {/* Disable while loading */}
+              <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`} disabled={isEnvironmentLoading}>
                 <Globe className="h-4 w-4" />
-                {/* Display current environment name or loading state */}
-                <span>{isEnvironmentLoading ? t('header.environmentLoading', 'Loading...') : currentEnvironment?.name || t('header.environmentList.none', 'No Environment')}</span>
-                <ChevronDown className="h-3 w-3 ml-1" />
+                <span className="hidden sm:inline">{isEnvironmentLoading ? "Yükleniyor..." : currentEnvironment?.name || "Ortam Yok"}</span>
+                <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
               <DropdownMenuLabel>{t('header.environmentList.title', 'Environments')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {/* Use environments from context */}              {environments.length > 0 ? (
+              {/* Use environments from context */}              
+              {environments.length > 0 ? (
                 environments.map(env => (
                   <div key={env.id} className="px-2 py-1.5 flex items-center justify-between">
                     <div 
@@ -662,7 +770,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 ))
               ) : (
                 <DropdownMenuItem disabled>
-                  {t('header.environmentList.none', 'No environments found')}
+                  Ortam Bulunamadı
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />              <Button
@@ -675,12 +783,14 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 {t('header.environmentList.add', 'Add Environment')}
               </Button>
             </DropdownMenuContent>
-          </DropdownMenu>          <DropdownMenu>
+          </DropdownMenu>
+          
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`}>
                 <Share2 className="h-4 w-4" />
-                <span>Paylaş</span>
-                <ChevronDown className="h-3 w-3 ml-1" />
+                <span className="hidden sm:inline">Paylaş</span>
+                <ChevronDown className="h-3 w-3 sm:ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -710,9 +820,236 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             user={user}
             onLogout={logout}
           />
-        </div>      </header>
-
-      {/* Delete confirmation dialog artık burada gerekli değil çünkü üstte zaten tanımlandı */}
+        </div>
+        
+        {isMobile && !isMobileMenuOpen && (
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
+              className={isDarkMode ? "text-gray-300" : "text-gray-600"}
+            >
+              {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+            <ProfileDropdown
+              darkMode={isDarkMode}
+              setDarkMode={() => setTheme(isDarkMode ? 'light' : 'dark')}
+              user={user}
+              onLogout={logout}
+            />
+          </div>
+        )}
+        
+        {isMobile && isMobileMenuOpen && (
+          <div className={`fixed inset-0 z-50 ${isDarkMode ? 'bg-gray-900/90' : 'bg-gray-100/90'}`}>
+            <div className={`flex flex-col p-5 ${isDarkMode ? 'bg-gray-800' : 'bg-white'} h-full`}>
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex gap-2 items-center">
+                  <Image src={'icon.svg'} width={30} height={30} alt="icon"/> 
+                  <h1 className={`text-xl font-extrabold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                    <span className="text-blue-500">PUT</span>
+                    <span className={`${isDarkMode ? "text-white" : "text-gray-800"}`}>man</span>
+                  </h1>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={isDarkMode ? "text-white" : "text-gray-600"}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <X className="h-6 w-6" />
+                </Button>
+              </div>
+              
+              <div className="flex flex-col space-y-4">
+                <Button
+                  variant="ghost"
+                  className={`justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                  onClick={() => {
+                    setShowSaveRequest(true);
+                    closeMobileMenu();
+                  }}
+                >
+                  <Save className="h-4 w-4" />
+                  <span>Kaydet</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={`justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                  onClick={() => {
+                    setShowGenerateCode(true);
+                    closeMobileMenu();
+                  }}
+                >
+                  <Code className="h-4 w-4" />
+                  <span>Kod Üret</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  className={`justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                  onClick={() => {
+                    setShowSettings(true);
+                    closeMobileMenu();
+                  }}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Ayarlar</span>
+                </Button>
+                
+                <Link href="/loadtests" onClick={closeMobileMenu}>
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                  >
+                    <Activity className="h-4 w-4" />
+                    <span>Yük Testleri</span>
+                  </Button>
+                </Link>
+                <Link href="/monitor" onClick={closeMobileMenu}>
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                  >
+                    <Activity className="h-4 w-4" />
+                    <span>İzleme</span>
+                  </Button>
+                </Link>
+                
+                <div className="py-2">
+                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Ortam</div>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between mb-2"
+                    onClick={() => {
+                      openCreateEnvironmentModal();
+                      closeMobileMenu();
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <Globe className="h-4 w-4 mr-2" />
+                      <span>{isEnvironmentLoading ? "Yükleniyor..." : currentEnvironment?.name || "Ortam Yok"}</span>
+                    </div>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                  {environments.length > 0 && (
+                    <div className={`max-h-32 overflow-auto ${isDarkMode ? "bg-gray-700" : "bg-gray-100"} rounded-md p-1`}>
+                      {environments.map(env => (
+                        <div 
+                          key={env.id} 
+                          className={`flex justify-between items-center p-2 rounded ${currentEnvironment?.id === env.id ? (isDarkMode ? 'bg-gray-600' : 'bg-gray-200') : ''} cursor-pointer mb-1`}
+                          onClick={() => {
+                            activateEnvironment(env.id);
+                            closeMobileMenu();
+                          }}
+                        >
+                          <span className="flex items-center">
+                            <Check className={`h-4 w-4 ${currentEnvironment?.id === env.id ? 'text-green-500' : 'text-transparent' } mr-2`} />
+                            {env.name}
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-6 w-6 p-0" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditEnvironmentModal(env, e);
+                              closeMobileMenu();
+                            }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="py-2">
+                  <div className={`text-sm font-semibold mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Paylaş</div>
+                  <div className="space-y-2">
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                      onClick={() => {
+                        handleCopyLink();
+                        closeMobileMenu();
+                      }}
+                    >
+                      <Share2 className="h-4 w-4" />
+                      <span>Bağlantıyı Kopyala</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                      onClick={() => {
+                        handleShareToWorkspace();
+                        closeMobileMenu();
+                      }}
+                    >
+                      <Share2 className="h-4 w-4" />
+                      <span>Çalışma Alanına Paylaş</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start space-x-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}
+                      onClick={() => {
+                        handleExportRequest();
+                        closeMobileMenu();
+                      }}
+                    >
+                      <Share2 className="h-4 w-4" />
+                      <span>Dışa Aktar</span>
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="py-2">
+                  <NotificationBell darkMode={isDarkMode} isMobile={true} />
+                </div>
+              </div>
+              
+              <div className="mt-auto">
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
+                  className={`w-full justify-start ${isDarkMode ? "text-white" : "text-gray-600"}`}
+                >
+                  {isDarkMode ? <Sun className="h-5 w-5 mr-2" /> : <Moon className="h-5 w-5 mr-2" />}
+                  {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                </Button>
+                
+                <div className="flex justify-between items-center mt-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center">
+                    <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold mr-3">
+                      {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                    </div>
+                    <div>
+                      <div className={`font-medium ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                        {user?.name || user?.email || 'User'}
+                      </div>
+                      <div className={`text-sm ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                        {user?.email || ''}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      logout();
+                      closeMobileMenu();
+                    }}
+                  >
+                    Logout
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
     </>
   );
 }

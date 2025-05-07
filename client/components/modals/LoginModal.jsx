@@ -121,25 +121,25 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0 w-[95%] mx-auto">
           <div className="relative overflow-hidden rounded-lg">
             <div className="absolute -top-10 -left-10 w-32 h-32 bg-blue-500/10 rounded-xl rotate-12 animate-float opacity-50"></div>
             <div className="absolute top-20 -right-10 w-24 h-24 bg-cyan-500/10 rounded-xl -rotate-12 animate-float-delayed opacity-50"></div>
             <div className="absolute -bottom-10 -left-5 w-20 h-20 bg-indigo-500/10 rounded-xl rotate-45 animate-float-slow opacity-50"></div>
 
-            <div className="relative z-10 p-8 bg-white/90 backdrop-blur-sm">
-              <div className="text-center mb-8">
-                <DialogTitle className="text-2xl font-bold text-[#1A2333]">
+            <div className="relative z-10 p-4 sm:p-8 bg-white/90 backdrop-blur-sm">
+              <div className="text-center mb-4 sm:mb-8">
+                <DialogTitle className="text-xl sm:text-2xl font-bold text-[#1A2333]">
                   API Testing Tool
                 </DialogTitle>
-                <p className="text-gray-500 mt-2">Sign in to access your workspace</p>
+                <p className="text-sm sm:text-base text-gray-500 mt-2">Sign in to access your workspace</p>
               </div>
 
-              <form onSubmit={handleLogin2} className="space-y-5">
+              <form onSubmit={handleLogin2} className="space-y-4 sm:space-y-5">
                 {!is2FARequired ? (
                   <>
                     <div>
-                      <Label htmlFor="email-login" className="text-sm font-medium text-gray-700">
+                      <Label htmlFor="email-login" className="text-xs sm:text-sm font-medium text-gray-700">
                         Email
                       </Label>
                       <div className="relative mt-1">
@@ -148,7 +148,7 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className={`w-full pl-10 pr-4 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
+                          className={`w-full pl-10 pr-4 py-2 sm:py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
                           placeholder="your@email.com"
                           required
                         />
@@ -157,7 +157,7 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                     </div>
 
                     <div>
-                      <Label htmlFor="password-login" className="text-sm font-medium text-gray-700">
+                      <Label htmlFor="password-login" className="text-xs sm:text-sm font-medium text-gray-700">
                         Password
                       </Label>
                       <div className="relative mt-1">
@@ -166,7 +166,7 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                           type="password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className={`w-full pl-10 pr-4 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
+                          className={`w-full pl-10 pr-4 py-2 sm:py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
                           placeholder="••••••••"
                           required
                         />
@@ -174,7 +174,7 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
                       <div className="flex items-center">
                         <Checkbox 
                           id="remember-me-login" 
@@ -192,16 +192,16 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                     </div>
                   </>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-center">
-                      <p className="text-sm text-blue-800">
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-md p-3 sm:p-4 text-center">
+                      <p className="text-xs sm:text-sm text-blue-800">
                         A verification code has been sent to your email.
                         <br />Please enter the code below to continue.
                       </p>
                     </div>
                     
                     <div>
-                      <Label htmlFor="verification-code" className="text-sm font-medium text-gray-700">
+                      <Label htmlFor="verification-code" className="text-xs sm:text-sm font-medium text-gray-700">
                         Verification Code
                       </Label>
                       <Input
@@ -209,7 +209,7 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                         type="text"
                         value={verificationCode}
                         onChange={(e) => setVerificationCode(e.target.value)}
-                        className={`w-full py-3 bg-gray-50 border text-center text-lg tracking-widest font-mono ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
+                        className={`w-full py-2 sm:py-3 bg-gray-50 border text-center text-base sm:text-lg tracking-widest font-mono ${error ? 'border-red-300' : 'border-gray-200'} focus:ring-blue-500/50 focus:border-blue-500`}
                         placeholder="123456"
                         maxLength={6}
                         required
@@ -219,7 +219,7 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                         <button 
                           type="button" 
                           onClick={() => setIs2FARequired(false)}
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                          className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 font-medium"
                         >
                           Back to login
                         </button>
@@ -229,12 +229,12 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                 )}
 
                 {error && (
-                  <p className="text-sm text-red-600 text-center">{error}</p>
+                  <p className="text-xs sm:text-sm text-red-600 text-center">{error}</p>
                 )}
 
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
+                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-2 sm:py-3 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -243,16 +243,16 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      {is2FARequired ? 'Verifying...' : 'Signing in...'}
+                      <span className="text-sm sm:text-base">{is2FARequired ? 'Verifying...' : 'Signing in...'}</span>
                     </div>
                   ) : (
-                    is2FARequired ? 'Verify Code' : 'Sign in'
+                    <span className="text-sm sm:text-base">{is2FARequired ? 'Verify Code' : 'Sign in'}</span>
                   )}
                 </Button>
               </form>
 
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600">
+              <div className="mt-4 sm:mt-6 text-center">
+                <p className="text-xs sm:text-sm text-gray-600">
                   Don't have an account?{' '}
                   <button 
                     onClick={onSwitchToSignup} 
@@ -264,25 +264,25 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }) => {
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-6 text-center relative z-10 rounded-b-lg">
-              <div className="flex items-center justify-center space-x-4">
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-500/20 text-blue-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
+            <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 p-4 sm:p-6 text-center relative z-10 rounded-b-lg">
+              <div className="flex items-center justify-center space-x-3 sm:space-x-4">
+                <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-blue-500/20 text-blue-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
                   </svg>
                 </div>
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green-500/20 text-green-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
+                <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-green-500/20 text-green-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
                   </svg>
                 </div>
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-500/20 text-purple-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
+                <div className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-purple-500/20 text-purple-700">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
                   </svg>
                 </div>
               </div>
-              <p className="text-gray-600 text-sm mt-4">Powerful API testing with modern tools</p>
+              <p className="text-xs sm:text-sm text-gray-600 mt-3 sm:mt-4">Powerful API testing with modern tools</p>
             </div>
           </div>
         </DialogContent>

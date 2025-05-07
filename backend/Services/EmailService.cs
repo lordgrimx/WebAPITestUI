@@ -55,7 +55,7 @@ namespace WebTestUI.Backend.Services
                                              "false";
             _useDefaultCredentials = bool.TryParse(useDefaultCredentialsStr, out bool useDefault) ? useDefault : false;
 
-            _logger.LogInformation($"Email configuration loaded. Using email: {_senderEmail}");
+            
         }
 
         public async Task<bool> SendEmailAsync(string toEmail, string subject, string body, bool isHtml = true)

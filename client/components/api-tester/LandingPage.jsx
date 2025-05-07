@@ -4,21 +4,21 @@ import { Button } from '../ui/button'
 import Image from 'next/image'
 import { Zap, Code, ChartLine, Users, Shield, BookMarked, Check } from 'lucide-react'
 
-// Destructure openLoginModal from props
 export default function LandingPage({ darkMode, setDarkMode, openSignupModal, openLoginModal }) {
   return (
     <div className="min-h-screen bg-gray-50 font-sans m-0 p-0">
       {/* Hero */}
       <div className="relative overflow-hidden min-h-screen m-0 p-0">
-        <div className="z-10 relative">
-          {/* Pass openLoginModal down to the Header component */}
+        {/* Fix header positioning - give it a proper z-index and background color */}
+        <div className="fixed top-0 left-0 right-0 z-50 bg-transparent">
           <Header 
             darkMode={darkMode} 
             setDarkMode={setDarkMode} 
             openSignupModal={openSignupModal} 
-            openLoginModal={openLoginModal} // Pass it down
+            openLoginModal={openLoginModal}
           />
         </div>
+        
         <div className="absolute inset-0 z-0">
           <Image
             src={"/landingpage.jpeg"}
@@ -28,24 +28,26 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
             className="w-full h-full object-cover object-top"
           />
         </div>
-        <div className="z-10 relative mt-40 w-full ml-20 flex justify-start items-center">
-          <div className="w-1/2">
+
+        {/* Add padding-top to push content below fixed header */}
+        <div className="z-10 relative pt-20 mt-20 w-full px-6 flex flex-col md:flex-row justify-start items-center">
+          <div className="w-full md:w-1/2">
             <div className="mt-5">
-              <h1 className="text-5xl text-gray-100">
+              <h1 className="text-3xl md:text-5xl text-gray-100">
                 Powerfull API Testing Made Simple
               </h1>
             </div>
             <div>
-              <p className="text-lg text-gray-200 mt-4">
+              <p className="text-base md:text-lg text-gray-200 mt-4">
                 Test, monitor, and debug your APIs with our intuitive platform.
                 Streamline your development workflow and ensure your APIs work
                 flawlessly.
               </p>
             </div>
-            <div className="flex items-center mt-5">
+            <div className="flex flex-col md:flex-row items-center mt-5">
               <Button
                 variant={"default"}
-                className="bg-blue-500 text-white hover:bg-blue-600 mr-7 h-12"
+                className="bg-blue-500 text-white hover:bg-blue-600 mr-0 md:mr-7 mb-4 md:mb-0 h-12"
                 onClick={openSignupModal}
               >
                 Get Started Free
@@ -55,8 +57,8 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
               </Button>
             </div>
           </div>
-          <div className="w-1/2 flex justify-end mr-30">
-            <div className="w-2xl h-xl bg-white rounded-lg shadow-lg p-5">
+          <div className="w-full md:w-1/2 flex justify-center md:justify-end mt-10 md:mt-0">
+            <div className="w-full md:w-2xl h-auto bg-white rounded-lg shadow-lg p-5">
               <Image
                 src={"/document.png"}
                 alt="landingSum"
@@ -70,80 +72,80 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
       </div>
       {/* Features */}
       <div className="min-h-screen bg-white font-sans m-0 p-0">
-        <div className="flex flex-col justify-start items-center mt-20">
-          <h2 className="text-5xl text-gray-800">Powerful Features</h2>
-          <h3 className="text-2xl mt-7 font-light text-gray-500 tracking-wide">
+        <div className="flex flex-col justify-start items-center mt-20 px-6">
+          <h2 className="text-3xl md:text-5xl text-gray-800">Powerful Features</h2>
+          <h3 className="text-lg md:text-2xl mt-7 font-light text-gray-500 tracking-wide">
             Everything you need to test, document, and monitor your APIs
           </h3>
         </div>
-        <div className="flex justify-start items-start mt-20 flex-wrap ml-10 mr-10 mb-20">
-          <div className="flex flex-col justify-center items-start w-1/3 max-w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
+        <div className="flex flex-wrap justify-center items-start mt-20 px-6">
+          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
             <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
               <Zap className="h-8 w-8 text-blue-500" />
             </div>
             <div>
-              <h2 className="text-2xl mt-5">Fast & Reliable</h2>
-              <p className="text-lg font-light text-gray-800">
+              <h2 className="text-xl md:text-2xl mt-5">Fast & Reliable</h2>
+              <p className="text-sm md:text-lg font-light text-gray-800">
                 Test your APIs with lightning speed and get instant, reliable
                 results every time.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-1/3 max-w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
+          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
             <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
               <Code className="h-8 w-8 text-blue-500" />
             </div>
             <div>
-              <h2 className="text-2xl mt-5">Code Generation</h2>
-              <p className="text-lg font-light text-gray-800">
+              <h2 className="text-xl md:text-2xl mt-5">Code Generation</h2>
+              <p className="text-sm md:text-lg font-light text-gray-800">
                 Automatically generate code snippets in multiple programming
                 languages.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-1/3 max-w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
+          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
             <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
               <ChartLine className="h-8 w-8 text-blue-500" />
             </div>
             <div>
-              <h2 className="text-2xl mt-5">Monitoring</h2>
-              <p className="text-lg font-light text-gray-800">
+              <h2 className="text-xl md:text-2xl mt-5">Monitoring</h2>
+              <p className="text-sm md:text-lg font-light text-gray-800">
                 Monitor your API performance and get alerts when something goes
                 wrong.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-1/3 max-w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
+          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
             <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
               <Users className="h-8 w-8 text-blue-500" />
             </div>
             <div>
-              <h2 className="text-2xl mt-5">Team Collaboration</h2>
-              <p className="text-lg font-light text-gray-800">
+              <h2 className="text-xl md:text-2xl mt-5">Team Collaboration</h2>
+              <p className="text-sm md:text-lg font-light text-gray-800">
                 Work together with your team in real-time with shared
                 collections and workspaces.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-1/3 max-w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
+          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
             <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
               <Shield className="h-8 w-8 text-blue-500" />
             </div>
             <div>
-              <h2 className="text-2xl mt-5">Security Testing</h2>
-              <p className="text-lg font-light text-gray-800">
+              <h2 className="text-xl md:text-2xl mt-5">Security Testing</h2>
+              <p className="text-sm md:text-lg font-light text-gray-800">
                 Identify and fix security vulnerabilities in your APIs before
                 they become problems.
               </p>
             </div>
           </div>
-          <div className="flex flex-col justify-center items-start w-1/3 max-w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
+          <div className="flex flex-col justify-center items-start w-full sm:w-[45%] lg:w-[30%] bg-gray-50 border-1 border-gray-200 rounded-lg shadow-lg p-5 m-5 hover:shadow-2xl transition-shadow duration-300 ease-in-out hover:bg-gray-150">
             <div className="flex justify-center items-center p-4 bg-blue-100 rounded-lg">
               <BookMarked className="h-8 w-8 text-blue-500" />
             </div>
             <div>
-              <h2 className="text-2xl mt-5">Documentation</h2>
-              <p className="text-lg font-light text-gray-800">
+              <h2 className="text-xl md:text-2xl mt-5">Documentation</h2>
+              <p className="text-sm md:text-lg font-light text-gray-800">
                 Automatically generate and maintain comprehensive API
                 documentation.
               </p>
@@ -154,12 +156,12 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
       {/* Pricing */}
       <div className="min-h-screen bg-gray-50 font-sans m-0 p-0">
         <div className="flex flex-col justify-start items-center mt-20">
-          <div>
-            <h2 className="text-4xl text-center ">Simple, Transparent Pricing</h2>
-            <h3 className="text-2xl font-light text-gray-500 mt-4 tracking-wide">
+          <div className="px-6 text-center">
+            <h2 className="text-3xl md:text-5xl text-gray-800">Simple, Transparent Pricing</h2>
+            <h3 className="text-lg md:text-2xl mt-4 font-light text-gray-500 tracking-wide">
               Choose the plan that works best for you and your team
             </h3>
-          </div>{" "}
+          </div>
           <div className="flex justify-center items-center mt-20 flex-wrap mb-20 w-full max-w-7xl mx-auto px-4 sm:px-6">
             {/* Free Plan */}
             <div className="flex flex-col justify-between bg-white border border-gray-200 w-full sm:w-[90%] md:w-[45%] lg:w-[30%] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 p-4 sm:p-6 lg:p-8 m-3 sm:m-4 lg:m-5">
@@ -302,10 +304,10 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-xl font-bold mb-4">API Testing Tool</h3>
-              <p className="text-gray-400 mb-4">
+              <h3 className="text-lg md:text-xl font-bold mb-4">API Testing Tool</h3>
+              <p className="text-sm md:text-base text-gray-400 mb-4">
                 The most powerful API testing platform for developers and teams.
               </p>
               <div className="flex space-x-4">
@@ -488,25 +490,25 @@ export default function LandingPage({ darkMode, setDarkMode, openSignupModal, op
           </div>
 
           <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm mb-4 md:mb-0">
+            <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-0">
               © 2025 API Testing Tool. All rights reserved.
             </p>
             <div className="flex space-x-6">
               <a
                 href="#"
-                className="text-gray-400 hover:text-white text-sm transition-colors"
+                className="text-sm md:text-base text-gray-400 hover:text-white transition-colors"
               >
                 Privacy Policy
               </a>
               <a
                 href="#"
-                className="text-gray-400 hover:text-white text-sm transition-colors"
+                className="text-sm md:text-base text-gray-400 hover:text-white transition-colors"
               >
                 Terms of Service
               </a>
               <a
                 href="#"
-                className="text-gray-400 hover:text-white text-sm transition-colors"
+                className="text-sm md:text-base text-gray-400 hover:text-white transition-colors"
               >
                 Cookie Policy
               </a>

@@ -23,6 +23,23 @@ authAxios.interceptors.request.use(
     }
 );
 
+// Add response interceptor to handle token expiration
+authAxios.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            // Token expired or invalid
+            console.log('Token expired or unauthorized, logging out...');
+            localStorage.removeItem('token');
+            window.location.href = '/';
+            return Promise.reject(error);
+        }
+        return Promise.reject(error);
+    }
+);
+
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
