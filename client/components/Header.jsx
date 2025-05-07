@@ -27,6 +27,7 @@ import {
   Activity,
   Menu,
   X,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -46,6 +47,8 @@ import { useAuth } from "@/lib/auth-context";
 import { useSettings } from "@/lib/settings-context"; 
 import { useEnvironment } from "@/lib/environment-context"; 
 import Image from "next/image";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 // DeleteConfirmDialog bileşeni - Environment silme onay dialog'u
 const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
