@@ -794,6 +794,17 @@ export default function ApiTester() {
     }
   }, [setCurrentRequestData, triggerEnvironmentChange, setHistoryUpdated, setShowImportModal]); // Add dependencies
 
+  const resetRequestBuilderStates = useCallback(() => {
+    console.log("Resetting RequestBuilder states: initialDataFromHistory and selectedRequestId");
+    setInitialDataFromHistory(null);
+    setSelectedRequestId(null);
+    // İsteğe bağlı olarak responseData'yı da sıfırlayabilirsiniz:
+    // setResponseData(null);
+    // Ve currentRequestData'yı da (eğer context'i de sıfırlamak isterseniz):
+    // setCurrentRequestData(null); // Bu, useRequest context'inden geleni günceller
+    // setCurrentRequestDataLocal(null); // Bu, lokal state'i günceller
+  }, [/*setCurrentRequestData*/]);
+
   return (
     <>
       <Header
@@ -801,6 +812,7 @@ export default function ApiTester() {
         onRequestSaved={handleRequestSaved}
         collections={collections}
         history={history}
+        onCloseSettingsModal={resetRequestBuilderStates}
       />
       
       <ImportDataModal

@@ -137,10 +137,7 @@ function AccountSettingsModal({ open, setOpen, darkMode, setDarkMode }) {
          website: user.website,
          twoFactorEnabled: user.twoFactorEnabled,
        });
-       // Also reset the visual theme if it was changed instantly
-       const currentTheme = user.theme || (globalSettings.darkMode ? 'dark' : 'light');
-       if (currentTheme === 'dark') setDarkMode(true);
-       if (currentTheme === 'light') setDarkMode(false);
+       
      }
     setOpen(false); // Just close the modal, discard local changes
   };

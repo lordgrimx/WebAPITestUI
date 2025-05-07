@@ -79,7 +79,7 @@ const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
 };
 
 // Accept currentRequestData prop from ApiTester
-export default function Header({ currentRequestData, openSignupModal, openLoginModal, onRequestSaved, collections, history }) {
+export default function Header({ currentRequestData, openSignupModal, openLoginModal, onRequestSaved, collections, history, onCloseSettingsModal }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showGenerateCode, setShowGenerateCode] = useState(false);
   const [showSaveRequest, setShowSaveRequest] = useState(false);
@@ -414,6 +414,13 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     }
   };
 
+  const handleSetShowSettings = (isOpen) => {
+    setShowSettings(isOpen);
+    if (!isOpen && onCloseSettingsModal) { // Modal kapatılıyorsa ve callback varsa
+      onCloseSettingsModal();
+    }
+  };
+
   // Use isAuthLoading for auth check
   if (isAuthLoading) {
     return (
@@ -603,7 +610,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     <>
       <SettingsModal
         open={showSettings}
-        setOpen={setShowSettings}
+        setOpen={handleSetShowSettings}
         currentEnvironment={currentEnvironment}
       />
       <EnvironmentModal
