@@ -117,7 +117,7 @@ const getPathFromUrl = (urlString) => {
 };
 
 // Update the component to include mobile toggle functionality
-export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError, historyUpdated, currentEnvironment, environmentChangedTimestamp }) {
+export default function CollectionsSidebar({ setSelectedRequestId, onHistorySelect, hasError, darkMode, onError, historyUpdated, currentEnvironment, environmentChangedTimestamp, showMobileToggle = false }) {
   const [newCollectionName, setNewCollectionName] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -314,9 +314,21 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
       variant="ghost" 
       size="icon" 
       onClick={toggleSidebar}
-      className={`fixed z-50 top-16 left-2 rounded-full shadow-md ${darkMode ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-white text-gray-800 hover:bg-gray-100'} md:hidden`}
+      className={`fixed z-50 top-16 left-2 rounded-full 
+        ${darkMode 
+          ? 'bg-gray-800 text-blue-400 hover:bg-gray-700 hover:text-blue-300' 
+          : 'bg-white text-blue-600 hover:bg-blue-50 hover:text-blue-700'} 
+        transform transition-all duration-200 ease-in-out
+        ${isSidebarOpen ? 'rotate-90' : 'rotate-0'}
+        shadow-lg hover:shadow-xl border ${darkMode ? 'border-gray-700' : 'border-gray-200'}
+        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
+        md:hidden`}
+      aria-label={isSidebarOpen ? "Koleksiyonları kapat" : "Koleksiyonları aç"}
     >
-      {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+      {isSidebarOpen 
+        ? <X size={18} className="transform transition-transform duration-200" /> 
+        : <Menu size={18} className="transform transition-transform duration-200" />
+      }
     </Button>
   );
 
@@ -346,7 +358,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
 
   return (
     <>
-      {isMobile && <MobileToggleButton />}
+      {isMobile && showMobileToggle && <MobileToggleButton />}
 
       <div 
         className={`${isMobile ? 'fixed inset-y-0 left-0 z-40 w-72 transition-transform duration-300 transform shadow-2xl ' + (isSidebarOpen ? 'translate-x-0' : '-translate-x-full') : 'h-full flex flex-col border-r'} ${darkMode ? 'bg-gray-800 border-gray-700 text-gray-300' : 'bg-white border-gray-200 text-gray-700'}`}
@@ -443,14 +455,6 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
           </ScrollArea>
         </div>
       </div>
-
-      {isMobile && isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-30" 
-          onClick={() => setIsSidebarOpen(false)}
-          aria-hidden="true"
-        ></div>
-      )}
     </>
   );
 }
