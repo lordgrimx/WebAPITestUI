@@ -27,8 +27,9 @@ namespace WebTestUI.Backend.Controllers
         private readonly IConfiguration _configuration;
         private readonly IK6TestService _k6TestService;
         private readonly string _k6ExecutablePath;
-        private readonly Dictionary<string, Process> _runningTests;
-        private readonly Dictionary<int, string> _processIdToTestIdMap;
+        // Make the dictionaries static to be shared across controller instances
+        private static readonly Dictionary<string, Process> _runningTests = new Dictionary<string, Process>();
+        private static readonly Dictionary<int, string> _processIdToTestIdMap = new Dictionary<int, string>();
         private readonly IServiceScopeFactory _serviceScopeFactory;
 
         public K6Controller(
@@ -42,8 +43,6 @@ namespace WebTestUI.Backend.Controllers
             _configuration = configuration;
             _k6TestService = k6TestService;
             _k6ExecutablePath = _configuration["K6:ExecutablePath"] ?? "k6";
-            _runningTests = new Dictionary<string, Process>();
-            _processIdToTestIdMap = new Dictionary<int, string>();
             _notificationService = notificationService;
             _serviceScopeFactory = serviceScopeFactory;
         }
@@ -196,8 +195,9 @@ namespace WebTestUI.Backend.Controllers
                 _logger.LogInformation($"K6 process started with PID: {processId} for test ID: {testRunGuid}");
 
                 string runId = testRunGuid.ToString();
-                _runningTests[runId] = process;
-                _processIdToTestIdMap[processId] = runId;
+                lock (_runningTests) { _runningTests[runId] = process; }
+                lock (_processIdToTestIdMap) { _processIdToTestIdMap[processId] = runId; }
+                _logger.LogInformation($"Tracking process - PID: {processId}, RunId: {runId}. Current tracked PIDs: [{string.Join(", ", _processIdToTestIdMap.Keys)}]");
 
                 await _k6TestService.UpdateK6TestProcessIdAsync(testRunGuid, processId);
                 await _k6TestService.UpdateK6TestStatusAsync(testRunGuid, "running");
@@ -213,6 +213,7 @@ namespace WebTestUI.Backend.Controllers
                         await process.WaitForExitAsync();
                         var exitCode = process.ExitCode;
 
+                        _logger.LogInformation($"Process finished/exiting - PID: {processId}, RunId: {runId}. Removing tracking info.");
                         lock (_runningTests) { _runningTests.Remove(runId); }
                         lock (_processIdToTestIdMap) { _processIdToTestIdMap.Remove(processId); }
 
@@ -368,29 +369,131 @@ namespace WebTestUI.Backend.Controllers
         [HttpPost("stop-by-pid/{processId}")]
         public async Task<IActionResult> StopTestByProcessId(int processId)
         {
-            if (_processIdToTestIdMap.TryGetValue(processId, out var runId) && _runningTests.TryGetValue(runId, out var process))
+            _logger.LogInformation($"Attempting to stop PID: {processId}. Reviewing tracked PIDs shortly.");
+
+            string? runId = null;
+            Process? processToKill = null;
+            bool foundInPidMap;
+            // bool foundInRunningTests = false; // Bu değişkene gerek kalmadı, processToKill null kontrolü yeterli
+
+            // 1. PID'yi _processIdToTestIdMap'te ara (lock içinde)
+            lock (_processIdToTestIdMap)
             {
+                foundInPidMap = _processIdToTestIdMap.TryGetValue(processId, out runId);
+                if (foundInPidMap && runId != null)
+                {
+                    // PID map'te bulunduysa, yarış durumunu azaltmak için hemen map'ten çıkar.
+                    _processIdToTestIdMap.Remove(processId);
+                    _logger.LogInformation($"PID {processId} (RunId: {runId}) found in map and removed from _processIdToTestIdMap.");
+                }
+                else
+                {
+                    _logger.LogInformation($"PID {processId} not found in _processIdToTestIdMap. Current PIDs in map: [{string.Join(", ", _processIdToTestIdMap.Keys.ToList())}]");
+                }
+            }
+
+            if (foundInPidMap && runId != null)
+            {
+                // 2. runId _runningTests'te var mı diye bak (lock içinde) ve process'i al
+                lock (_runningTests)
+                {
+                    if (_runningTests.TryGetValue(runId, out processToKill))
+                    {
+                        // runId _runningTests'te bulunduysa, yarış durumunu azaltmak için hemen çıkar.
+                        _runningTests.Remove(runId);
+                        // foundInRunningTests = true; // processToKill null değilse bu durum anlaşılır
+                        _logger.LogInformation($"RunId {runId} (PID: {processId}) found and removed from _runningTests.");
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"RunId {runId} (PID: {processId}) was in _processIdToTestIdMap but not found in _runningTests. Test might have just completed. Current RunIds in _runningTests: [{string.Join(", ", _runningTests.Keys.ToList())}]");
+                        // processToKill null kalacak.
+                    }
+                }
+
+                // Artık process ID ve run ID map'lerden (eğer varsa) kaldırıldı.
+                // Şimdi kill etmeye çalışalım (eğer process objesini bulduysak) ve DB'yi güncelleyelim.
+
+                if (processToKill != null)
+                {
+                    try
+                    {
+                        bool hasExited = false;
+                        try
+                        {
+                            hasExited = processToKill.HasExited;
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            _logger.LogWarning($"Error checking HasExited for PID {processId} (RunId: {runId}): {ex.Message}. Assuming it has exited or is inaccessible.");
+                            hasExited = true; 
+                        }
+                        catch (System.ComponentModel.Win32Exception ex) 
+                        {
+                            _logger.LogWarning($"Win32Error checking HasExited for PID {processId} (RunId: {runId}): {ex.Message}. Assuming it has exited or is inaccessible.");
+                            hasExited = true;
+                        }
+
+                        if (!hasExited)
+                        {
+                            _logger.LogInformation($"Attempting to kill process with PID: {processId} (RunId: {runId}) as it has not exited.");
+                            processToKill.Kill(true); 
+                            _logger.LogInformation($"Kill signal sent for PID {processId} (RunId: {runId}).");
+                        }
+                        else
+                        {
+                            _logger.LogInformation($"Process PID {processId} (RunId: {runId}) had already exited or was marked as exited before explicit kill.");
+                        }
+                    }
+                    catch (InvalidOperationException ex) // process.Kill() için
+                    {
+                        _logger.LogError($"Error killing K6 process with PID {processId} (RunId: {runId}): {ex.Message}. It might have already exited.");
+                    }
+                    catch (System.ComponentModel.Win32Exception ex) // process.Kill() için
+                    {
+                        _logger.LogError($"Win32Error killing K6 process with PID {processId} (RunId: {runId}): {ex.Message}. Access denied or process already exited.");
+                    }
+                    catch (Exception ex) 
+                    {
+                        _logger.LogError($"General error during stopping/killing K6 process with PID {processId} (RunId: {runId}): {ex.Message}. It might have already exited or an issue occurred.");
+                    }
+                    finally
+                    {
+                        processToKill.Dispose(); // Process nesnesini serbest bırak
+                    }
+                }
+                else 
+                {
+                    _logger.LogInformation($"Process object for RunId {runId} (PID: {processId}) was not found in _runningTests at the time of removal. Assuming it already completed or was handled by another mechanism.");
+                }
+
                 try
                 {
-                    _logger.LogInformation($"Attempting to stop K6 process with PID: {processId} (maps to runId: {runId})");
-                    process.Kill(true); // Kill entire process tree
-                    _runningTests.Remove(runId); // Ana map'ten kaldır
-                    _processIdToTestIdMap.Remove(processId); // PID map'inden kaldır
-                    _logger.LogInformation($"K6 process with PID {processId} stopped successfully.");
-
-                    Guid testGuid = Guid.Parse(runId); 
-                    await _k6TestService.UpdateK6TestStatusAsync(testGuid, "stopped"); // veya "cancelled"
-                    
-                    return Ok(new { Message = $"Test with PID {processId} stopped." });
+                    Guid testGuid = Guid.Parse(runId);
+                    using (var scope = _serviceScopeFactory.CreateScope())
+                    {
+                        var scopedK6TestService = scope.ServiceProvider.GetRequiredService<IK6TestService>();
+                        await scopedK6TestService.UpdateK6TestStatusAsync(testGuid, "stopped");
+                        _logger.LogInformation($"DB status updated to 'stopped' for test associated with PID {processId} (RunId: {runId}).");
+                    }
+                    return Ok(new { Message = $"Stop request processed for test associated with PID {processId} (RunId: {runId}). Status updated to stopped." });
+                }
+                catch (FormatException ex)
+                {
+                    _logger.LogError($"Could not parse RunId '{runId}' to Guid for PID {processId}: {ex.Message}");
+                    return StatusCode(500, new { error = $"Internal error processing stop request: Invalid RunId format for PID {processId}." });
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError($"Error stopping K6 process with PID {processId}: {ex.Message}");
-                    return StatusCode(500, new { error = $"Error stopping test: {ex.Message}" });
+                    _logger.LogError($"Error updating database or finalizing stop for test associated with PID {processId} (RunId: {runId}): {ex.Message}");
+                    return StatusCode(500, new { error = $"Error finalizing stop request for PID {processId}: {ex.Message}" });
                 }
             }
-            _logger.LogWarning($"Test with PID {processId} not found in running tests or mapping.");
-            return NotFound(new { error = "Test not found or not running with the given Process ID." });
+            else 
+            {
+                _logger.LogWarning($"Stop request failed: PID {processId} was not found in the initial tracking map (_processIdToTestIdMap). Test may have already completed and been fully removed from tracking, or the PID is invalid.");
+                return NotFound(new { error = $"Test not found or not actively running with Process ID {processId}. It might have already completed or the PID is incorrect." });
+            }
         }
 
         // Parses K6 JSON Lines output to extract summary metrics.
