@@ -17,5 +17,9 @@ namespace WebTestUI.Backend.Services
         Task<K6TestDTO> ExecuteK6TestAsync(Guid testId);
         Task UpdateK6TestProcessIdAsync(Guid testId, int processId);
         Task UpdateK6TestStatusAsync(Guid testId, string status);
+
+        // Added for K6Controller logging needs
+        Task AddTestLogAsync(Guid testId, string level, string message, object? details = null);
+        Task<IEnumerable<K6TestLogDto>> GetTestLogsAsync(Guid testId);
     }
 } 

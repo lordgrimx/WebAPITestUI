@@ -201,6 +201,8 @@ namespace WebTestUI.Backend.Controllers
 
                 await _k6TestService.UpdateK6TestProcessIdAsync(testRunGuid, processId);
                 await _k6TestService.UpdateK6TestStatusAsync(testRunGuid, "running");
+                // Log test started
+                await _k6TestService.AddTestLogAsync(testRunGuid, "info", "K6 test execution started.", new { ProcessId = processId });
 
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
@@ -217,10 +219,35 @@ namespace WebTestUI.Backend.Controllers
                         lock (_runningTests) { _runningTests.Remove(runId); }
                         lock (_processIdToTestIdMap) { _processIdToTestIdMap.Remove(processId); }
 
-                        if (exitCode != 0 && exitCode != 99)
+                        var errorOutputString = error.ToString();
+
+                        if (exitCode == -1)
                         {
-                            _logger.LogError($"K6 process for test {runId} (PID: {processId}) exited with code {exitCode}. Error: {error.ToString()}");
+                            // Check if the error output contains actual K6 errors or just console logs
+                            bool containsRealError = !string.IsNullOrWhiteSpace(errorOutputString) && 
+                                                   (errorOutputString.Contains("level=error", StringComparison.OrdinalIgnoreCase) || 
+                                                    errorOutputString.Contains("level=fatal", StringComparison.OrdinalIgnoreCase));
+
+                            if (containsRealError)
+                            {
+                                _logger.LogError($"K6 process for test {runId} (PID: {processId}) exited with code -1 and K6 reported errors. Error: {errorOutputString}");
+                                await scopedK6TestService.UpdateK6TestStatusAsync(testRunGuid, "failed");
+                                await scopedK6TestService.AddTestLogAsync(testRunGuid, "error", $"K6 test execution failed with exit code -1. K6 reported errors.", new { ExitCode = exitCode, ErrorOutput = errorOutputString });
+                            }
+                            else
+                            {
+                                _logger.LogWarning($"K6 process for test {runId} (PID: {processId}) exited with code -1. This might be due to script completion with non-zero exit, external termination, or an issue not directly logged as an error by K6. K6 Output: {errorOutputString}");
+                                await scopedK6TestService.UpdateK6TestStatusAsync(testRunGuid, "failed"); // Still mark as failed
+                                await scopedK6TestService.AddTestLogAsync(testRunGuid, "warning", $"K6 test execution ended with exit code -1. Review K6 output.", new { ExitCode = exitCode, K6Output = errorOutputString });
+                            }
+                            if (System.IO.File.Exists(jsonOutputPath)) try { System.IO.File.Delete(jsonOutputPath); } catch { /* ignore */ }
+                            return;
+                        }
+                        else if (exitCode != 0 && exitCode != 99) // Handle other non-zero exit codes as errors
+                        {
+                            _logger.LogError($"K6 process for test {runId} (PID: {processId}) exited with code {exitCode}. Error: {errorOutputString}");
                             await scopedK6TestService.UpdateK6TestStatusAsync(testRunGuid, "failed");
+                            await scopedK6TestService.AddTestLogAsync(testRunGuid, "error", $"K6 test execution failed with exit code {exitCode}.", new { ExitCode = exitCode, ErrorOutput = errorOutputString });
                             if (System.IO.File.Exists(jsonOutputPath)) try { System.IO.File.Delete(jsonOutputPath); } catch { /* ignore */ }
                             return;
                         }
@@ -294,10 +321,12 @@ namespace WebTestUI.Backend.Controllers
                                 };
                                 await scopedK6TestService.UpdateK6TestResultsAsync(testRunGuid, updateResultsDto);
                                 _logger.LogInformation($"K6 test {runId} (PID: {processId}) completed and results saved. Exit code: {exitCode}");
+                                await scopedK6TestService.AddTestLogAsync(testRunGuid, "info", $"K6 test completed. Exit code: {exitCode}. Results saved.", new { ExitCode = exitCode });
                             }
                             catch (Exception ex)
                             {
                                 _logger.LogError($"Error processing K6 output for test {runId} (PID: {processId}): {ex.Message}");
+                                await scopedK6TestService.AddTestLogAsync(testRunGuid, "error", "Error processing K6 test output.", new { ExceptionMessage = ex.Message });
                                 try
                                 {
                                     await scopedK6TestService.UpdateK6TestStatusAsync(testRunGuid, "failed_parsing_results");
@@ -315,6 +344,7 @@ namespace WebTestUI.Backend.Controllers
                         else
                         {
                             _logger.LogWarning($"K6 JSON output file not found for test {runId} (PID: {processId}). Setting status to failed.");
+                            await scopedK6TestService.AddTestLogAsync(testRunGuid, "warning", "K6 JSON output file not found after test completion.");
                             try
                             {
                                 await scopedK6TestService.UpdateK6TestStatusAsync(testRunGuid, "failed_no_output");
@@ -475,6 +505,15 @@ namespace WebTestUI.Backend.Controllers
                         var scopedK6TestService = scope.ServiceProvider.GetRequiredService<IK6TestService>();
                         await scopedK6TestService.UpdateK6TestStatusAsync(testGuid, "stopped");
                         _logger.LogInformation($"DB status updated to 'stopped' for test associated with PID {processId} (RunId: {runId}).");
+                        // Log test stopped by user
+                        try
+                        {
+                            await _k6TestService.AddTestLogAsync(testGuid, "info", "Test stopped by user.", new { ProcessId = processId });
+                        }
+                        catch (Exception logEx)
+                        {
+                            _logger.LogError($"Failed to add log for test stop event for PID {processId}: {logEx.Message}");
+                        }
                     }
                     return Ok(new { Message = $"Stop request processed for test associated with PID {processId} (RunId: {runId}). Status updated to stopped." });
                 }
@@ -493,6 +532,32 @@ namespace WebTestUI.Backend.Controllers
             {
                 _logger.LogWarning($"Stop request failed: PID {processId} was not found in the initial tracking map (_processIdToTestIdMap). Test may have already completed and been fully removed from tracking, or the PID is invalid.");
                 return NotFound(new { error = $"Test not found or not actively running with Process ID {processId}. It might have already completed or the PID is incorrect." });
+            }
+        }
+
+        [HttpGet("{testId}/logs")]
+        public async Task<IActionResult> GetTestLogs(Guid testId)
+        {
+            if (testId == Guid.Empty)
+            {
+                return BadRequest("Test ID cannot be empty.");
+            }
+
+            try
+            {
+                var logs = await _k6TestService.GetTestLogsAsync(testId);
+                if (logs == null)
+                {
+                    // Return empty list if service returns null, to be consistent with frontend expectation of an array.
+                    return Ok(new List<object>()); 
+                }
+                return Ok(logs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error retrieving logs for test ID {testId}: {ex.Message}");
+                // Propagate a generic error message or a more specific one if available from ex
+                return StatusCode(500, new { error = $"An error occurred while retrieving test logs: {ex.Message}" });
             }
         }
 

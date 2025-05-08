@@ -376,5 +376,57 @@ export default function() {{
                 UpdatedAt = test.UpdatedAt
             };
         }
+
+        // Implementation for the new interface method
+        public async Task AddTestLogAsync(Guid testId, string level, string message, object? details = null)
+        {
+            var test = await _context.K6Tests.FindAsync(testId);
+            if (test == null)
+            {
+                _logger.LogWarning($"Cannot add log. K6Test with ID {testId} not found.");
+                return; 
+            }
+
+            if (test.Logs == null)
+            {
+                test.Logs = new List<WebTestUI.Backend.Data.Entities.K6TestLog>(); // Ensure Logs list is initialized
+            }
+
+            var ownedLogEntry = new WebTestUI.Backend.Data.Entities.K6TestLog // Using the K6Test.cs defined K6TestLog
+            {
+                Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                Level = level,
+                Message = message,
+                Data = details != null ? JsonSerializer.Serialize(details, new JsonSerializerOptions { WriteIndented = false }) : null
+                // Error property will be null unless explicitly set for error logs
+            };
+
+            test.Logs.Add(ownedLogEntry);
+            test.UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            _context.K6Tests.Update(test); // Mark the K6Test entity as modified
+            await _context.SaveChangesAsync();
+        }
+
+        // Implementation for the new interface method
+        public async Task<IEnumerable<K6TestLogDto>> GetTestLogsAsync(Guid testId)
+        {
+            var test = await _context.K6Tests.AsNoTracking().FirstOrDefaultAsync(t => t.Id == testId);
+            if (test == null || test.Logs == null)
+            {
+                _logger.LogWarning($"K6Test with ID {testId} not found or has no logs.");
+                return Enumerable.Empty<K6TestLogDto>();
+            }
+
+            return test.Logs.OrderBy(log => log.Timestamp) // Order by timestamp ascending
+                           .Select(log => new K6TestLogDto
+                           {
+                               Id = Guid.NewGuid(), // Generating a new Guid for DTO as owned type doesn't have its own PK
+                               K6TestId = testId, // Assign the parent testId
+                               Timestamp = log.Timestamp,
+                               Level = log.Level,
+                               Message = log.Message,
+                               Details = log.Data // K6Test.cs -> K6TestLog.Data is already a string?
+                           }).ToList();
+        }
     }
 }

@@ -122,6 +122,10 @@ namespace WebTestUI.Backend.Data
                 .WithMany()
                 .HasForeignKey(cm => cm.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // K6Test and K6TestLog relationship is handled by Owned Entity Type K6TestLog within K6Test
+            // No explicit configuration needed here if K6Test.Logs is correctly defined as [Column(TypeName = "jsonb")]
+            // and K6TestLog class within K6Test.cs is marked with [Owned]
         }
     }
 }

@@ -874,7 +874,8 @@ export default function LoadTestsPage() {
                             </div>
                             <div className="font-medium">{log.message}</div>
                             {log.data && (
-                              <pre className="mt-2 text-xs bg-white bg-opacity-50 p-3 rounded overflow-x-auto border border-slate-200">
+                              <pre className="mt-2 text-xs bg-white bg-opacity-50 p-3 rounded overflow-x-auto border border-slate-200"
+                                   style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                                 {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
                               </pre>
                             )}
