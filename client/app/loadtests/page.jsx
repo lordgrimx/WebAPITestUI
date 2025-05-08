@@ -45,12 +45,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authAxios } from '@/lib/auth-context';
 import LoadTestDialog from '@/components/api-tester/LoadTestDialog';
 import Link from 'next/link';
+import { useTheme } from "next-themes";
 
-function MetricItem({ label, value }) {
+function MetricItem({ label, value, isDarkMode }) {
   return (
-    <div className="p-3 bg-slate-50 rounded-lg">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="text-lg font-semibold">{value?.toFixed(2) || '0.00'}</p>
+    <div className={`p-3 ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'} rounded-lg`}>
+      <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
+      <p className={`text-lg font-semibold ${isDarkMode ? 'text-slate-100' : ''}`}>{value?.toFixed(2) || '0.00'}</p>
     </div>
   );
 }
@@ -91,6 +92,8 @@ export default function LoadTestsPage() {
   const [isRunning, setIsRunning] = useState({});
   const [isStopping, setIsStopping] = useState({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const { theme } = useTheme(); // Use the theme hook
+  const isDarkMode = theme === 'dark'; // Derive dark mode from theme
 
   // Translation map güncelleme
   const statusTranslations = {
@@ -467,16 +470,16 @@ export default function LoadTestsPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className={`container mx-auto py-8 ${isDarkMode ? 'bg-slate-900 text-slate-200' : ''}`}>
       <div className="flex justify-between items-center mb-8">
         <div className='flex items-center justify-center'>
-          <Link href="/home" className="text-blue-400 hover:text-blue-700">
+          <Link href="/home" className={`${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-400 hover:text-blue-700'}`}>
             <ArrowLeft className={`h-10 w-10 mr-4`}/>
           </Link>
-          <h1 className="text-3xl font-bold">Yük Testleri</h1>
+          <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-slate-100' : ''}`}>Yük Testleri</h1>
         </div>
         <Button 
-          className="bg-blue-400 hover:bg-blue-700"
+          className={`${isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-blue-400 hover:bg-blue-700'}`}
           onClick={() => setIsCreateDialogOpen(true)}
         >
           Yeni Test Oluştur
@@ -488,12 +491,16 @@ export default function LoadTestsPage() {
           const performanceScore = calculatePerformanceScore(test);
           
           return (
-            <Card key={test.id} className="overflow-hidden border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <Card key={test.id} className={`overflow-hidden shadow-sm hover:shadow-md transition-shadow ${
+              isDarkMode 
+                ? 'bg-slate-900 border-2 border-slate-700 text-slate-200' 
+                : 'border-2 border-slate-300'
+            }`}>
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg font-semibold">{test.name}</CardTitle>
-                    <CardDescription className="text-xs">
+                    <CardTitle className={`text-lg font-semibold ${isDarkMode ? 'text-slate-100' : ''}`}>{test.name}</CardTitle>
+                    <CardDescription className={`text-xs ${isDarkMode ? 'text-slate-400' : ''}`}>
                       {format(test.createdAt, 'PPpp')}
                     </CardDescription>
                   </div>
@@ -507,49 +514,65 @@ export default function LoadTestsPage() {
               </CardHeader>
               <CardContent className="py-4">
                 <div className="grid grid-cols-3 gap-3 mb-4">
-                  <div className="flex flex-col items-center justify-center bg-slate-50 p-3 rounded-lg">
-                    <Users className="h-4 w-4 mb-1 text-slate-500" />
-                    <span className="text-lg font-medium">{test.results?.vus || 0}</span>
-                    <span className="text-xs text-slate-500">Sanal Kullanıcılar</span>
+                  <div className={`flex flex-col items-center justify-center p-3 rounded-lg ${
+                    isDarkMode ? 'bg-slate-800' : 'bg-slate-50'
+                  }`}>
+                    <Users className={`h-4 w-4 mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                    <span className={`text-lg font-medium ${isDarkMode ? 'text-slate-200' : ''}`}>{test.results?.vus || 0}</span>
+                    <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Sanal Kullanıcılar</span>
                   </div>
-                  <div className="flex flex-col items-center justify-center bg-slate-50 p-3 rounded-lg">
-                    <Timer className="h-4 w-4 mb-1 text-slate-500" />
-                    <span className="text-lg font-medium">{test.results?.duration || "N/A"}</span>
-                    <span className="text-xs text-slate-500">Süre</span>
+                  <div className={`flex flex-col items-center justify-center p-3 rounded-lg ${
+                    isDarkMode ? 'bg-slate-800' : 'bg-slate-50'
+                  }`}>
+                    <Timer className={`h-4 w-4 mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                    <span className={`text-lg font-medium ${isDarkMode ? 'text-slate-200' : ''}`}>{test.results?.duration || "N/A"}</span>
+                    <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Süre</span>
                   </div>
-                  <div className="flex flex-col items-center justify-center bg-slate-50 p-3 rounded-lg">
-                    <LineChart className="h-4 w-4 mb-1 text-slate-500" />
-                    <span className="text-lg font-medium">{test.results?.requestsPerSecond?.toFixed(1) || 0}</span>
-                    <span className="text-xs text-slate-500">İstek/Saniye</span>
+                  <div className={`flex flex-col items-center justify-center p-3 rounded-lg ${
+                    isDarkMode ? 'bg-slate-800' : 'bg-slate-50'
+                  }`}>
+                    <LineChart className={`h-4 w-4 mb-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />
+                    <span className={`text-lg font-medium ${isDarkMode ? 'text-slate-200' : ''}`}>{test.results?.requestsPerSecond?.toFixed(1) || 0}</span>
+                    <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>İstek/Saniye</span>
                   </div>
                 </div>
                 {test.status === 'completed' && performanceScore !== null && (
                   <div className="mb-4">
                     <div className="flex justify-between text-sm mb-1">
-                      <span>Performans Skoru</span>
+                      <span className={isDarkMode ? 'text-slate-300' : ''}>Performans Skoru</span>
                       <span className={`font-semibold ${
-                        performanceScore > 80 ? 'text-emerald-500' :
-                        performanceScore > 50 ? 'text-amber-500' : 'text-rose-500'
+                        performanceScore > 80 
+                          ? (isDarkMode ? 'text-emerald-400' : 'text-emerald-500') 
+                          : performanceScore > 50 
+                            ? (isDarkMode ? 'text-amber-400' : 'text-amber-500') 
+                            : (isDarkMode ? 'text-rose-400' : 'text-rose-500')
                       }`}>
                         {performanceScore}/100
                       </span>
                     </div>
                     <Progress 
                       value={performanceScore} 
-                      className="h-2"
+                      className={`h-2 ${isDarkMode ? 'bg-slate-700' : ''}`}
                       indicatorColor={
-                        performanceScore > 80 ? 'bg-emerald-500' :
-                        performanceScore > 50 ? 'bg-amber-500' : 'bg-rose-500'
+                        performanceScore > 80 
+                          ? (isDarkMode ? 'bg-emerald-400' : 'bg-emerald-500')
+                          : performanceScore > 50 
+                            ? (isDarkMode ? 'bg-amber-400' : 'bg-amber-500') 
+                            : (isDarkMode ? 'bg-rose-400' : 'bg-rose-500')
                       }
                     />
                   </div>
                 )}
                 {test.status === 'completed' && (
                   <div className="flex justify-between text-sm mb-4">
-                    <div className={test.results?.failureRate > 5 ? 'text-rose-500' : 'text-emerald-500'}>
+                    <div className={
+                      test.results?.failureRate > 5 
+                        ? (isDarkMode ? 'text-rose-400' : 'text-rose-500') 
+                        : (isDarkMode ? 'text-emerald-400' : 'text-emerald-500')
+                    }>
                       <span className="font-medium">{test.results?.failureRate?.toFixed(1)}%</span> Hata Oranı
                     </div>
-                    <div>
+                    <div className={isDarkMode ? 'text-slate-300' : ''}>
                       <span className="font-medium">{test.results?.averageResponseTime?.toFixed(0)}</span> ms Ort. Yanıt
                     </div>
                   </div>
@@ -560,7 +583,9 @@ export default function LoadTestsPage() {
                   <Button
                     variant="outline"
                     onClick={() => setSelectedTest(test)}
-                    className="flex-1"
+                    className={`flex-1 ${
+                      isDarkMode ? 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700 hover:text-slate-100' : ''
+                    }`}
                   >
                     Detaylar
                   </Button>
@@ -571,8 +596,8 @@ export default function LoadTestsPage() {
                         disabled={isRunning[test.id]}
                         className={`flex-1 ${
                           isRunning[test.id] 
-                            ? 'bg-blue-400' 
-                            : 'bg-blue-600 hover:bg-blue-700'
+                            ? (isDarkMode ? 'bg-blue-500' : 'bg-blue-400') 
+                            : (isDarkMode ? 'bg-blue-600 hover:bg-blue-500' : 'bg-blue-600 hover:bg-blue-700')
                         } text-white`}
                       >
                         {isRunning[test.id] ? (
@@ -588,7 +613,11 @@ export default function LoadTestsPage() {
                       <Button
                         variant="outline"
                         onClick={() => handleDeleteTest(test.id)}
-                        className="bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-600 hover:text-rose-700"
+                        className={
+                          isDarkMode
+                            ? 'bg-rose-900 hover:bg-rose-800 border-rose-700 text-rose-300 hover:text-rose-200'
+                            : 'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-600 hover:text-rose-700'
+                        }
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -599,7 +628,9 @@ export default function LoadTestsPage() {
                       <Button
                         onClick={() => handleStopTest(test.id)}
                         disabled={isStopping[test.id]}
-                        className="flex-1 bg-rose-600 hover:bg-rose-700 text-white"
+                        className={`flex-1 ${
+                          isDarkMode ? 'bg-rose-700 hover:bg-rose-600' : 'bg-rose-600 hover:bg-rose-700'
+                        } text-white`}
                       >
                         {isStopping[test.id] ? (
                           <>
@@ -614,7 +645,11 @@ export default function LoadTestsPage() {
                       <Button
                         variant="outline"
                         onClick={() => handleDeleteTest(test.id)}
-                        className="bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-600 hover:text-rose-700"
+                        className={
+                          isDarkMode
+                            ? 'bg-rose-900 hover:bg-rose-800 border-rose-700 text-rose-300 hover:text-rose-200'
+                            : 'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-600 hover:text-rose-700'
+                        }
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -624,7 +659,7 @@ export default function LoadTestsPage() {
                   {test.status === 'stopping' && (
                     <Button
                       disabled
-                      className="flex-1 bg-purple-500 text-white"
+                      className={`flex-1 ${isDarkMode ? 'bg-purple-700' : 'bg-purple-500'} text-white`}
                     >
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Durduruluyor
                     </Button>
@@ -650,9 +685,9 @@ export default function LoadTestsPage() {
       />
 
       <Dialog open={!!selectedTest} onOpenChange={() => setSelectedTest(null)}>
-        <DialogContent className="max-w-4xl w-full overflow-hidden">
+        <DialogContent className={`max-w-4xl w-full overflow-hidden ${isDarkMode ? 'bg-slate-900 border-slate-800 shadow-xl' : ''}`}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={`flex items-center gap-2 ${isDarkMode ? 'text-slate-50' : ''}`}>
               <span>Test Detayları: {selectedTest?.name}</span>
               <Badge className={`${statusColors[selectedTest?.status || 'created']} text-white`}>
                 <span className="flex items-center gap-1">
@@ -665,11 +700,11 @@ export default function LoadTestsPage() {
           
           <div className="mt-4">
             <Tabs defaultValue="results">
-              <TabsList className="w-full">
-                <TabsTrigger value="results" className="flex-1">Sonuçlar</TabsTrigger>
-                <TabsTrigger value="script" className="flex-1">Senaryo</TabsTrigger>
-                <TabsTrigger value="metrics" className="flex-1">Metrikler</TabsTrigger>
-                <TabsTrigger value="logs" className="flex-1">Loglar</TabsTrigger>
+              <TabsList className={`w-full ${isDarkMode ? 'bg-slate-800' : ''}`}>
+                <TabsTrigger value="results" className={`flex-1 ${isDarkMode ? 'text-slate-300 data-[state=active]:bg-slate-700 data-[state=active]:text-slate-50' : ''}`}>Sonuçlar</TabsTrigger>
+                <TabsTrigger value="script" className={`flex-1 ${isDarkMode ? 'text-slate-300 data-[state=active]:bg-slate-700 data-[state=active]:text-slate-50' : ''}`}>Senaryo</TabsTrigger>
+                <TabsTrigger value="metrics" className={`flex-1 ${isDarkMode ? 'text-slate-300 data-[state=active]:bg-slate-700 data-[state=active]:text-slate-50' : ''}`}>Metrikler</TabsTrigger>
+                <TabsTrigger value="logs" className={`flex-1 ${isDarkMode ? 'text-slate-300 data-[state=active]:bg-slate-700 data-[state=active]:text-slate-50' : ''}`}>Loglar</TabsTrigger>
               </TabsList>
               
               <div className="h-[500px] overflow-hidden">
@@ -677,49 +712,51 @@ export default function LoadTestsPage() {
                   {selectedTest?.results ? (
                     <ScrollArea className="h-full pr-4">
                       <div className="grid grid-cols-2 gap-4 mb-6">
-                        <Card>
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-sm text-slate-500">Sanal Kullanıcılar</CardTitle>
+                            <CardTitle className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Sanal Kullanıcılar</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <div className="flex items-baseline">
-                              <span className="text-3xl font-bold">{selectedTest.results.vus}</span>
-                              <span className="ml-2 text-sm text-slate-500">Kullanıcı</span>
+                              <span className={`text-3xl font-bold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.vus}</span>
+                              <span className={`ml-2 text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Kullanıcı</span>
                             </div>
                           </CardContent>
                         </Card>
                         
-                        <Card>
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-sm text-slate-500">Süre</CardTitle>
+                            <CardTitle className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Süre</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <div className="flex items-baseline">
-                              <span className="text-3xl font-bold">{selectedTest.results.duration}</span>
+                              <span className={`text-3xl font-bold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.duration}</span>
                             </div>
                           </CardContent>
                         </Card>
                         
-                        <Card>
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-sm text-slate-500">İstek/Saniye</CardTitle>
+                            <CardTitle className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>İstek/Saniye</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <div className="flex items-baseline">
-                              <span className="text-3xl font-bold">{selectedTest.results.requestsPerSecond.toFixed(2)}</span>
-                              <span className="ml-2 text-sm text-slate-500">istek/s</span>
+                              <span className={`text-3xl font-bold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.requestsPerSecond.toFixed(2)}</span>
+                              <span className={`ml-2 text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>istek/s</span>
                             </div>
                           </CardContent>
                         </Card>
                         
-                        <Card>
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-sm text-slate-500">Hata Oranı</CardTitle>
+                            <CardTitle className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Hata Oranı</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <div className="flex items-baseline">
                               <span className={`text-3xl font-bold ${
-                                selectedTest.results.failureRate > 5 ? 'text-rose-500' : 'text-emerald-500'
+                                selectedTest.results.failureRate > 5 
+                                  ? (isDarkMode ? 'text-rose-400' : 'text-rose-500') 
+                                  : (isDarkMode ? 'text-emerald-400' : 'text-emerald-500')
                               }`}>
                                 {selectedTest.results.failureRate.toFixed(2)}%
                               </span>
@@ -727,45 +764,45 @@ export default function LoadTestsPage() {
                           </CardContent>
                         </Card>
                         
-                        <Card>
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-sm text-slate-500">Ort. Yanıt Süresi</CardTitle>
+                            <CardTitle className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Ort. Yanıt Süresi</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <div className="flex items-baseline">
-                              <span className="text-3xl font-bold">{selectedTest.results.averageResponseTime.toFixed(2)}</span>
-                              <span className="ml-2 text-sm text-slate-500">ms</span>
+                              <span className={`text-3xl font-bold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.averageResponseTime.toFixed(2)}</span>
+                              <span className={`ml-2 text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>ms</span>
                             </div>
                           </CardContent>
                         </Card>
                         
-                        <Card>
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                           <CardHeader className="pb-2">
-                            <CardTitle className="text-sm text-slate-500">P95 Yanıt Süresi</CardTitle>
+                            <CardTitle className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>P95 Yanıt Süresi</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <div className="flex items-baseline">
-                              <span className="text-3xl font-bold">{selectedTest.results.p95ResponseTime.toFixed(2)}</span>
-                              <span className="ml-2 text-sm text-slate-500">ms</span>
+                              <span className={`text-3xl font-bold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.p95ResponseTime.toFixed(2)}</span>
+                              <span className={`ml-2 text-sm ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>ms</span>
                             </div>
                           </CardContent>
                         </Card>
                       </div>
                       
-                      <Card>
+                      <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                         <CardHeader>
-                          <CardTitle>Ham Sonuçlar</CardTitle>
+                          <CardTitle className={isDarkMode ? 'text-slate-50' : ''}>Ham Sonuçlar</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <pre className="bg-slate-50 p-4 rounded-lg overflow-x-auto text-sm">
+                          <pre className={`p-4 rounded-lg overflow-x-auto text-sm ${isDarkMode ? 'bg-slate-900 text-slate-300' : 'bg-slate-50'}`}>
                             {JSON.stringify(selectedTest.results, null, 1)}
                           </pre>
                         </CardContent>
                       </Card>
                     </ScrollArea>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                      <AlertTriangle className="h-12 w-12 mb-4 text-slate-400" />
+                    <div className={`flex flex-col items-center justify-center h-full ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <AlertTriangle className={`h-12 w-12 mb-4 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
                       <p>Sonuç bulunamadı</p>
                       {['created', 'failed'].includes(selectedTest?.status) && (
                         <Button 
@@ -784,12 +821,12 @@ export default function LoadTestsPage() {
                 
                 <TabsContent value="script" className="h-full">
                   <ScrollArea className="h-full pr-4" style={{ maxWidth: 'calc(100vw - 4rem)' }}>
-                    <Card>
+                    <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                       <CardHeader>
-                        <CardTitle>Test Senaryosu</CardTitle>
+                        <CardTitle className={isDarkMode ? 'text-slate-50' : ''}>Test Senaryosu</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <pre className="bg-slate-50 p-4 rounded-lg whitespace-pre-wrap break-all text-sm">
+                        <pre className={`p-4 rounded-lg whitespace-pre-wrap break-all text-sm ${isDarkMode ? 'bg-slate-900 text-slate-300' : 'bg-slate-50'}`}>
                           {selectedTest?.script || "Senaryo bulunamadı"}
                         </pre>
                       </CardContent>
@@ -801,85 +838,85 @@ export default function LoadTestsPage() {
                   <ScrollArea className="h-full pr-4">
                     {selectedTest?.results?.detailedMetrics ? (
                       <div className="space-y-6">
-                        <Card>
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                           <CardHeader className='font-bold'>
-                            <CardTitle>Genel Metrikler</CardTitle>
+                            <CardTitle className={isDarkMode ? 'text-slate-50' : ''}>Genel Metrikler</CardTitle>
                           </CardHeader>
                           <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Kontrol Oranı</p>
-                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.checksRate.toFixed(2)}%</p>
+                              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-muted-foreground'}`}>Kontrol Oranı</p>
+                              <p className={`text-2xl font-semibold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.detailedMetrics.checksRate.toFixed(2)}%</p>
                             </div>
                             <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Alınan Veri</p>
-                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.dataReceived}</p>
+                              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-muted-foreground'}`}>Alınan Veri</p>
+                              <p className={`text-2xl font-semibold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.detailedMetrics.dataReceived}</p>
                             </div>
                             <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Gönderilen Veri</p>
-                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.dataSent}</p>
+                              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-muted-foreground'}`}>Gönderilen Veri</p>
+                              <p className={`text-2xl font-semibold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.detailedMetrics.dataSent}</p>
                             </div>
                           </CardContent>
                         </Card>
 
-                        <Card>
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                           <CardHeader className='font-bold'>
-                            <CardTitle>Süre Metrikleri</CardTitle>
+                            <CardTitle className={isDarkMode ? 'text-slate-50' : ''}>Süre Metrikleri</CardTitle>
                           </CardHeader>
                           <CardContent>
                             <div className="space-y-4">
                               <div>
-                                <h4 className="font-medium mb-2">HTTP İstek Süresi</h4>
+                                <h4 className={`font-medium mb-2 ${isDarkMode ? 'text-slate-200' : ''}`}>HTTP İstek Süresi</h4>
                                 <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-                                  <MetricItem label="Ort." value={selectedTest.results.detailedMetrics.httpReqDuration.avg} />
-                                  <MetricItem label="Min" value={selectedTest.results.detailedMetrics.httpReqDuration.min} />
-                                  <MetricItem label="Med" value={selectedTest.results.detailedMetrics.httpReqDuration.med} />
-                                  <MetricItem label="Max" value={selectedTest.results.detailedMetrics.httpReqDuration.max} />
-                                  <MetricItem label="P90" value={selectedTest.results.detailedMetrics.httpReqDuration.p90} />
-                                  <MetricItem label="P95" value={selectedTest.results.detailedMetrics.httpReqDuration.p95} />
+                                  <MetricItem isDarkMode={isDarkMode} label="Ort." value={selectedTest.results.detailedMetrics.httpReqDuration.avg} />
+                                  <MetricItem isDarkMode={isDarkMode} label="Min" value={selectedTest.results.detailedMetrics.httpReqDuration.min} />
+                                  <MetricItem isDarkMode={isDarkMode} label="Med" value={selectedTest.results.detailedMetrics.httpReqDuration.med} />
+                                  <MetricItem isDarkMode={isDarkMode} label="Max" value={selectedTest.results.detailedMetrics.httpReqDuration.max} />
+                                  <MetricItem isDarkMode={isDarkMode} label="P90" value={selectedTest.results.detailedMetrics.httpReqDuration.p90} />
+                                  <MetricItem isDarkMode={isDarkMode} label="P95" value={selectedTest.results.detailedMetrics.httpReqDuration.p95} />
                                 </div>
                               </div>
                               <div>
-                                <h4 className="font-medium mb-2">İterasyon Süresi</h4>
+                                <h4 className={`font-medium mb-2 ${isDarkMode ? 'text-slate-200' : ''}`}>İterasyon Süresi</h4>
                                 <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-                                  <MetricItem label="Ort." value={selectedTest.results.detailedMetrics.iterationDuration.avg} />
-                                  <MetricItem label="Min" value={selectedTest.results.detailedMetrics.iterationDuration.min} />
-                                  <MetricItem label="Med" value={selectedTest.results.detailedMetrics.iterationDuration.med} />
-                                  <MetricItem label="Max" value={selectedTest.results.detailedMetrics.iterationDuration.max} />
-                                  <MetricItem label="P90" value={selectedTest.results.detailedMetrics.iterationDuration.p90} />
-                                  <MetricItem label="P95" value={selectedTest.results.detailedMetrics.iterationDuration.p95} />
+                                  <MetricItem isDarkMode={isDarkMode} label="Ort." value={selectedTest.results.detailedMetrics.iterationDuration.avg} />
+                                  <MetricItem isDarkMode={isDarkMode} label="Min" value={selectedTest.results.detailedMetrics.iterationDuration.min} />
+                                  <MetricItem isDarkMode={isDarkMode} label="Med" value={selectedTest.results.detailedMetrics.iterationDuration.med} />
+                                  <MetricItem isDarkMode={isDarkMode} label="Max" value={selectedTest.results.detailedMetrics.iterationDuration.max} />
+                                  <MetricItem isDarkMode={isDarkMode} label="P90" value={selectedTest.results.detailedMetrics.iterationDuration.p90} />
+                                  <MetricItem isDarkMode={isDarkMode} label="P95" value={selectedTest.results.detailedMetrics.iterationDuration.p95} />
                                 </div>
                               </div>
                             </div>
                           </CardContent>
                         </Card>
 
-                        <Card>
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
                           <CardHeader>
-                            <CardTitle className='font-bold'>Oranlar ve Sayılar</CardTitle>
+                            <CardTitle className={`font-bold ${isDarkMode ? 'text-slate-50' : ''}`}>Oranlar ve Sayılar</CardTitle>
                           </CardHeader>
                           <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">HTTP İstek Oranı</p>
-                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.httpReqRate.toFixed(2)}/s</p>
+                              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-muted-foreground'}`}>HTTP İstek Oranı</p>
+                              <p className={`text-2xl font-semibold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.detailedMetrics.httpReqRate.toFixed(2)}/s</p>
                             </div>
                             <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Başarı Oranı</p>
-                              <p className="text-2xl font-semibold text-green-600">{selectedTest.results.detailedMetrics.successRate.toFixed(2)}%</p>
+                              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-muted-foreground'}`}>Başarı Oranı</p>
+                              <p className={`text-2xl font-semibold ${isDarkMode ? 'text-green-500' : 'text-green-600'}`}>{selectedTest.results.detailedMetrics.successRate.toFixed(2)}%</p>
                             </div>
                             <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Başarısız İstekler</p>
-                              <p className="text-2xl font-semibold text-red-600">{(selectedTest.results.detailedMetrics.httpReqFailed).toFixed(2)}%</p> 
+                              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-muted-foreground'}`}>Başarısız İstekler</p>
+                              <p className={`text-2xl font-semibold ${isDarkMode ? 'text-red-500' : 'text-red-600'}`}>{(selectedTest.results.detailedMetrics.httpReqFailed).toFixed(2)}%</p> 
                             </div>
                             <div className="space-y-1">
-                              <p className="text-sm text-muted-foreground">Toplam İterasyon</p>
-                              <p className="text-2xl font-semibold">{selectedTest.results.detailedMetrics.iterations}</p>
+                              <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-muted-foreground'}`}>Toplam İterasyon</p>
+                              <p className={`text-2xl font-semibold ${isDarkMode ? 'text-slate-50' : ''}`}>{selectedTest.results.detailedMetrics.iterations}</p>
                             </div>
                           </CardContent>
                         </Card>
 
-                        <Card >
-                          <CardHeader >
-                            <CardTitle className="text-xl font-bold flex items-center">
+                        <Card className={isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-100' : ''}>
+                          <CardHeader>
+                            <CardTitle className={`text-xl font-bold flex items-center ${isDarkMode ? 'text-slate-50' : ''}`}>
                               <ActivityIcon className="mr-2 h-5 w-5" />
                               Durum Kodları Genel Bakış
                             </CardTitle>
@@ -888,38 +925,38 @@ export default function LoadTestsPage() {
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                               {Object.entries(selectedTest.results?.statusCodes || {}).map(([key, value]) => {
                                 const statusCode = key.replace('status', '');
-                                let bgColor = 'bg-slate-50';
-                                let textColor = 'text-slate-600';
-                                let borderColor = 'border-slate-200';
+                                let bgColor = isDarkMode ? 'bg-slate-700' : 'bg-slate-50';
+                                let textColor = isDarkMode ? 'text-slate-300' : 'text-slate-600';
+                                let borderColor = isDarkMode ? 'border-slate-600' : 'border-slate-200';
                                 let icon = null;
                                 let label = "";
 
                                 if (statusCode.startsWith('2')) {
-                                  bgColor = 'bg-green-50';
-                                  textColor = 'text-green-600';
-                                  borderColor = 'border-green-200';
-                                  icon = <CheckCheckIcon className="h-4 w-4 text-green-500" />;
+                                  bgColor = isDarkMode ? 'bg-green-900' : 'bg-green-50';
+                                  textColor = isDarkMode ? 'text-green-400' : 'text-green-600';
+                                  borderColor = isDarkMode ? 'border-green-700' : 'border-green-200';
+                                  icon = <CheckCheckIcon className={`h-4 w-4 ${isDarkMode ? 'text-green-400' : 'text-green-500'}`} />;
                                   label = "Başarılı";
                                 } else if (statusCode.startsWith('3')) {
-                                  bgColor = 'bg-blue-50';
-                                  textColor = 'text-blue-600';
-                                  borderColor = 'border-blue-200';
-                                  icon = <ArrowRightCircleIcon className="h-4 w-4 text-blue-500" />;
+                                  bgColor = isDarkMode ? 'bg-blue-900' : 'bg-blue-50';
+                                  textColor = isDarkMode ? 'text-blue-400' : 'text-blue-600';
+                                  borderColor = isDarkMode ? 'border-blue-700' : 'border-blue-200';
+                                  icon = <ArrowRightCircleIcon className={`h-4 w-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'}`} />;
                                   label = "Yönlendirme";
                                 } else if (statusCode.startsWith('4')) {
-                                  bgColor = 'bg-amber-50';
-                                  textColor = 'text-amber-600';
-                                  borderColor = 'border-amber-200';
-                                  icon = <AlertCircleIcon className="h-4 w-4 text-amber-500" />;
+                                  bgColor = isDarkMode ? 'bg-amber-900' : 'bg-amber-50';
+                                  textColor = isDarkMode ? 'text-amber-400' : 'text-amber-600';
+                                  borderColor = isDarkMode ? 'border-amber-700' : 'border-amber-200';
+                                  icon = <AlertCircleIcon className={`h-4 w-4 ${isDarkMode ? 'text-amber-400' : 'text-amber-500'}`} />;
                                   label = "İstemci Hatası";
                                 } else if (statusCode.startsWith('5')) {
-                                  bgColor = 'bg-rose-50';
-                                  textColor = 'text-rose-600';
-                                  borderColor = 'border-rose-200';
-                                  icon = <XCircleIcon className="h-4 w-4 text-rose-500" />;
+                                  bgColor = isDarkMode ? 'bg-rose-900' : 'bg-rose-50';
+                                  textColor = isDarkMode ? 'text-rose-400' : 'text-rose-600';
+                                  borderColor = isDarkMode ? 'border-rose-700' : 'border-rose-200';
+                                  icon = <XCircleIcon className={`h-4 w-4 ${isDarkMode ? 'text-rose-400' : 'text-rose-500'}`} />;
                                   label = "Sunucu Hatası";
                                 } else if (key === 'other') {
-                                  icon = <HelpCircleIcon className="h-4 w-4 text-slate-500" />;
+                                  icon = <HelpCircleIcon className={`h-4 w-4 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`} />;
                                   label = "Diğer";
                                 }
 
@@ -930,7 +967,7 @@ export default function LoadTestsPage() {
                                   >
                                     <div className="flex items-center mb-2">
                                       {icon}
-                                      <p className="text-xs font-medium ml-1 text-slate-500">
+                                      <p className={`text-xs font-medium ml-1 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                                         {key === 'other' ? "Diğer" : `${statusCode} ${label}`}
                                       </p>
                                     </div>
@@ -938,11 +975,13 @@ export default function LoadTestsPage() {
                                       {value}
                                     </p>
                                     <div className="flex justify-between items-center mt-2">
-                                      <p className="text-xs text-slate-500">
+                                      <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                                         {value > 0 ? 'istekler' : 'istek yok'}
                                       </p>
                                       {value > 0 && (
-                                        <span className="text-xs px-2 py-1 bg-white rounded-full shadow-sm font-medium text-slate-600">
+                                        <span className={`text-xs px-2 py-1 rounded-full shadow-sm font-medium ${
+                                          isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-600'
+                                        }`}>
                                           {((value / Object.values(selectedTest.results?.statusCodes || {}).reduce((a, b) => a + b, 0)) * 100).toFixed(1)}%
                                         </span>
                                       )}
@@ -955,8 +994,8 @@ export default function LoadTestsPage() {
                         </Card> 
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                        <AlertTriangle className="h-12 w-12 mb-4 text-slate-400" />
+                      <div className={`flex flex-col items-center justify-center h-full ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <AlertTriangle className={`h-12 w-12 mb-4 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
                         <p>Detaylı metrikler bulunamadı</p>
                       </div>
                     )}
@@ -971,9 +1010,11 @@ export default function LoadTestsPage() {
                           <div
                             key={index}
                             className={`p-4 rounded-lg border ${
-                              log.level === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' :
-                              log.level === 'warn' ? 'bg-amber-50 border-amber-200 text-amber-800' :
-                              'bg-slate-50 border-slate-200 text-slate-800'
+                              log.level === 'error' 
+                                ? (isDarkMode ? 'bg-rose-900 border-rose-700 text-rose-100' : 'bg-rose-50 border-rose-200 text-rose-800')
+                                : log.level === 'warn' 
+                                  ? (isDarkMode ? 'bg-amber-900 border-amber-700 text-amber-100' : 'bg-amber-50 border-amber-200 text-amber-800')
+                                  : (isDarkMode ? 'bg-slate-800 border-slate-600 text-slate-100' : 'bg-slate-50 border-slate-200 text-slate-800')
                             }`}
                           >
                             <div className="flex items-center justify-between mb-2">
@@ -989,7 +1030,11 @@ export default function LoadTestsPage() {
                             </div>
                             <div className="font-medium">{log.message}</div>
                             {log.data && (
-                              <pre className="mt-2 text-xs bg-white bg-opacity-50 p-3 rounded overflow-x-auto border border-slate-200">
+                              <pre className={`mt-2 text-xs p-3 rounded overflow-x-auto border ${
+                                isDarkMode 
+                                  ? 'bg-slate-900 bg-opacity-50 border-slate-700 text-slate-300' 
+                                  : 'bg-white bg-opacity-50 border-slate-200'
+                              }`}>
                                 {typeof log.data === 'string' ? log.data : JSON.stringify(log.data, null, 2)}
                               </pre>
                             )}
@@ -997,8 +1042,8 @@ export default function LoadTestsPage() {
                         ))}
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-slate-500">
-                        <Clock className="h-12 w-12 mb-4 text-slate-400" />
+                      <div className={`flex flex-col items-center justify-center h-full ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <Clock className={`h-12 w-12 mb-4 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
                         <p>Loglar bulunamadı</p>
                       </div>
                     )}
@@ -1013,6 +1058,7 @@ export default function LoadTestsPage() {
               <Button 
                 variant="outline" 
                 onClick={() => setSelectedTest(null)}
+                className={isDarkMode ? 'bg-slate-800 border-slate-600 text-slate-200 hover:bg-slate-700 hover:text-slate-100' : ''}
               >
                 İptal
               </Button>
