@@ -10,6 +10,8 @@ namespace WebTestUI.Backend.DTOs
         public bool? GracefulStop { get; set; } = false;
         public Dictionary<string, string>? Environment { get; set; }
         public string? WorkingDirectory { get; set; }
+        public Guid TestIdToRun { get; set; }
+        public string? NewTestName { get; set; }
     }
 
     public class K6Options

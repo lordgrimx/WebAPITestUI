@@ -17,6 +17,7 @@ namespace WebTestUI.Backend.DTOs
         public int? RequestId { get; set; }
         public string Status { get; set; } = string.Empty;
         public K6TestResults? Results { get; set; }
+        public int? ProcessId { get; set; }
         public long CreatedAt { get; set; }
         public long UpdatedAt { get; set; }
     }

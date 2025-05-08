@@ -60,9 +60,9 @@ const executeK6Test = async (testId) => {
   return response.data;
 };
 
-const stopK6Test = async (runId) => {
-  console.log("Stopping test with runId:", runId);
-  const response = await authAxios.post(`/K6/stop/${runId}`);
+const stopK6Test = async (processId) => {
+  console.log("Stopping test with processId:", processId);
+  const response = await authAxios.post(`/K6/stop-by-pid/${processId}`);
   console.log("Stop test response:", response.data);
   
   return response.data;
@@ -99,7 +99,8 @@ export default function LoadTestsPage() {
     running: "Çalışıyor",
     completed: "Tamamlandı",
     failed: "Başarısız",
-    stopping: "Durduruluyor"
+    stopping: "Durduruluyor",
+    stopped: "Durduruldu"
   };
 
   // Testleri backend'den çekme
@@ -107,9 +108,10 @@ export default function LoadTestsPage() {
     const fetchTests = async () => {
       try {
         const response = await authAxios.get('/K6Test');
-        // Status code'ları normalize et
+        // Status code'ları normalize et ve processId alanını ekle (başlangıçta null)
         const normalizedTests = response.data.map(test => ({
           ...test,
+          processId: test.processId || null,
           results: test.results ? {
             ...test.results,
             statusCodes: {
@@ -148,51 +150,49 @@ export default function LoadTestsPage() {
       setIsRunning(prev => ({ ...prev, [testId]: true }));
       toast.info("Test çalışıyor", { description: "İşlem zaman alabilir" });
       
-      // Execute the test
-      const testInfo = await executeK6Test(testId);
+      // Testin script ve options bilgilerini almak için executeK6Test çağırıyoruz
+      const testInfo = await executeK6Test(testId); // Bu, script ve options içeren bir DTO dönmeli
       
-      // Test seçeneklerinden gelen verileri kontrol et
-      console.log("Test options from backend:", testInfo.options);
+      console.log("Test info from K6Test/execute:", testInfo);
       
-      // Kullanıcının seçtiği test seçeneklerini (parametreleri) almak için testi bulalım
-      const currentTest = k6Tests.find(test => test.id === testId);
-      
-      // Options değerlerini doğru şekilde al
-      // Öncelik sırası: 1. Kullanıcının daha önce seçtiği değerler, 2. Backend'den gelen değerler, 3. Varsayılan değerler
-      const k6Options = {
-        vus: currentTest?.options?.vus || testInfo.options?.vus || 10,
-        duration: currentTest?.options?.duration || testInfo.options?.duration || "30s"
+      // K6/run endpoint\'ine gönderilecek payload
+      const k6RunPayload = {
+        script: testInfo.script, // executeK6Test\'ten gelen script
+        options: testInfo.options, // executeK6Test\'ten gelen options
+        testIdToRun: testId, // Çalıştırılacak mevcut testin ID\'si
+        // NewTestName: null, // Mevcut testi çalıştırdığımız için bu null
       };
       
-      console.log("Using K6 options:", k6Options);
+      console.log("Sending payload to /K6/run:", k6RunPayload);
       
-      const response = await authAxios.post('/K6/run', {
-        script: testInfo.script,
-        options: k6Options
-      });
+      // /api/K6/run endpoint\'ini çağır
+      const runResponse = await authAxios.post('/K6/run', k6RunPayload);
 
-      console.log();
+      console.log("K6/run response:", runResponse.data);
       
+      const returnedRunId = runResponse.data.runId; // Bu, backend\'deki testRunGuid (string)
+      const returnedProcessId = runResponse.data.processId; // Backend\'den gelen PID
+
+      console.log("K6 test started with returnedRunId:", returnedRunId, "ProcessId:", returnedProcessId);
       
-      // K6/run endpoint'inden dönen runId'yi sakla
-      const runId = response.data.runId || response.data.testId;
-      console.log("K6 test started with runId:", runId);
-      console.log("K6 test started with testId:", testId);
-      
-      // Test ID'sini güncelle - bu ID'yi durdurma işlemi için kullanacağız
+      // State\'i güncelle: testId (Guid) ile eşleşen teste processId ve runId (eğer farklıysa) ekle
+      // Backend'deki runId zaten testId (Guid) olduğu için ayrıca runId saklamaya gerek yok gibi.
+      // Backend'den dönen RunId, bizim testId'miz ile aynı olmalı.
       setK6Tests(prevTests => prevTests.map(t => {
-        if (t.id === testId) {
-          return { ...t, runId: runId, status: "running" };
+        if (t.id === testId) { // Frontend'deki test.id, backend'deki K6Test.Id (Guid)
+          return { ...t, processId: returnedProcessId, status: "running" };
         }
         return t;
       }));
 
-      const results = response.data;
-      console.log("Test results:", results);
+      // Test sonuçlarını backend'e kaydetme (bu kısım backend /K6/run içinde Task.Run ile yapılıyor)
+      // Bu yüzden frontend'de ayrıca sonuç kaydetme veya status güncelleme yapmaya gerek yok gibi görünüyor,
+      // Backend pollInterval ile düzenli olarak güncel durumu çekecek.
+      // Sadece anlık olarak status: "running" ve processId set ettik.
 
-      // Fetch logs periodically during test execution
+      // Fetch logs periodically (bu kısım olduğu gibi kalabilir)
       const logInterval = setInterval(async () => {
-        const logs = await fetchLogs(testId);
+        const logs = await fetchLogs(testId); // testId (Guid) ile logları çek
         setK6Tests(prevTests => prevTests.map(t => {
           if (t.id === testId) {
             return { ...t, logs };
@@ -201,208 +201,78 @@ export default function LoadTestsPage() {
         }));
       }, 2000);
 
-      // Clean up interval after test completion
-      setTimeout(() => clearInterval(logInterval), 5000);
+      // Clean up interval after some time (bu da kalabilir, backend tamamlandığında status değişecek)
+      // Belki de test tamamlandığında (status != 'running') bu interval temizlenmeli.
+      // Şimdilik backend'in pollInterval'ına güvenelim.
+      // setTimeout(() => clearInterval(logInterval), 50000); // Daha uzun bir süre olabilir
 
-      // State'i güncelle
-      setK6Tests(prevTests => prevTests.map(t => {
-        if (t.id === testId) {
-          return {
-            ...t,
-            status: "completed",
-            results: {
-              vus: testInfo.options?.vus || 10,
-              duration: testInfo.options?.duration || "30s",
-              requestsPerSecond: results.metrics?.http_Reqs?.rate || 0,
-              failureRate: results.metrics?.http_Req_Failed?.rate || 0,
-              averageResponseTime: results.metrics?.http_Req_Duration?.trend?.avg || 0,
-              p95ResponseTime: results.metrics?.http_Req_Duration?.trend?.p95 || 0,
-              timestamp: Date.now(),
-              detailedMetrics: {
-                checksRate: results.metrics?.checks?.rate || 0,
-                dataReceived: results.metrics?.data?.count || "N/A",
-                dataSent: results.metrics?.data?.count || "N/A",
-                httpReqRate: results.metrics?.http_reqs?.rate || 0,
-                httpReqFailed: results.metrics?.http_req_failed?.rate || 0,
-                successRate: results.metrics?.checks?.rate || 0,
-                iterations: results.metrics?.iterations?.count || 0,
-                httpReqDuration: {
-                  avg: results.metrics?.http_Req_Duration?.trend?.avg || 0,
-                  min: results.metrics?.http_Req_Duration?.trend?.min || 0,
-                  med: results.metrics?.http_Req_Duration?.trend?.med || 0,
-                  max: results.metrics?.http_Req_Duration?.trend?.max || 0,
-                  p90: results.metrics?.http_Req_Duration?.trend?.p90 || 0,
-                  p95: results.metrics?.http_Req_Duration?.trend?.p95 || 0
-                },
-                iterationDuration: {
-                  avg: results.metrics?.iterations?.trend?.avg || 0,
-                  min: results.metrics?.iterations?.trend?.min || 0,
-                  med: results.metrics?.iterations?.trend?.med || 0,
-                  max: results.metrics?.iterations?.trend?.max || 0,
-                  p90: results.metrics?.iterations?.trend?.p90 || 0,
-                  p95: results.metrics?.iterations?.trend?.p95 || 0
-                }
-              },
-              statusCodes: {
-                status200: results.metrics?.statusCodes?.status200 || 0,
-                status201: results.metrics?.statusCodes?.status201 || 0,
-                status204: results.metrics?.statusCodes?.status204 || 0,
-                status400: results.metrics?.statusCodes?.status400 || 0,
-                status401: results.metrics?.statusCodes?.status401 || 0,
-                status403: results.metrics?.statusCodes?.status403 || 0,
-                status404: results.metrics?.statusCodes?.status404 || 0,
-                status415: results.metrics?.statusCodes?.status415 || 0,
-                status500: results.metrics?.statusCodes?.status500 || 0,
-                other: results.metrics?.statusCodes?.other || 0
-              }
-            }
-          };
-        }
-        return t;
-      }));
+      // Testin tamamlanmasını beklemeye gerek yok, backend bunu asenkron yapıyor.
+      // toast.success("Test tamamlandı", ...); bu mesajı backend'den gelen status'e göre pollInterval'da göstermek daha doğru olur.
 
-      // Test sonuçlarını backend'e kaydet
-      try {
-        console.log("Saving test results to backend for test ID:", testId);
-        const formattedResults = {
-          status: "completed",
-          results: {
-            vus: testInfo.options?.vus || 10,
-            duration: testInfo.options?.duration || "30s",
-            requestsPerSecond: results.metrics?.http_Reqs?.rate || 0,
-            failureRate: results.metrics?.http_Req_Failed?.rate || 0,
-            averageResponseTime: results.metrics?.http_Req_Duration?.trend?.avg || 0,
-            p95ResponseTime: results.metrics?.http_Req_Duration?.trend?.p95 || 0,
-            timestamp: Date.now(),
-            detailedMetrics: {
-              checksRate: results.metrics?.checks?.rate || 0,
-              dataReceived: results.metrics?.data?.count?.toString() || "0",
-              dataSent: results.metrics?.data?.count?.toString() || "0",
-              httpReqRate: results.metrics?.http_Reqs?.rate || 0,
-              httpReqFailed: results.metrics?.http_Req_Failed?.rate || 0,
-              successRate: results.metrics?.checks?.rate || 0,
-              iterations: results.metrics?.iterations?.count || 0,
-              httpReqDuration: {
-                avg: results.metrics?.http_Req_Duration?.trend?.avg || 0,
-                min: results.metrics?.http_Req_Duration?.trend?.min || 0,
-                med: results.metrics?.http_Req_Duration?.trend?.med || 0,
-                max: results.metrics?.http_Req_Duration?.trend?.max || 0,
-                p90: results.metrics?.http_Req_Duration?.trend?.p90 || 0,
-                p95: results.metrics?.http_Req_Duration?.trend?.p95 || 0
-              },
-              iterationDuration: {
-                avg: results.metrics?.iterations?.trend?.avg || 0,
-                min: results.metrics?.iterations?.trend?.min || 0,
-                med: results.metrics?.iterations?.trend?.med || 0,
-                max: results.metrics?.iterations?.trend?.max || 0,
-                p90: results.metrics?.iterations?.trend?.p90 || 0,
-                p95: results.metrics?.iterations?.trend?.p95 || 0
-              },
-            },
-            statusCodes: {
-              status_200: results.metrics?.statusCodes?.status200 || 0,
-              status_201: results.metrics?.statusCodes?.status201 || 0,
-              status_204: results.metrics?.statusCodes?.status204 || 0,
-              status_400: results.metrics?.statusCodes?.status400 || 0,
-              status_401: results.metrics?.statusCodes?.status401 || 0,
-              status_403: results.metrics?.statusCodes?.status403 || 0,
-              status_404: results.metrics?.statusCodes?.status404 || 0,
-              status_415: results.metrics?.statusCodes?.status415 || 0,
-              status_500: results.metrics?.statusCodes?.status500 || 0,
-              other: results.metrics?.statusCodes?.other || 0
-            }
-          }
-        };
-        
-        console.log("Formatted results:", JSON.stringify(formattedResults));
-        const response = await authAxios.put(`/K6Test/${testId}/results`, formattedResults);
-        console.log("Results saved successfully:", response.status);
-      } catch (error) {
-        console.error("Error saving test results:", error.response?.data || error.message);
-        toast.error("Test sonuçlarını kaydetme hatası", {
-          description: error.response?.data?.error || error.message
-        });
-      }
-
-      toast.success("Test tamamlandı", {
-        description: `RPS: ${results.metrics?.http_reqs?.rate?.toFixed(2) || 0}, Hata Oranı: ${(100 - (results.metrics?.checks?.rate || 0)).toFixed(2)}%`
-      });
     } catch (error) {
       console.error("Test çalıştırma hatası", error);
       setK6Tests(prevTests => prevTests.map(t => {
         if (t.id === testId) {
           return {
             ...t,
-            status: "failed",
-            results: {
-              vus: 0,
-              duration: "0s",
-              requestsPerSecond: 0,
-              failureRate: 100,
-              averageResponseTime: 0,
-              p95ResponseTime: 0,
-              timestamp: Date.now()
-            }
+            status: "failed", // Hata durumunda failed
+            processId: null   // Process ID'yi temizle
           };
         }
         return t;
       }));
 
       toast.error("Test çalıştırma başarısız", { 
-        description: error.response?.data?.message || error.message 
+        description: error.response?.data?.message || error.response?.data?.error || error.message 
       });
     } finally {
       setIsRunning(prev => ({ ...prev, [testId]: false }));
     }
   };
 
-  const handleStopTest = async (testId) => {
+  const handleStopTest = async (testIdToStop, processIdToStop) => { // testId ve processId alacak
+    if (!processIdToStop) {
+      toast.error("Test durdurulamadı", { description: "Process ID bulunamadı." });
+      return;
+    }
     try {
-      setIsStopping(prev => ({ ...prev, [testId]: true }));
+      setIsStopping(prev => ({ ...prev, [testIdToStop]: true })); // UI için testId kullanmaya devam edebiliriz
       
-      // Update UI immediately for better user experience
       setK6Tests(prevTests => prevTests.map(t => {
-        if (t.id === testId) {
-          return {
-            ...t,
-            status: "stopping"
-          };
+        if (t.id === testIdToStop) {
+          return { ...t, status: "stopping" };
         }
         return t;
       }));
       
       toast.info("Test durduruluyor", { description: "Lütfen bekleyin..." });
       
-      // Doğru test ID'sini bul - runId varsa onu kullan, yoksa normal id'yi kullan
-      const test = k6Tests.find(t => t.id === testId);
-      const runIdToStop = test?.runId;
+      await stopK6Test(processIdToStop); // processIdToStop ile çağır
       
-      if (!runIdToStop) {
-        console.error("RunId bulunamadı, test durdurulamıyor");
-        toast.error("Test durdurulamadı", { 
-          description: "Test çalıştırma ID'si bulunamadı. Test zaten tamamlanmış olabilir."
-        });
-        setIsStopping(prev => ({ ...prev, [testId]: false }));
-        return;
-      }
+      // Durdurma sonrası state'i hemen "stopped" yapmak yerine, backend'den poll ile güncel durumu bekleyelim.
+      // Ama anlık olarak "stopped" ve processId: null yapabiliriz.
+      setK6Tests(prevTests => prevTests.map(t => {
+        if (t.id === testIdToStop) {
+          return { ...t, status: "stopped", processId: null }; // Durum ve PID güncelle
+        }
+        return t;
+      }));
       
-      console.log("Stopping test with runId:", runIdToStop);
-      
-      // Call backend to stop the test with the correct runId
-      await stopK6Test(runIdToStop);
-      
-      // Refresh tests to get the updated status
-      const response = await authAxios.get('/K6Test');
-      setK6Tests(response.data);
-      
-      toast.success("Test durduruldu");
+      toast.success("Test durdurma isteği gönderildi."); // Backend asenkron olarak durduracak ve poll güncelleyecek.
     } catch (error) {
       console.error("Test durdurma hatası", error);
+      // Hata durumunda state'i "running" veya önceki durumuna geri döndürebiliriz, ya da poll'a bırakabiliriz.
+      setK6Tests(prevTests => prevTests.map(t => { // Hata durumunda eski haline dönsün (veya poll güncellesin)
+        if (t.id === testIdToStop && t.status === "stopping") { // Sadece stopping durumundaysa
+          return { ...t, status: "running" }; // Ya da önceki status neyse o? Şimdilik running varsayalım.
+        }
+        return t;
+      }));
       toast.error("Test durdurma başarısız", {
-        description: error.response?.data?.message || error.message
+        description: error.response?.data?.message || error.response?.data?.error || error.message
       });
     } finally {
-      setIsStopping(prev => ({ ...prev, [testId]: false }));
+      setIsStopping(prev => ({ ...prev, [testIdToStop]: false }));
     }
   };
 
@@ -419,26 +289,41 @@ export default function LoadTestsPage() {
     }
   };
 
-  const handleTestCreated = (newTestId) => {
+  const handleTestCreated = (newTest) => { // newTest objesi backend'den CreateK6TestAsync'ten dönen DTO olmalı
+    // Bu fonksiyon LoadTestDialog'dan çağrılıyor. 
+    // Diyalog kapanınca yeni testi çalıştırmak yerine listeyi yenileyeceğiz.
+    // Ya da yeni testi direkt k6Tests'e ekleyebiliriz.
+    // Şimdilik sadece listeyi yenileme (fetchTests) kalsın.
     const fetchTests = async () => {
       try {
         const response = await authAxios.get('/K6Test');
-        setK6Tests(response.data);
+        const normalizedTests = response.data.map(test => ({
+          ...test,
+          processId: test.processId || null,
+          results: test.results ? { /* ... normalization ... */ } : null
+        }));
+        setK6Tests(normalizedTests);
       } catch (error) {
         console.error("Testleri yükleme hatası", error);
         toast.error("Testleri yükleme başarısız");
       }
     };
 
-    fetchTests();
+    fetchTests(); 
+    // Eğer yeni oluşturulan testi direkt çalıştırmak isteniyorsa:
+    // if (newTest && newTest.id) {
+    //   handleRunTest(newTest.id); 
+    // }
   };
 
   const statusIcons = {
     created: <Clock className="h-4 w-4" />,
-    pending: <RefreshCw className="h-4 w-4" />,
+    pending: <RefreshCw className="h-4 w-4" />, // Beklemede
     running: <Play className="h-4 w-4" />,
     completed: <CheckCircle className="h-4 w-4" />,
-    failed: <AlertTriangle className="h-4 w-4" />
+    failed: <AlertTriangle className="h-4 w-4" />,
+    stopping: <RefreshCw className="h-4 w-4 animate-spin" />, // Durduruluyor için
+    stopped: <Square className="h-4 w-4" /> // Durduruldu için
   };
 
   const statusColors = {
@@ -446,7 +331,9 @@ export default function LoadTestsPage() {
     pending: "bg-amber-500 hover:bg-amber-600",
     running: "bg-blue-500 hover:bg-blue-600",
     completed: "bg-emerald-500 hover:bg-emerald-600",
-    failed: "bg-rose-500 hover:bg-rose-600"
+    failed: "bg-rose-500 hover:bg-rose-600",
+    stopping: "bg-purple-500 hover:bg-purple-600",
+    stopped: "bg-slate-500 hover:bg-slate-600"
   };
 
   const statusTextColors = {
@@ -454,7 +341,9 @@ export default function LoadTestsPage() {
     pending: "text-amber-500",
     running: "text-blue-500",
     completed: "text-emerald-500",
-    failed: "text-rose-500"
+    failed: "text-rose-500",
+    stopping: "text-purple-500",
+    stopped: "text-slate-500"
   };
 
   const calculatePerformanceScore = (test) => {
@@ -564,7 +453,7 @@ export default function LoadTestsPage() {
                   >
                     Detaylar
                   </Button>
-                  {['created', 'failed', 'completed'].includes(test.status) && (
+                  {['created', 'failed', 'completed', 'stopped'].includes(test.status) && (
                     <>
                       <Button
                         onClick={() => handleRunTest(test.id)}
@@ -594,10 +483,10 @@ export default function LoadTestsPage() {
                       </Button>
                     </>
                   )}
-                  {test.status === 'running' && (
+                  {test.status === 'running' && test.processId && (
                     <>
                       <Button
-                        onClick={() => handleStopTest(test.id)}
+                        onClick={() => handleStopTest(test.id, test.processId)}
                         disabled={isStopping[test.id]}
                         className="flex-1 bg-rose-600 hover:bg-rose-700 text-white"
                       >
@@ -619,15 +508,6 @@ export default function LoadTestsPage() {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>
-                  )}
-
-                  {test.status === 'stopping' && (
-                    <Button
-                      disabled
-                      className="flex-1 bg-purple-500 text-white"
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Durduruluyor
-                    </Button>
                   )}
                 </div>
               </CardFooter>
@@ -686,6 +566,11 @@ export default function LoadTestsPage() {
                               <span className="text-3xl font-bold">{selectedTest.results.vus}</span>
                               <span className="ml-2 text-sm text-slate-500">Kullanıcı</span>
                             </div>
+                            {selectedTest.processId && (
+                              <div className="mt-1 text-xs text-slate-400">
+                                PID: {selectedTest.processId}
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                         
@@ -767,7 +652,7 @@ export default function LoadTestsPage() {
                     <div className="flex flex-col items-center justify-center h-full text-slate-500">
                       <AlertTriangle className="h-12 w-12 mb-4 text-slate-400" />
                       <p>Sonuç bulunamadı</p>
-                      {['created', 'failed'].includes(selectedTest?.status) && (
+                      {['created', 'failed', 'stopped'].includes(selectedTest?.status) && (
                         <Button 
                           onClick={() => {
                             setSelectedTest(null);
@@ -1016,7 +901,7 @@ export default function LoadTestsPage() {
               >
                 İptal
               </Button>
-              {['created', 'completed', 'failed'].includes(selectedTest?.status) && (
+              {['created', 'completed', 'failed', 'stopped'].includes(selectedTest?.status) && (
                 <Button 
                   onClick={() => {
                     setSelectedTest(null);

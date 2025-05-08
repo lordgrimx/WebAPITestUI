@@ -15,5 +15,7 @@ namespace WebTestUI.Backend.Services
         Task AddLogEntryAsync(Guid testId, AddLogEntryDTO logDto);
         Task UpdateTestStatusAndLogsAsync(Guid id, UpdateTestStatusAndLogsDTO updateDto);
         Task<K6TestDTO> ExecuteK6TestAsync(Guid testId);
+        Task UpdateK6TestProcessIdAsync(Guid testId, int processId);
+        Task UpdateK6TestStatusAsync(Guid testId, string status);
     }
 } 

@@ -4,6 +4,7 @@ namespace WebTestUI.Backend.DTOs
     {
         public MetricData? Checks { get; set; }
         public MetricData? Data { get; set; }
+        public MetricData? Data_Sent { get; set; }
         public MetricData? Http_Reqs { get; set; }
         public MetricData? Http_Req_Failed { get; set; } // Eklendi
         public MetricData? Success_Rate { get; set; } // Başarı oranı için eklendi

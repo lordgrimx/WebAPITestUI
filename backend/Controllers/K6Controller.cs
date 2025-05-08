@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json;
 using System.Linq;
 using Microsoft.VisualBasic; // Added for LINQ usage
+using Microsoft.Extensions.DependencyInjection;
 
 namespace WebTestUI.Backend.Controllers
 {
@@ -27,19 +28,24 @@ namespace WebTestUI.Backend.Controllers
         private readonly IK6TestService _k6TestService;
         private readonly string _k6ExecutablePath;
         private readonly Dictionary<string, Process> _runningTests;
+        private readonly Dictionary<int, string> _processIdToTestIdMap;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
 
         public K6Controller(
             ILogger<K6Controller> logger,
             IConfiguration configuration,
             IK6TestService k6TestService,
-            INotificationService notificationService)  // Changed to INotificationService
+            INotificationService notificationService,
+            IServiceScopeFactory serviceScopeFactory)
         {
             _logger = logger;
             _configuration = configuration;
             _k6TestService = k6TestService;
             _k6ExecutablePath = _configuration["K6:ExecutablePath"] ?? "k6";
             _runningTests = new Dictionary<string, Process>();
+            _processIdToTestIdMap = new Dictionary<int, string>();
             _notificationService = notificationService;
+            _serviceScopeFactory = serviceScopeFactory;
         }
 
         [HttpPost("run")]
@@ -58,7 +64,6 @@ namespace WebTestUI.Backend.Controllers
                     Directory.CreateDirectory(tempDir);
                 }
                 _logger.LogInformation($"Temp directory path: {tempDir}");
-                var duration = request.Options?.Duration ?? "30s"; // Default duration if not provided
 
                 var scriptFileName = $"k6-script-{Guid.NewGuid()}.js";
                 var scriptPath = Path.Combine(tempDir, scriptFileName);
@@ -66,10 +71,14 @@ namespace WebTestUI.Backend.Controllers
 
                 try
                 {
-                    // Ensure the file is properly written and flushed
                     using (var writer = new StreamWriter(scriptPath, false, Encoding.UTF8))
                     {
                         await writer.WriteAsync(request.Script);
+                        if (string.IsNullOrEmpty(request.Script))
+                        {
+                            _logger.LogError("Script content is null or empty.");
+                            return BadRequest(new { error = "Script content cannot be null or empty." });
+                        }
                         await writer.FlushAsync();
                     }
 
@@ -146,172 +155,180 @@ namespace WebTestUI.Backend.Controllers
                     }
                 };
 
-                var testId = Guid.NewGuid().ToString();
-                _runningTests[testId] = process;
-
-                process.Start();
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                await process.WaitForExitAsync(); var exitCode = process.ExitCode;
-
-                // Capture process times before closing it
-                double processDuration = 0;
-                try
+                Guid testRunGuid;
+                if (request.TestIdToRun == Guid.Empty && !string.IsNullOrEmpty(request.NewTestName))
                 {
-                    // Try to get process time information
-                    processDuration = process.TotalProcessorTime.TotalSeconds;
-                    _logger.LogInformation($"Process CPU time: {processDuration:F2} seconds");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning($"Could not get process time: {ex.Message}");
-                }
-
-                process.Close(); // Close the process before accessing files
-
-                // Clean up the temporary script file
-                try
-                {
-                    if (System.IO.File.Exists(scriptPath))
+                    if (string.IsNullOrEmpty(request.Script))
                     {
-                        System.IO.File.Delete(scriptPath);
-                        _logger.LogInformation($"Deleted temporary script file: {scriptPath}");
+                        _logger.LogError("Script content is required when creating a new test.");
+                        return BadRequest(new { error = "Script content is required for a new test." });
                     }
+                    var createDto = new CreateK6TestDTO
+                    {
+                        Name = request.NewTestName,
+                        Script = request.Script,
+                    };
+                    var newK6Test = await _k6TestService.CreateK6TestAsync(createDto);
+                    testRunGuid = newK6Test.Id;
                 }
-                catch (Exception ex)
+                else if (request.TestIdToRun != Guid.Empty)
                 {
-                    _logger.LogWarning($"Could not delete temporary script file {scriptPath}: {ex.Message}");
-                }
-                if (exitCode != 0)
-                {
-                    // Special handling for threshold violations (exit code 99)
-                    if (exitCode == 99)
+                    testRunGuid = request.TestIdToRun;
+                    var existingTest = await _k6TestService.ExecuteK6TestAsync(testRunGuid);
+                    if (existingTest == null)
                     {
-                        _logger.LogWarning($"K6 threshold crossed, but continuing with results. Details: {error.ToString()}");
-                        // Continue processing results since threshold violations are not actual test failures
+                        return NotFound(new { error = $"K6 test definition not found with ID {testRunGuid}" });
                     }
-                    else
+                    if (string.IsNullOrEmpty(request.Script) && !string.IsNullOrEmpty(existingTest.Script))
                     {
-                        // Clean up JSON output file for actual errors
-                        try
-                        {
-                            if (System.IO.File.Exists(jsonOutputPath))
-                            {
-                                System.IO.File.Delete(jsonOutputPath);
-                                _logger.LogInformation($"Deleted temporary JSON output file on error: {jsonOutputPath}");
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning($"Could not delete temporary JSON output file {jsonOutputPath} on error: {ex.Message}");
-                        }
-                        _logger.LogError($"K6 process exited with code {exitCode}. Error output: {error.ToString()}");
-                        return StatusCode(500, new { error = $"K6 process failed with exit code {exitCode}. Error: {error.ToString()}" });
-                    }
-                }
-
-                // Read metrics from the JSON output file
-                string? jsonContent = null;
-                if (System.IO.File.Exists(jsonOutputPath))
-                {
-                    try
-                    {
-                        jsonContent = await System.IO.File.ReadAllTextAsync(jsonOutputPath);
-                        _logger.LogInformation($"Successfully read JSON output file: {jsonOutputPath}");
-
-
-                        // Clean up the temporary JSON file after reading
-                        System.IO.File.Delete(jsonOutputPath);
-                        _logger.LogInformation($"Deleted temporary JSON output file: {jsonOutputPath}");
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Error reading or deleting JSON output file {jsonOutputPath}: {ex.Message}");
-                        // Attempt to clean up anyway
-                        try { System.IO.File.Delete(jsonOutputPath); } catch { /* Ignore */ }
-                        return StatusCode(500, new { error = $"Error reading K6 output file: {ex.Message}" });
+                        request.Script = existingTest.Script;
+                        await System.IO.File.WriteAllTextAsync(scriptPath, request.Script, Encoding.UTF8);
                     }
                 }
                 else
                 {
-                    _logger.LogError($"K6 JSON output file not found: {jsonOutputPath}");
-                    return StatusCode(500, new { error = "K6 JSON output file not found." });
+                    return BadRequest(new { error = "Either TestIdToRun (for existing test) or NewTestName (for new test) must be provided." });
                 }
-                try
-                {
-                    // Calculate start and end times based on current time and test duration
-                    DateTime endTime = DateTime.UtcNow;
-                    DateTime startTime = endTime.AddSeconds(-processDuration);
 
-                    // Parse the duration string to get seconds
-                    double durationSecondType = 30; // Default 30 seconds
-                    if (!string.IsNullOrEmpty(request.Options?.Duration))
+                _logger.LogInformation($"Attempting to start K6 process for test ID: {testRunGuid}");
+                process.Start();
+                var processId = process.Id;
+                _logger.LogInformation($"K6 process started with PID: {processId} for test ID: {testRunGuid}");
+
+                string runId = testRunGuid.ToString();
+                _runningTests[runId] = process;
+                _processIdToTestIdMap[processId] = runId;
+
+                await _k6TestService.UpdateK6TestProcessIdAsync(testRunGuid, processId);
+                await _k6TestService.UpdateK6TestStatusAsync(testRunGuid, "running");
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                _ = Task.Run(async () =>
+                {
+                    using (var scope = _serviceScopeFactory.CreateScope())
                     {
-                        string durationStr = request.Options.Duration.Trim();
-                        if (durationStr.EndsWith("s"))
+                        var scopedK6TestService = scope.ServiceProvider.GetRequiredService<IK6TestService>();
+                        await process.WaitForExitAsync();
+                        var exitCode = process.ExitCode;
+
+                        lock (_runningTests) { _runningTests.Remove(runId); }
+                        lock (_processIdToTestIdMap) { _processIdToTestIdMap.Remove(processId); }
+
+                        if (exitCode != 0 && exitCode != 99)
                         {
-                            // Seconds format
-                            double.TryParse(durationStr.TrimEnd('s'), out durationSecondType);
+                            _logger.LogError($"K6 process for test {runId} (PID: {processId}) exited with code {exitCode}. Error: {error.ToString()}");
+                            await scopedK6TestService.UpdateK6TestStatusAsync(testRunGuid, "failed");
+                            if (System.IO.File.Exists(jsonOutputPath)) try { System.IO.File.Delete(jsonOutputPath); } catch { /* ignore */ }
+                            return;
                         }
-                        else if (durationStr.EndsWith("m"))
+
+                        if (System.IO.File.Exists(jsonOutputPath))
                         {
-                            // Minutes format - convert to seconds
-                            double minutes;
-                            if (double.TryParse(durationStr.TrimEnd('m'), out minutes))
+                            try
                             {
-                                durationSecondType = minutes * 60;
+                                var jsonContent = await System.IO.File.ReadAllTextAsync(jsonOutputPath);
+                                double durationInSeconds = 0;
+                                if (request.Options?.Duration != null) {
+                                    durationInSeconds = TryParseK6DurationToSeconds(request.Options.Duration);
+                                }
+                                var parsedK6Output = ParseK6JsonOutput(jsonContent, durationInSeconds);
+                                var resultsToSave = new WebTestUI.Backend.Data.Entities.K6TestResults
+                                {
+                                    Vus = request.Options?.Vus ?? (parsedK6Output.Vus != null ? ToInt(parsedK6Output.Vus.Count) : 0),
+                                    Duration = request.Options?.Duration ?? "",
+                                    RequestsPerSecond = parsedK6Output.Http_Reqs?.Rate ?? 0,
+                                    FailureRate = parsedK6Output.Http_Req_Failed?.Rate ?? 0,
+                                    AverageResponseTime = parsedK6Output.Http_Req_Duration?.Trend?.Avg ?? 0,
+                                    P95ResponseTime = parsedK6Output.Http_Req_Duration?.Trend?.P95 ?? 0,
+                                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+                                    DetailedMetrics = new WebTestUI.Backend.Data.Entities.K6TestDetailedMetrics
+                                    {
+                                        ChecksRate = parsedK6Output.Checks?.Rate ?? 0,
+                                        DataReceived = parsedK6Output.Data != null ? parsedK6Output.Data.Count.ToString() : "0",
+                                        DataSent = parsedK6Output.Data_Sent != null ? parsedK6Output.Data_Sent.Count.ToString() : "0",
+                                        HttpReqRate = parsedK6Output.Http_Reqs?.Rate ?? 0,
+                                        HttpReqFailed = parsedK6Output.Http_Req_Failed?.Rate ?? 0,
+                                        SuccessRate = parsedK6Output.Success_Rate?.Rate ?? (1 - (parsedK6Output.Http_Req_Failed?.Rate ?? 0)),
+                                        Iterations = parsedK6Output.Iterations != null ? ToInt(parsedK6Output.Iterations.Count) : 0,
+                                        HttpReqDuration = parsedK6Output.Http_Req_Duration?.Trend != null ? new WebTestUI.Backend.Data.Entities.HttpReqDurationMetrics
+                                        {
+                                            Avg = parsedK6Output.Http_Req_Duration.Trend.Avg,
+                                            Min = parsedK6Output.Http_Req_Duration.Trend.Min,
+                                            Med = parsedK6Output.Http_Req_Duration.Trend.Med,
+                                            Max = parsedK6Output.Http_Req_Duration.Trend.Max,
+                                            P90 = parsedK6Output.Http_Req_Duration.Trend.P90,
+                                            P95 = parsedK6Output.Http_Req_Duration.Trend.P95
+                                        } : new WebTestUI.Backend.Data.Entities.HttpReqDurationMetrics(),
+                                        IterationDuration = parsedK6Output.Iterations?.Trend != null ? new WebTestUI.Backend.Data.Entities.IterationDurationMetrics
+                                        {
+                                            Avg = parsedK6Output.Iterations.Trend.Avg,
+                                            Min = parsedK6Output.Iterations.Trend.Min,
+                                            Med = parsedK6Output.Iterations.Trend.Med,
+                                            Max = parsedK6Output.Iterations.Trend.Max,
+                                            P90 = parsedK6Output.Iterations.Trend.P90,
+                                            P95 = parsedK6Output.Iterations.Trend.P95
+                                        } : new WebTestUI.Backend.Data.Entities.IterationDurationMetrics()
+                                    },
+                                    StatusCodes = parsedK6Output.StatusCodes != null ? new WebTestUI.Backend.Data.Entities.StatusCodeMetrics
+                                    {
+                                        Status200 = parsedK6Output.StatusCodes.Status200,
+                                        Status201 = parsedK6Output.StatusCodes.Status201,
+                                        Status204 = parsedK6Output.StatusCodes.Status204,
+                                        Status400 = parsedK6Output.StatusCodes.Status400,
+                                        Status401 = parsedK6Output.StatusCodes.Status401,
+                                        Status403 = parsedK6Output.StatusCodes.Status403,
+                                        Status404 = parsedK6Output.StatusCodes.Status404,
+                                        Status415 = parsedK6Output.StatusCodes.Status415,
+                                        Status500 = parsedK6Output.StatusCodes.Status500,
+                                        Other = parsedK6Output.StatusCodes.Other
+                                    } : new WebTestUI.Backend.Data.Entities.StatusCodeMetrics()
+                                };
+
+                                var updateResultsDto = new UpdateK6TestResultsDTO
+                                {
+                                    Status = (exitCode == 99) ? "completed_with_thresholds" : "completed",
+                                    Results = resultsToSave
+                                };
+                                await scopedK6TestService.UpdateK6TestResultsAsync(testRunGuid, updateResultsDto);
+                                _logger.LogInformation($"K6 test {runId} (PID: {processId}) completed and results saved. Exit code: {exitCode}");
                             }
-                        }
-                        else if (durationStr.EndsWith("h"))
-                        {
-                            // Hours format - convert to seconds
-                            double hours;
-                            if (double.TryParse(durationStr.TrimEnd('h'), out hours))
+                            catch (Exception ex)
                             {
-                                durationSecondType = hours * 3600;
+                                _logger.LogError($"Error processing K6 output for test {runId} (PID: {processId}): {ex.Message}");
+                                try
+                                {
+                                    await scopedK6TestService.UpdateK6TestStatusAsync(testRunGuid, "failed_parsing_results");
+                                }
+                                catch (Exception serviceEx)
+                                {
+                                    _logger.LogError($"Failed to update test status to failed_parsing_results for {testRunGuid}: {serviceEx.Message}");
+                                }
+                            }
+                            finally
+                            {
+                                if (System.IO.File.Exists(jsonOutputPath)) try { System.IO.File.Delete(jsonOutputPath); } catch { /* ignore */ }
                             }
                         }
                         else
                         {
-                            // No unit specified, assume seconds
-                            double.TryParse(durationStr, out durationSecondType);
+                            _logger.LogWarning($"K6 JSON output file not found for test {runId} (PID: {processId}). Setting status to failed.");
+                            try
+                            {
+                                await scopedK6TestService.UpdateK6TestStatusAsync(testRunGuid, "failed_no_output");
+                            }
+                            catch (Exception serviceEx)
+                            {
+                                _logger.LogError($"Failed to update test status to failed_no_output for {testRunGuid}: {serviceEx.Message}");
+                            }
                         }
+
+                        if (System.IO.File.Exists(scriptPath)) try { System.IO.File.Delete(scriptPath); } catch { /* ignore */ }
                     }
+                });
 
-                    _logger.LogInformation($"Test duration in seconds: {durationSecondType}");
-
-                    // Parse metrics from the JSON file content and pass duration for RPS calculation
-                    var metrics = ParseK6JsonOutput(jsonContent, durationSecondType);
-
-                    // Log the metrics as JSON for debugging
-                    LogMetricsToConsole(metrics);
-                    // Send notification if configured
-                    await _notificationService.CreateNotificationAsync(new CreateNotificationDto {
-                        UserId = userId,
-                        Title = exitCode == 99 ? "K6 Test Completed (Thresholds Violated)" : "K6 Test Completed",
-                        Message = $"K6 test run finished. Exit Code: {exitCode}. Check results.", // Add more details if needed
-                        Type = exitCode == 99 ? "test_threshold_violation" : "test_success",
-                        RelatedEntityType = "k6_run", // Or link to a specific K6Test entity if applicable
-                        RelatedEntityId = request.TestId.ToString() // Convert Guid to string
-                    });
-
-                    return Ok(new K6MetricsResponseDto
-                    {
-                        Status = "completed",
-                        Metrics = metrics,
-                        RunId = testId,
-                        TestId = testId,
-                        StartTime = startTime,
-                        EndTime = endTime
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Error parsing K6 output: {ex.Message}");
-                    // Include inner exception details for better debugging
-                    return StatusCode(500, new { error = $"Error parsing K6 output: {ex.Message}", details = ex.InnerException?.Message });
-                }
+                return Ok(new { RunId = runId, ProcessId = processId, Message = "K6 test started." });
             }
             catch (Exception ex)
             {
@@ -323,7 +340,7 @@ namespace WebTestUI.Backend.Controllers
                         Message = "An unexpected error occurred while running the K6 test.",
                         Type = "test_error",
                         RelatedEntityType = "k6_run",
-                        RelatedEntityId = request.TestId.ToString() // Convert Guid to string
+                        RelatedEntityId = request.TestIdToRun.ToString()
                     });
                 }
                 return StatusCode(500, new { error = ex.Message });
@@ -348,34 +365,35 @@ namespace WebTestUI.Backend.Controllers
             return Ok(new { status = "completed" });
         }
 
-        [HttpPost("stop/{runId}")]
-        public IActionResult StopTest(string runId)
+        [HttpPost("stop-by-pid/{processId}")]
+        public async Task<IActionResult> StopTestByProcessId(int processId)
         {
-            if (!_runningTests.TryGetValue(runId, out var process))
+            if (_processIdToTestIdMap.TryGetValue(processId, out var runId) && _runningTests.TryGetValue(runId, out var process))
             {
-                return NotFound(new { error = "Test run not found" });
-            }
-
-            try
-            {
-                if (!process.HasExited)
+                try
                 {
-                    process.Kill(true); // Force kill
-                    _logger.LogInformation($"Killed K6 process with ID: {runId}");
-                }
+                    _logger.LogInformation($"Attempting to stop K6 process with PID: {processId} (maps to runId: {runId})");
+                    process.Kill(true); // Kill entire process tree
+                    _runningTests.Remove(runId); // Ana map'ten kaldır
+                    _processIdToTestIdMap.Remove(processId); // PID map'inden kaldır
+                    _logger.LogInformation($"K6 process with PID {processId} stopped successfully.");
 
-                _runningTests.Remove(runId);
-                // Clean up associated temp files if possible? Might be tricky.
-                return Ok(new { status = "stopped" });
+                    Guid testGuid = Guid.Parse(runId); 
+                    await _k6TestService.UpdateK6TestStatusAsync(testGuid, "stopped"); // veya "cancelled"
+                    
+                    return Ok(new { Message = $"Test with PID {processId} stopped." });
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Error stopping K6 process with PID {processId}: {ex.Message}");
+                    return StatusCode(500, new { error = $"Error stopping test: {ex.Message}" });
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error stopping K6 test {runId}: {ex.Message}");
-                // Attempt to remove from dictionary even if kill fails
-                _runningTests.Remove(runId);
-                return StatusCode(500, new { error = $"Error stopping K6 test: {ex.Message}" });
-            }
-        }        // Parses K6 JSON Lines output to extract summary metrics.
+            _logger.LogWarning($"Test with PID {processId} not found in running tests or mapping.");
+            return NotFound(new { error = "Test not found or not running with the given Process ID." });
+        }
+
+        // Parses K6 JSON Lines output to extract summary metrics.
         private K6DetailedMetricsDto ParseK6JsonOutput(string jsonContent, double durationInSeconds = 0)
         {
             if (string.IsNullOrWhiteSpace(jsonContent))
@@ -544,7 +562,12 @@ namespace WebTestUI.Backend.Controllers
                     metricsDto.Checks = CreateMetricDataFromPoints("checks", metricPointsData["checks"]);
 
                 if (metricPointsData.ContainsKey("data_received"))
-                    metricsDto.Data = CreateMetricDataFromPoints("data_received", metricPointsData["data_received"]); if (metricPointsData.ContainsKey("http_reqs"))
+                    metricsDto.Data = CreateMetricDataFromPoints("data_received", metricPointsData["data_received"]);
+                
+                if (metricPointsData.ContainsKey("data_sent"))
+                    metricsDto.Data_Sent = CreateMetricDataFromPoints("data_sent", metricPointsData["data_sent"]);
+
+                if (metricPointsData.ContainsKey("http_reqs"))
                 {
                     // Create the HTTP requests metric
                     var httpReqsMetric = CreateMetricDataFromPoints("http_reqs", metricPointsData["http_reqs"]);
@@ -807,5 +830,38 @@ namespace WebTestUI.Backend.Controllers
             // Reuse the helper to parse the found 'values' element
             return ParseValuesElement(valuesElement, metricName);
         }
+
+        private double TryParseK6DurationToSeconds(string durationStr)
+        {
+            if (string.IsNullOrWhiteSpace(durationStr)) return 0;
+            durationStr = durationStr.Trim().ToLower();
+            double value = 0;
+            try
+            {
+                if (durationStr.EndsWith("s"))
+                {
+                    double.TryParse(durationStr.Substring(0, durationStr.Length - 1), out value);
+                }
+                else if (durationStr.EndsWith("m"))
+                {
+                    double.TryParse(durationStr.Substring(0, durationStr.Length - 1), out value);
+                    value *= 60;
+                }
+                else if (durationStr.EndsWith("h"))
+                {
+                    double.TryParse(durationStr.Substring(0, durationStr.Length - 1), out value);
+                    value *= 3600;
+                }
+                else // Birimsizse saniye varsay
+                {
+                    double.TryParse(durationStr, out value);
+                }
+            }
+            catch { /* ignore parsing errors, return 0 */ }
+            return value;
+        }
+
+        // MetricData.Count double? olabilir, int'e çevirmek için helper.
+        private static int ToInt(double? value) => value.HasValue ? Convert.ToInt32(value.Value) : 0;
     }
 }

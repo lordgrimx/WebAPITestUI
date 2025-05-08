@@ -315,36 +315,43 @@ export default function() {{
         {
             var test = await _context.K6Tests.FindAsync(testId);
             if (test == null)
-                throw new KeyNotFoundException($"K6Test with ID {testId} not found");
-
-            try
             {
-                test.Status = "running";
-                test.Logs = test.Logs ?? new List<K6TestLog>();
-                test.Logs.Add(new K6TestLog
-                {
-                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                    Message = "Starting K6 test execution",
-                    Level = "info"
-                });
-
-                await _context.SaveChangesAsync();
-                return MapToDTO(test);
+                throw new KeyNotFoundException($"Test with ID {testId} not found.");
             }
-            catch (Exception ex)
-            {
-                test.Status = "failed";
-                test.Logs = test.Logs ?? new List<K6TestLog>();
-                test.Logs.Add(new K6TestLog
-                {
-                    Timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
-                    Message = "Test execution failed",
-                    Level = "error",
-                    Data = ex.Message
-                });
 
+            // Burada testin çalıştırılmasıyla ilgili bir mantık varsa, o ayrıca ele alınmalı.
+            // Bu metot daha çok script ve options döndürmek için kullanılıyor gibi duruyor.
+            // Şimdilik sadece DTO'yu döndürüyoruz.
+            return MapToDTO(test);
+        }
+
+        public async Task UpdateK6TestProcessIdAsync(Guid testId, int processId)
+        {
+            var test = await _context.K6Tests.FindAsync(testId);
+            if (test != null)
+            {
+                test.ProcessId = processId;
+                test.UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                 await _context.SaveChangesAsync();
-                throw;
+            }
+            else
+            {
+                _logger.LogWarning($"UpdateK6TestProcessIdAsync: K6Test with ID {testId} not found.");
+            }
+        }
+
+        public async Task UpdateK6TestStatusAsync(Guid testId, string status)
+        {
+            var test = await _context.K6Tests.FindAsync(testId);
+            if (test != null)
+            {
+                test.Status = status;
+                test.UpdatedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                _logger.LogWarning($"UpdateK6TestStatusAsync: K6Test with ID {testId} not found.");
             }
         }
 
@@ -364,6 +371,7 @@ export default function() {{
                 RequestId = test.RequestId,
                 Status = test.Status,
                 Results = test.Results,
+                ProcessId = test.ProcessId,
                 CreatedAt = test.CreatedAt,
                 UpdatedAt = test.UpdatedAt
             };

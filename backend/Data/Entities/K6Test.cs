@@ -30,6 +30,8 @@ namespace WebTestUI.Backend.Data.Entities
         [Column(TypeName = "jsonb")]
         public K6TestResults? Results { get; set; }
 
+        public int? ProcessId { get; set; }
+
         public long CreatedAt { get; set; }
         public long UpdatedAt { get; set; }
     }

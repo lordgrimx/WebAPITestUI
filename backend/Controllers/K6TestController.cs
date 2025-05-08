@@ -98,6 +98,29 @@ namespace WebTestUI.Backend.Controllers
             }
         }
 
+        [HttpGet("{testId}/logs")]
+        public async Task<ActionResult<List<K6TestLog>>> GetTestLogs(Guid testId)
+        {
+            try
+            {
+                var testDto = await _k6TestService.ExecuteK6TestAsync(testId);
+                if (testDto == null)
+                {
+                    return NotFound(new { message = $"Test with ID {testId} not found when fetching logs." });
+                }
+                return Ok(testDto.Logs ?? new List<K6TestLog>());
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound(new { message = $"Test with ID {testId} not found (KeyNotFoundException)." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = $"An internal error occurred while fetching logs: {ex.Message}" });
+            }
+        }
+        
+
         [HttpPost("{testId}/execute")]
         public async Task<ActionResult<object>> ExecuteK6Test(Guid testId)
         {
