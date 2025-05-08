@@ -1122,7 +1122,8 @@ export default function RequestBuilder({
 
 
   return (
-    <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>      {/* Display error if any */}
+    <div className={`flex flex-col h-full ${darkMode ? 'bg-gray-900 text-white' : 'bg-white text-black'}`}>
+      {/* Display error if any */}
       {error && (
         <div className={`${darkMode ? 'bg-red-900/30 border-red-700 text-red-300' : 'bg-red-100 border-red-400 text-red-700'} px-4 py-2 text-sm mb-2 mx-2 rounded relative`} role="alert">
            <strong className="font-bold">{t('requests.error')}:</strong>
@@ -1133,27 +1134,33 @@ export default function RequestBuilder({
         </div>
       )}
 
-      {/* Top Bar: Method, URL, Send Button */}
-      <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'flex-row items-center'} p-2 border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'} ${isMobile ? 'space-x-0' : 'space-x-2'}`}>
-        <Select value={method} onValueChange={setMethod}>
-          <SelectTrigger className={`${isMobile ? 'w-full' : 'w-[120px]'} flex-shrink-0 font-medium ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
-            <SelectValue placeholder="Method" />
-          </SelectTrigger>
-          <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
-            {httpMethods.map((m) => (
-              <SelectItem key={m} value={m}>
-                {m}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className={`${isMobile ? 'w-full' : 'flex-grow'} relative`}>
+      {/* Top Bar: Method, URL, Send Button - Responsive işlemi */}
+      <div className="flex flex-col p-2 border-b gap-2 sm:gap-3 md:gap-4 lg:flex-row lg:items-center lg:space-x-2 
+        border-gray-200 dark:border-gray-800">
+        {/* HTTP Metodu */}
+        <div className="flex-none w-full sm:w-auto">
+          <Select value={method} onValueChange={setMethod}>
+            <SelectTrigger className={`w-full lg:w-[120px] flex-shrink-0 font-medium ${darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}>
+              <SelectValue placeholder="Method" />
+            </SelectTrigger>
+            <SelectContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
+              {httpMethods.map((m) => (
+                <SelectItem key={m} value={m}>
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        {/* URL Girişi */}
+        <div className="flex-grow relative">
           <Input
             type="url"
             placeholder="https://api.example.com/v1/users"
-            value={url} // Bind directly to url state
-            onChange={(e) => setUrl(e.target.value)} // Update url state directly
-            className={`w-full ${urlError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500' : 'bg-white border-gray-300 text-black focus:border-blue-500 focus:ring-blue-500'}`} // Dynamic border and dark mode styles
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            className={`w-full ${urlError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500' : 'bg-white border-gray-300 text-black focus:border-blue-500 focus:ring-blue-500'}`}
             aria-invalid={!!urlError}
             aria-describedby={urlError ? "url-error-message" : undefined}
           />
@@ -1168,11 +1175,13 @@ export default function RequestBuilder({
             </div>
           )}
         </div>
-        <div className={`flex ${isMobile ? 'w-full justify-between' : 'items-center space-x-2'}`}>
+        
+        {/* İşlem Butonları - Gönder ve Yük Testi */}
+        <div className="flex gap-2 mt-1 lg:mt-0 justify-end">
           <Button
-            onClick={handleSendClick} // Opens the dialog after validation
-            className={`${methodColors[method]} text-white flex items-center ${isMobile ? 'flex-1 mr-2' : ''}`}
-            disabled={isValidatingUrl} // Disable while validating
+            onClick={handleSendClick}
+            className={`${methodColors[method]} text-white flex items-center`}
+            disabled={isValidatingUrl}
           >
             <SendHorizontal className="h-4 w-4 mr-1" /> {t('requests.send')}
           </Button>
@@ -1182,10 +1191,10 @@ export default function RequestBuilder({
                 <Button
                   onClick={() => setShowLoadTestDialog(true)}
                   variant="outline"
-                  className={`flex items-center ${isMobile ? 'flex-1' : ''} ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}
+                  className={`flex items-center ${darkMode ? 'border-gray-600 hover:bg-gray-700' : 'border-gray-300 hover:bg-gray-100'}`}
                   disabled={!url || !!urlError}
                 >
-                  <Activity className="h-4 w-4 mr-1" /> {isMobile ? '' : t('requests.loadTest')}
+                  <Activity className="h-4 w-4 mr-1" /> {!isMobile && <span className="hidden sm:inline">{t('requests.loadTest')}</span>}
                 </Button>
               </TooltipTrigger>
               <TooltipContent className={darkMode ? 'bg-gray-800 border-gray-700 text-white' : ''}>
@@ -1231,7 +1240,6 @@ export default function RequestBuilder({
             {t('requests.tests')}
           </TabsTrigger>
         </TabsList>
-        {/* Ensure TabsContent takes remaining space and scrolls */}
         <TabsContent value="params" className="flex-1 overflow-auto">
           <ParamsTab params={params} setParams={setParams} darkMode={darkMode} isMobile={isMobile} />
         </TabsContent>
@@ -1266,7 +1274,9 @@ export default function RequestBuilder({
         <TabsContent value="tests" className="flex-1 overflow-auto">
           <TestsTab tests={tests} setTests={setTests} darkMode={darkMode} receivedTestResults={testResults} isMobile={isMobile} />
         </TabsContent>
-      </Tabs>      {/* Dialog for advanced options */}
+      </Tabs>
+    
+      {/* Dialog for advanced options */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent aria-describedby="request-dialog-description" className={darkMode ? 'dark bg-gray-800 border-gray-700' : ''}>
           <DialogHeader>

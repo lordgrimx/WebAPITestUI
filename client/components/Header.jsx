@@ -479,7 +479,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             </Button>
           )}
 
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden lg:flex items-center space-x-6">
             <a
               href="#features"
               className={`${isDarkMode ? 'text-white hover:text-blue-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
@@ -703,7 +703,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
       <header
         className={`${
           isDarkMode ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
-        } border-b py-3 px-4 md:px-6 flex items-center justify-between`}
+        } border-b py-3 px-4 lg:px-6 flex flex-wrap items-center justify-between gap-y-2`}
       >
         <div className="flex items-center">
           <div className="flex gap-2 items-center cursor-pointer">
@@ -727,63 +727,63 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             </Button>
           )}
           
-          <div className="hidden md:flex space-x-2 ml-6">
+          <div className="hidden lg:flex space-x-1 ml-4 sm:ml-6 flex-wrap">
             <Button
               variant="ghost"
               size="sm"
-              className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
+              className={`flex items-center space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               onClick={() => setShowSaveRequest(true)}
             >
               <Save className="h-4 w-4" />
-              <span>{t('header.saveRequest', 'Kaydet')}</span>
+              <span className="hidden sm:inline">Kaydet</span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
+              className={`flex items-center space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               onClick={() => setShowGenerateCode(true)}
             >
               <Code className="h-4 w-4" />
-              <span>{t('header.generateCode', 'Kod Üret')}</span>
+              <span className="hidden sm:inline">Kod Üret</span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
+              className={`flex items-center space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               onClick={() => setShowSettings(true)}
             >
               <Settings className="h-4 w-4" />
-              <span>{t('header.settings', 'Ayarlar')}</span>
+              <span className="hidden sm:inline">Ayarlar</span>
             </Button>            
             <Link href="/loadtests">
               <Button
                 variant="ghost"
                 size="sm"
-                className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
+                className={`flex items-center space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
-                <Activity className="h-4 w-4 mr-1" />
-                <span>{t('loadTests.title', 'Yük Testleri')}</span>
+                <Activity className="h-4 w-4" />
+                <span className="hidden sm:inline">Yük Testleri</span>
               </Button>
             </Link>
             <Link href="/monitor">
               <Button
                 variant="ghost"
                 size="sm"
-                className={`space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
+                className={`flex items-center space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
-                <Activity className="h-4 w-4 mr-1" />
-                <span>{t('header.monitoring', 'İzleme')}</span>
+                <Activity className="h-4 w-4" />
+                <span className="hidden sm:inline">İzleme</span>
               </Button>
             </Link>
           </div>
         </div>
         
-        <div className="hidden md:flex items-center space-x-4">          
+        <div className="hidden lg:flex items-center space-x-2 md:space-x-4 mr-2">          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`} disabled={isEnvironmentLoading}>
+              <Button variant="outline" size="sm" className={`flex items-center space-x-1 ${isDarkMode ? "" : "text-gray-800"}`} disabled={isEnvironmentLoading}>
                 <Globe className="h-4 w-4" />
-                <span className="hidden sm:inline">{isEnvironmentLoading ? t('general.loading', 'Yükleniyor...') : currentEnvironment?.name || t('header.environmentList.noEnv', 'Ortam Yok')}</span>
+                <span className="hidden sm:inline max-w-[100px] truncate">{isEnvironmentLoading ? "Yükleniyor..." : currentEnvironment?.name || "Ortam Yok"}</span>
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -835,7 +835,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className={`space-x-1 ${isDarkMode ? "" : "text-gray-800"}`}>
+              <Button variant="outline" size="sm" className={`flex items-center space-x-1 ${isDarkMode ? "" : "text-gray-800"}`}>
                 <Share2 className="h-4 w-4" />
                 <span className="hidden sm:inline">{t('header.share', 'Paylaş')}</span>
                 <ChevronDown className="h-3 w-3 sm:ml-1" />
@@ -873,6 +873,112 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             closeMobileMenu={closeMobileMenu}
           />
         </div>
+        
+        {/* Orta ekranlar için (tablet & küçük laptop) burada görünür butonlar ekleyelim */}
+        {!isMobile && (
+          <div className="lg:hidden flex items-center space-x-2 mt-2 w-full md:w-auto justify-between md:justify-end">
+            <div className="flex space-x-1 mr-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`${isDarkMode ? "":"text-gray-800"}`}
+                onClick={() => setShowSaveRequest(true)}
+              >
+                <Save className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`${isDarkMode ? "":"text-gray-800"}`}
+                onClick={() => setShowGenerateCode(true)}
+              >
+                <Code className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`${isDarkMode ? "":"text-gray-800"}`}
+                onClick={() => setShowSettings(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="px-2 flex items-center" disabled={isEnvironmentLoading}>
+                    <Globe className="h-4 w-4" />
+                    <ChevronDown className="h-3 w-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  {/* Aynı dropdown içeriği */}
+                  <DropdownMenuLabel>Environments</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {environments.length > 0 ? (
+                    environments.map(env => (
+                      <div key={env.id} className="px-2 py-1.5 flex items-center justify-between">
+                        <div 
+                          className="flex items-center cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-2 py-1 flex-1"
+                          onClick={() => activateEnvironment(env.id)}
+                        >
+                          <Check className={`h-4 w-4 ${currentEnvironment?.id === env.id ? 'text-green-500' : 'text-transparent' } mr-2`} />
+                          {env.name}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={(e) => openEditEnvironmentModal(env, e)} 
+                            className="cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                          >
+                            <Pencil className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                          </button>
+                          <button 
+                            onClick={(e) => openDeleteDialog(env, e)} 
+                            className="cursor-pointer p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                          >
+                            <Trash2 className="h-3 w-3 text-red-400 hover:text-red-600" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <DropdownMenuItem disabled>
+                      Ortam Bulunamadı
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-center"
+                    onClick={openCreateEnvironmentModal}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add Environment
+                  </Button>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
+                className={isDarkMode ? "text-gray-300" : "text-gray-600"}
+              >
+                {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+              </Button>
+              
+              <ProfileDropdown
+                darkMode={isDarkMode}
+                setDarkMode={() => setTheme(isDarkMode ? 'light' : 'dark')}
+                user={user}
+                onLogout={logout}
+                closeMobileMenu={closeMobileMenu}
+              />
+            </div>
+          </div>
+        )}
         
         {isMobile && !isMobileMenuOpen && (
           <div className="flex items-center space-x-2">

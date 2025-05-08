@@ -80,7 +80,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
   const maxResponseSize = settings.responseSize;
 
   return (
-    <div className={`flex flex-col h-full p-4 ${darkMode ? 'bg-gray-900 text-gray-300' : 'bg-white text-gray-700'}`}>
+    <div className={`flex flex-col h-full px-2 sm:px-3 md:px-4 py-2 md:py-3 ${darkMode ? 'bg-gray-900 text-gray-300' : 'bg-white text-gray-700'}`}>
       {/* Status Bar - Modified for mobile responsiveness */}
       <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'items-center justify-between'} mb-2`}>
         <div className={`flex ${isMobile ? 'flex-wrap gap-2' : 'items-center space-x-2'}`}>
@@ -129,18 +129,18 @@ export default function ResponseDisplay({ responseData, darkMode }) {
         <TabsContent value="pretty" className="flex-1 p-0 mt-0 h-full">
           <ScrollArea className="h-full w-full" type="always" style={mobileScrollFixStyle}>
             {responseData.isTruncated && (
-              <div className={`${darkMode ? 'text-yellow-400 bg-yellow-900/30 border-yellow-800' : 'text-yellow-600 bg-yellow-50 border-yellow-200'} mb-2 p-2 rounded border mx-4 mt-4 ${isMobile ? 'text-xs' : ''}`}>
+              <div className={`${darkMode ? 'text-yellow-400 bg-yellow-900/30 border-yellow-800' : 'text-yellow-600 bg-yellow-50 border-yellow-200'} mb-2 p-2 rounded border mx-2 mt-2 ${isMobile ? 'text-xs' : ''}`}>
                 ⚠️ {t('response.truncatedWarning')} ({responseData.size}). {t('response.someMissingData')}
               </div>
             )}
-            <div className={`${isMobile ? 'p-2' : 'p-4'}`}>
+            <div className={`p-0 sm:p-1 md:p-2`}>
               {settings.highlightSyntax ? (
                 <SyntaxHighlighter
                   language="json"
                   style={darkMode ? tomorrow : oneLight}
                   customStyle={{
                     borderRadius: '4px',
-                    padding: isMobile ? '8px' : '16px',
+                    padding: isMobile ? '4px' : '8px',
                     margin: 0,
                     fontSize: isMobile ? '0.75rem' : '0.875rem',
                     lineHeight: '1.5',
@@ -148,6 +148,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                     wordBreak: settings.wrapLines ? 'break-all' : 'normal', // Ensure word breaking works with wrapping
                     maxHeight: 'none', // Kaldır sabit yüksekliği
                     overflow: 'visible', // Görünür yap taşan içeriği
+                    width: '100%',
                   }}
                   showLineNumbers={!isMobile} // Hide line numbers on mobile to save space
                   wrapLines={isMobile || settings.wrapLines} // Always wrap lines on mobile
@@ -156,7 +157,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                   {JSON.stringify(responseData.data, null, jsonIndent)}
                 </SyntaxHighlighter>
               ) : (
-                <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-2' : 'p-4'} rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} overflow-visible max-h-none`}>
+                <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-1' : 'p-2'} rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} overflow-visible max-h-none w-full`}>
                   {JSON.stringify(responseData.data, null, jsonIndent)}
                 </pre>
               )}
@@ -165,9 +166,9 @@ export default function ResponseDisplay({ responseData, darkMode }) {
         </TabsContent>
         <TabsContent value="raw" className="flex-1 mt-0 h-full">
           <ScrollArea className="h-full w-full" type="always" style={mobileScrollFixStyle}>
-            <div className={`${isMobile ? 'p-2' : 'p-4'}`}>
+            <div className={`p-0 sm:p-1 md:p-2`}>
               {/* Raw view typically doesn't use indentation or syntax highlighting, but respects wrapping */}
-              <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-2' : 'p-4'} rounded font-mono ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} overflow-visible max-h-none`}>
+              <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-1' : 'p-2'} rounded font-mono ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} overflow-visible max-h-none w-full`}>
                 {/* Stringify without indentation for raw view */}
                 {JSON.stringify(responseData.data)}
               </pre>
@@ -176,7 +177,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
         </TabsContent>
         <TabsContent value="preview" className="flex-1 mt-0 h-full">
           <ScrollArea className="h-full w-full overflow-visible" type="always" style={mobileScrollFixStyle}>
-            <div className={`${isMobile ? 'p-2' : 'p-4'} ${isMobile ? 'text-xs' : 'text-sm'} ${darkMode ? 'text-gray-300' : 'text-gray-700'} w-full`}>
+            <div className={`p-1 sm:p-2 ${isMobile ? 'text-xs' : 'text-sm'} ${darkMode ? 'text-gray-300' : 'text-gray-700'} w-full`}>
               {responseData.isTruncated && (
                 <div className={`${darkMode ? 'text-yellow-400 bg-yellow-900/30 border-yellow-800' : 'text-yellow-600 bg-yellow-50 border-yellow-200'} mb-4 p-2 rounded border ${isMobile ? 'text-xs' : ''}`}>
                   ⚠️ {t('response.truncatedWarning')} ({responseData.size}). {t('response.someMissingData')}
@@ -199,7 +200,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                             {typeof item === 'object' ? Object.keys(item).length : 1} {t('response.fields')}
                           </Badge>
                         </summary>
-                        <div className={`${isMobile ? 'pl-2' : 'pl-4'} pt-2 space-y-2 overflow-visible`}>
+                        <div className={`${isMobile ? 'pl-1' : 'pl-2'} pt-2 space-y-2 overflow-visible`}>
                           {typeof item === 'object' && Object.entries(item).map(([key, value]) => (
                             <div key={key} className={`${isMobile ? 'grid grid-cols-[80px_1fr] gap-1' : 'grid grid-cols-[120px_1fr] gap-2'} ${key === '_truncated' ? (darkMode ? 'text-yellow-400 font-medium' : 'text-yellow-600 font-medium') : ''} overflow-visible`}>
                               <div className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'} ${isMobile ? 'text-xs' : ''}`}>{key}:</div>
@@ -250,14 +251,14 @@ export default function ResponseDisplay({ responseData, darkMode }) {
         </TabsContent>
         <TabsContent value="headers" className="flex-1 mt-0 h-full">
           <ScrollArea className="h-full w-full" type="always" style={mobileScrollFixStyle}>
-            <div className={`${isMobile ? 'p-2' : 'p-4'}`}>
+            <div className={`p-0 sm:p-1 md:p-2`}>
               {settings.highlightSyntax ? (
                 <SyntaxHighlighter
                   language="json" // Keep as JSON for header object formatting
                   style={darkMode ? tomorrow : oneLight}
                   customStyle={{
                     borderRadius: '4px',
-                    padding: isMobile ? '8px' : '16px',
+                    padding: isMobile ? '4px' : '8px',
                     margin: 0,
                     fontSize: isMobile ? '0.75rem' : '0.875rem',
                     lineHeight: '1.5',
@@ -265,6 +266,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                     wordBreak: isMobile || settings.wrapLines ? 'break-all' : 'normal',
                     maxHeight: 'none',
                     overflow: 'visible',
+                    width: '100%',
                   }}
                   wrapLines={isMobile || settings.wrapLines} // Always wrap on mobile
                   showLineNumbers={!isMobile} // Hide line numbers on mobile
@@ -273,7 +275,7 @@ export default function ResponseDisplay({ responseData, darkMode }) {
                   {JSON.stringify(responseData.headers || {}, null, jsonIndent)}
                 </SyntaxHighlighter>
               ) : (
-                 <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-2' : 'p-4'} rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} overflow-visible max-h-none`}>
+                 <pre className={`${isMobile ? 'text-xs' : 'text-sm'} ${isMobile ? 'p-1' : 'p-2'} rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-100'} ${isMobile || settings.wrapLines ? 'whitespace-pre-wrap break-all' : 'whitespace-pre'} overflow-visible max-h-none w-full`}>
                   {JSON.stringify(responseData.headers || {}, null, jsonIndent)}
                 </pre>
               )}

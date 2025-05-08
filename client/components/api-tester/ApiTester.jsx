@@ -839,7 +839,7 @@ export default function ApiTester() {
           </div>
         )}
         
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 w-full overflow-hidden">
           {/* Conditional rendering based on screen size */}
           {isMobile ? (
             // Mobile stack layout with tabs
@@ -892,9 +892,12 @@ export default function ApiTester() {
               </Tabs>
             </div>
           ) : (
-            // Desktop resizable panels layout
-            <ResizablePanelGroup direction="horizontal" className="h-[calc(100vh-13rem)]">
-              <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+            // Desktop resizable panels layout - tam genişlik kullanmak için
+            <ResizablePanelGroup 
+              direction="horizontal" 
+              className="h-[calc(100vh-13rem)] w-full"
+            >
+              <ResizablePanel defaultSize={20} minSize={15} maxSize={30} className="min-w-[200px]">
                 <CollectionsSidebar
                   setSelectedRequestId={handleRequestSelect}
                   onHistorySelect={handleHistorySelect}
@@ -908,7 +911,7 @@ export default function ApiTester() {
                 />
               </ResizablePanel>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={40} minSize={30}>
+              <ResizablePanel defaultSize={40} minSize={30} className="min-w-[300px]">
                 <RequestBuilder
                   key={selectedRequestId || initialDataFromHistory?.url}
                   selectedRequestId={selectedRequestId}
@@ -923,7 +926,7 @@ export default function ApiTester() {
                 />
               </ResizablePanel>
               <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={40} minSize={25}>
+              <ResizablePanel defaultSize={40} minSize={25} className="min-w-[300px]">
                 <ResponseDisplay responseData={responseData} darkMode={isDarkMode} /> 
               </ResizablePanel>
             </ResizablePanelGroup>
