@@ -11,12 +11,11 @@ COPY --from=build /app/publish .
 EXPOSE 80
 EXPOSE 443
 
-# Ensure k6 is available (if needed)
-RUN apt-get update && apt-get install -y gnupg2 && \
-    apt-get install -y dirmngr --install-recommends && \
-    gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C780D0BDB1A69C86 && \
-    echo "deb https://dl.k6.io/deb stable main" | tee /etc/apt/sources.list.d/k6.list && \
-    apt-get update && \
-    apt-get install -y k6
+# Install K6 using alternative method
+RUN apt-get update && apt-get install -y ca-certificates gnupg curl && \
+    curl -L https://github.com/grafana/k6/releases/download/v0.46.0/k6-v0.46.0-linux-amd64.tar.gz -o k6.tar.gz && \
+    tar xzf k6.tar.gz && \
+    mv k6-v0.46.0-linux-amd64/k6 /usr/local/bin/ && \
+    rm -rf k6-v0.46.0-linux-amd64 k6.tar.gz
 
 ENTRYPOINT ["dotnet", "WebTestUI.Backend.dll"]
