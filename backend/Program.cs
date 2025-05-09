@@ -136,21 +136,21 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin", policy =>
     {
-        policy.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" })
+        // AllowedOrigins ayarından gelen origin'leri veya varsayılan olarak localhost ve Vercel domain'lerini kabul et
+        var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3000" };
+        
+        // Vercel URL'lerini ekle
+        var originList = new List<string>(allowedOrigins);
+        originList.Add("https://client-d597m7fo4-lordgrimxs-projects.vercel.app");
+        originList.Add("https://client-helykzfuh-lordgrimxs-projects.vercel.app");
+        // Herhangi bir Vercel domainini kabul etmek için (*.vercel.app) burada regex kullanamıyoruz, 
+        // bu yüzden bilinen tüm domainleri eklemeliyiz
+        
+        policy
+            .WithOrigins(originList.ToArray())
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
-    });
-});
-
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        policy.WithOrigins("http://localhost:3000")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
     });
 });
 
@@ -233,8 +233,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("AllowSpecificOrigin");
-
-app.UseCors();
 
 // Enable static file serving (for wwwroot)
 app.UseStaticFiles();
