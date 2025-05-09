@@ -13,6 +13,14 @@ if [ -z "$ConnectionStrings__DefaultConnection" ]; then
     exit 1
 fi
 
+# ConnectionString'i parçala
+CONNECTION_STRING="$ConnectionStrings__DefaultConnection"
+DB_HOST=$(echo $CONNECTION_STRING | sed -n 's/.*Host=\([^;]*\);.*/\1/p')
+DB_NAME=$(echo $CONNECTION_STRING | sed -n 's/.*Database=\([^;]*\);.*/\1/p')
+DB_USER=$(echo $CONNECTION_STRING | sed -n 's/.*Username=\([^;]*\);.*/\1/p')
+DB_PASSWORD=$(echo $CONNECTION_STRING | sed -n 's/.*Password=\([^;]*\);.*/\1/p')
+DB_PORT=$(echo $CONNECTION_STRING | sed -n 's/.*Port=\([^;]*\);.*/\1/p')
+
 # .env dosyasını oluştur
 if [ ! -f /app/.env ]; then
     echo "Çevre değişkenleri dosyası oluşturuluyor..."
@@ -30,16 +38,20 @@ fi
 
 # Veritabanı bağlantısını doğrula
 echo "Veritabanı bağlantısı kontrol ediliyor..."
-if nc -z `echo $ConnectionStrings__DefaultConnection | sed -e 's/.*Host=\([^;]*\);.*/\1/'` 5432 >/dev/null 2>&1; then
+if nc -z $DB_HOST $DB_PORT >/dev/null 2>&1; then
     echo "Veritabanı bağlantısı başarılı!"
+    
+    # Migrations.sql dosyasını çalıştır
+    if [ -f /app/migrations.sql ]; then
+        echo "Veritabanı migration script'i çalıştırılıyor..."
+        export PGPASSWORD=$DB_PASSWORD
+        psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f /app/migrations.sql || echo "Migration hatası, devam ediliyor..."
+    else
+        echo "UYARI: Migrations.sql dosyası bulunamadı!"
+    fi
 else
     echo "UYARI: Veritabanı bağlantısı kurulamadı, devam ediliyor..."
 fi
-
-# Önce veritabanı güncellemesi yap
-cd /app
-echo "Veritabanı güncellemesi yapılıyor..."
-dotnet ef database update || echo "Veritabanı güncellemesi başarısız oldu, devam ediliyor..."
 
 # K6 kurulumunu kontrol et
 if command -v k6 &> /dev/null; then

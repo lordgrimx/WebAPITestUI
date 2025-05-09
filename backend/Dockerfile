@@ -11,18 +11,20 @@ COPY . .
 WORKDIR "/src"
 RUN dotnet build "WebTestUI.Backend.csproj" -c Release -o /app/build
 
+# Migration script'i hazırla
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="${PATH}:/root/.dotnet/tools"
+RUN dotnet ef migrations script --idempotent --output /app/migrations.sql
+
 FROM build AS publish
 RUN dotnet publish "WebTestUI.Backend.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+COPY --from=build /app/migrations.sql ./migrations.sql
 COPY start.sh .
 RUN chmod +x start.sh
-
-# Entity Framework Core araçlarını yükle
-RUN dotnet tool install --global dotnet-ef
-ENV PATH="${PATH}:/root/.dotnet/tools"
 
 # K6 ve gerekli bağımlılıkları yükle (ayrı ayrı komutlar halinde)
 RUN apt-get update 
@@ -30,6 +32,7 @@ RUN apt-get install -y gnupg
 RUN apt-get install -y curl 
 RUN apt-get install -y bash 
 RUN apt-get install -y ca-certificates
+RUN apt-get install -y postgresql-client
 RUN curl -s https://dl.k6.io/key.gpg | gpg --dearmor > /usr/share/keyrings/k6-archive-keyring.gpg
 RUN echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | tee /etc/apt/sources.list.d/k6.list
 RUN apt-get update

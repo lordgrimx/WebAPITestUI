@@ -38,6 +38,11 @@ services:
       # Buildkit sorununu önlemek için
       - key: DOCKER_BUILDKIT
         value: 0
+      # EF Core migrations için
+      - key: DOTNET_SKIP_FIRST_TIME_EXPERIENCE 
+        value: 1
+      - key: DOTNET_CLI_TELEMETRY_OPTOUT
+        value: 1
     buildCommand: docker build --no-cache -t webtestui-backend .
     startCommand: docker run -p $PORT:80 --env-file .env -e "ConnectionStrings__DefaultConnection=$ConnectionStrings__DefaultConnection" webtestui-backend
 
