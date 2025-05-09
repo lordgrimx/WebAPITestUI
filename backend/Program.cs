@@ -46,8 +46,16 @@ if (usePostgres)
         {
             // Parse the connection string from DATABASE_URL
             connectionString = databaseUrl;
+            Console.WriteLine($"Using DATABASE_URL from environment: {connectionString}");
+        }
+        else
+        {
+            Console.WriteLine($"Using connection string from config: {connectionString}");
         }
     }
+    
+    // Log the database provider being used
+    Console.WriteLine("Using PostgreSQL database provider");
     
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseNpgsql(
@@ -59,6 +67,7 @@ if (usePostgres)
 else
 {
     // Default to SQL Server
+    Console.WriteLine("Using SQL Server database provider");
     builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlServer(
             builder.Configuration.GetConnectionString("DefaultConnection"),

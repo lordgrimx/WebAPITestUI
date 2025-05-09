@@ -5,7 +5,8 @@ services:
     env: docker
     region: oregon # Ya da size yakın bir bölge
     branch: main # Ana git branch'iniz
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: ./backend/Dockerfile # Ana projeden backend dizinine referans
+    rootDir: ./backend
     buildFilter:
       paths:
         - backend/**
