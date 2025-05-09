@@ -30,11 +30,24 @@ builder.Services.AddSignalR();
 
 // Add DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        b => b.MigrationsAssembly("WebTestUI.Backend")
-    )
-);
+{
+    var usePostgreSQL = builder.Configuration.GetValue<bool>("UsePostgreSQL", true); // Varsayılan olarak PostgreSQL kullan
+    
+    if (usePostgreSQL)
+    {
+        options.UseNpgsql(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            b => b.MigrationsAssembly("WebTestUI.Backend")
+        );
+    }
+    else
+    {
+        options.UseSqlServer(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            b => b.MigrationsAssembly("WebTestUI.Backend")
+        );
+    }
+});
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
