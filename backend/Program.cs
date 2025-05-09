@@ -28,13 +28,44 @@ builder.Services.AddControllers();
 // Add SignalR for real-time notifications
 builder.Services.AddSignalR();
 
-// Add DbContext
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        b => b.MigrationsAssembly("WebTestUI.Backend")
-    )
-);
+// Check if PostgreSQL should be used
+bool usePostgres = builder.Configuration.GetValue<bool>("UsePostgreSQL", false);
+
+// Add DbContext with conditional database provider
+if (usePostgres)
+{
+    // Render PostgreSQL connection string format
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    
+    // Check if we're in production (Render environment)
+    if (builder.Environment.IsProduction())
+    {
+        // Render provides DATABASE_URL environment variable
+        var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+        if (!string.IsNullOrEmpty(databaseUrl))
+        {
+            // Parse the connection string from DATABASE_URL
+            connectionString = databaseUrl;
+        }
+    }
+    
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseNpgsql(
+            connectionString,
+            b => b.MigrationsAssembly("WebTestUI.Backend")
+        )
+    );
+}
+else
+{
+    // Default to SQL Server
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(
+            builder.Configuration.GetConnectionString("DefaultConnection"),
+            b => b.MigrationsAssembly("WebTestUI.Backend")
+        )
+    );
+}
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>

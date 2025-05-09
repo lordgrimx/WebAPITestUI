@@ -1,0 +1,37 @@
+# Build files
+**/bin/
+**/obj/
+
+# Development files
+**/*.user
+**/*.userosscache
+**/*.dbmdl
+**/*.jfm
+**/.vs/
+**/.vscode/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+**/[Tt]emp/
+**/[Tt]mp/
+
+# Git directories and files
+**/.git/
+**/.gitignore
+**/.gitattributes
+
+# Docker related
+.dockerignore
+Dockerfile*
+
+# Local env files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Node modules if any exist
+**/node_modules/ 

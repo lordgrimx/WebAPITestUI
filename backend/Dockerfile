@@ -8,8 +8,13 @@ RUN dotnet publish "WebTestUI.Backend.csproj" -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish .
-EXPOSE 80
-EXPOSE 443
+
+# Ensure the migrations directory exists and is set up
+RUN mkdir -p /app/Migrations
+
+# Set environment variables for ASP.NET Core
+ENV ASPNETCORE_URLS=http://+:$PORT
+ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Ensure k6 is available (if needed)
 RUN apt-get update && apt-get install -y gnupg2 && \
@@ -19,4 +24,5 @@ RUN apt-get update && apt-get install -y gnupg2 && \
     apt-get update && \
     apt-get install -y k6
 
-ENTRYPOINT ["dotnet", "WebTestUI.Backend.dll"]
+# Command to run the application
+CMD dotnet WebTestUI.Backend.dll
