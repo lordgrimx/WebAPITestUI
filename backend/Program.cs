@@ -256,11 +256,60 @@ using (var scope = app.Services.CreateScope())
     // Ensure database is created and migrations are applied
     try
     {
+        logger.LogInformation("Attempting to ensure that database exists and is up to date...");
+        
+        // First ensure database exists
+        bool dbExists = dbContext.Database.CanConnect();
+        logger.LogInformation($"Database connection test: {(dbExists ? "Successful" : "Failed")}");
+        
+        if (!dbExists)
+        {
+            logger.LogInformation("Creating database...");
+            dbContext.Database.EnsureCreated();
+        }
+        
+        // Then apply migrations
+        logger.LogInformation("Applying migrations...");
         dbContext.Database.Migrate();
+        logger.LogInformation("Migrations applied successfully.");
+        
+        // Verify if migrations worked by checking if a few key tables exist
+        try 
+        {
+            // Select count to verify table exists
+            var envCount = dbContext.Environments.Count();
+            logger.LogInformation($"Table check: Environments table exists, count: {envCount}");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError($"Table verification failed. Environments table may not exist: {ex.Message}");
+            
+            // Try to recreate the database schema from scratch
+            logger.LogWarning("Migration appears to have failed. Attempting to recreate database schema...");
+            try 
+            {
+                dbContext.Database.EnsureDeleted(); // Clear database
+                dbContext.Database.EnsureCreated(); // Recreate with current model
+                logger.LogInformation("Successfully recreated database schema.");
+            }
+            catch (Exception recreateEx)
+            {
+                logger.LogError($"Failed to recreate database schema: {recreateEx.Message}");
+                throw; // Re-throw to propagate the error
+            }
+        }
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "An error occurred while migrating the database.");
+        logger.LogError(ex, "An error occurred while migrating or setting up the database.");
+        
+        // Try to provide more context about the error
+        if (ex.InnerException != null)
+        {
+            logger.LogError($"Inner Exception: {ex.InnerException.Message}");
+        }
+        
+        throw; // Re-throw to ensure application stops with error
     }
 
     // Check for default environment

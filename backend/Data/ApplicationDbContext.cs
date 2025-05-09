@@ -30,6 +30,22 @@ namespace WebTestUI.Backend.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // PostgreSQL için tablo adlarını düzenle
+            // Not: PostgreSQL, büyük-küçük harf duyarlıdır ve varsayılan olarak tablo adlarını küçük harfe çevirir
+            modelBuilder.Entity<Collection>().ToTable("collections");
+            modelBuilder.Entity<Request>().ToTable("requests");
+            modelBuilder.Entity<History>().ToTable("history_entries");
+            modelBuilder.Entity<EnvironmentConfig>().ToTable("environments");
+            modelBuilder.Entity<K6Test>().ToTable("k6_tests");
+            modelBuilder.Entity<SharedData>().ToTable("shared_data");
+            modelBuilder.Entity<Faq>().ToTable("faqs");
+            modelBuilder.Entity<SupportTicket>().ToTable("support_tickets");
+            modelBuilder.Entity<SupportTicketReply>().ToTable("support_ticket_replies");
+            modelBuilder.Entity<ChatMessage>().ToTable("chat_messages");
+            modelBuilder.Entity<HelpDocument>().ToTable("help_documents");
+            modelBuilder.Entity<Notification>().ToTable("notifications");
+            modelBuilder.Entity<NotificationPreference>().ToTable("notification_preferences");
+
             // Configure relationships and constraints
 
             // Collection
