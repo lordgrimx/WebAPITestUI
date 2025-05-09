@@ -3,7 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { useAuth } from '@/lib/auth-context';
 
 // Define API base URL - use the same one used in auth-context.js
-const API_BASE_URL = 'http://localhost:5296';
+const API_BASE_URL = 'https://webtestui-backend.onrender.com';
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
