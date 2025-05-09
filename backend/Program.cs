@@ -35,8 +35,36 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     
     if (usePostgreSQL)
     {
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        
+        // Check if connection string is a PostgreSQL URI (starts with postgres://)
+        if (connectionString?.StartsWith("postgres://") == true)
+        {
+            try 
+            {
+                // Parse the connection string to convert from URI format to key=value format
+                var uri = new Uri(connectionString);
+                var userInfo = uri.UserInfo.Split(':');
+                var username = userInfo[0];
+                var password = userInfo.Length > 1 ? userInfo[1] : "";
+                var host = uri.Host;
+                var port = uri.Port > 0 ? uri.Port : 5432;
+                var database = uri.AbsolutePath.TrimStart('/');
+                
+                // Build the new connection string in the format Npgsql expects
+                connectionString = $"Host={host};Port={port};Database={database};Username={username};Password={password};SSL Mode=Require;Trust Server Certificate=true;";
+                
+                Console.WriteLine($"Converted PostgreSQL connection string format. Using: Host={host};Port={port};Database={database};Username={username};Password=******;");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to parse PostgreSQL URI: {ex.Message}");
+                // If parsing fails, continue with the original connection string
+            }
+        }
+        
         options.UseNpgsql(
-            builder.Configuration.GetConnectionString("DefaultConnection"),
+            connectionString,
             b => b.MigrationsAssembly("WebTestUI.Backend")
         );
     }
