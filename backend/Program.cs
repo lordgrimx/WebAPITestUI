@@ -41,7 +41,7 @@ if (usePostgres)
     if (builder.Environment.IsProduction())
     {
         // Render provides DATABASE_URL environment variable
-        var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+        var databaseUrl = System.Environment.GetEnvironmentVariable("DATABASE_URL");
         if (!string.IsNullOrEmpty(databaseUrl))
         {
             // Parse the connection string from DATABASE_URL
