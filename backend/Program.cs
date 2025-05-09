@@ -284,18 +284,31 @@ using (var scope = app.Services.CreateScope())
         {
             logger.LogError($"Table verification failed. Environments table may not exist: {ex.Message}");
             
-            // Try to recreate the database schema from scratch
-            logger.LogWarning("Migration appears to have failed. Attempting to recreate database schema...");
+            // Render.com'da veritabanını sıfırlamaya çalışmak yetki hatası verir
+            // Bu nedenle daha güvenli bir yöntem kullanacağız
+            logger.LogWarning("Migration appears to have failed. Attempting schema creation...");
             try 
             {
-                dbContext.Database.EnsureDeleted(); // Clear database
-                dbContext.Database.EnsureCreated(); // Recreate with current model
-                logger.LogInformation("Successfully recreated database schema.");
+                // Doğrudan SQL komutları kullanarak şema ve tabloları oluşturmayı deneyelim
+                // NOT: Bu yöntem daha az güvenli, ancak hızlı bir çözüm sağlayabilir
+                logger.LogInformation("Creating schema using EnsureCreated...");
+                
+                // EnsureCreated ile şemayı oluştur ama mevcut tabloları silme
+                bool created = dbContext.Database.EnsureCreated();
+                logger.LogInformation($"Database schema created: {created}");
+                
+                if (!created)
+                {
+                    // Şema mevcut, migration'ları tekrar uygulamayı deneyelim
+                    logger.LogInformation("Schema exists, reapplying migrations...");
+                    dbContext.Database.Migrate();
+                }
             }
             catch (Exception recreateEx)
             {
-                logger.LogError($"Failed to recreate database schema: {recreateEx.Message}");
-                throw; // Re-throw to propagate the error
+                logger.LogError($"Failed to create database schema: {recreateEx.Message}");
+                logger.LogWarning("You may need to manually create tables or reset the database from Render.com dashboard");
+                // Hatayı yeniden fırlatmıyoruz - uygulama çalışmaya devam etsin ama log kayıtlarına uyarı ekleyelim
             }
         }
     }
