@@ -1,20 +1,20 @@
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+WORKDIR /app
+EXPOSE 80
+EXPOSE 443
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY ["WebTestUI.Backend.csproj", "./"]
+RUN dotnet restore "WebTestUI.Backend.csproj"
+COPY . .
+WORKDIR "/src"
+RUN dotnet build "WebTestUI.Backend.csproj" -c Release -o /app/build
+
+FROM build AS publish
+RUN dotnet publish "WebTestUI.Backend.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
 WORKDIR /app
-
-# Proje dosyalarını kopyala
-COPY . ./
-
-# Derle ve yayınla
-RUN dotnet restore
-RUN dotnet publish -c Release -o out
-
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
-WORKDIR /app
-COPY --from=build /app/out ./
-
-# Set environment variables
-ENV ASPNETCORE_URLS=http://+:$PORT
-ENV ASPNETCORE_ENVIRONMENT=Production
-
-# Command to run the application
-CMD ["dotnet", "WebTestUI.Backend.dll"]
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "WebTestUI.Backend.dll"] 
