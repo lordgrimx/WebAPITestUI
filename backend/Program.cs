@@ -40,17 +40,25 @@ if (usePostgres)
     // Check if we're in production (Render environment)
     if (builder.Environment.IsProduction())
     {
-        // Render provides DATABASE_URL environment variable
+        // Render provides DATABASE_URL or ConnectionStrings__DefaultConnection environment variable
         var databaseUrl = System.Environment.GetEnvironmentVariable("DATABASE_URL");
+        var renderConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        
         if (!string.IsNullOrEmpty(databaseUrl))
         {
             // Parse the connection string from DATABASE_URL
             connectionString = databaseUrl;
-            Console.WriteLine($"Using DATABASE_URL from environment: {connectionString}");
+            Console.WriteLine($"Using DATABASE_URL from environment");
+        }
+        else if (!string.IsNullOrEmpty(renderConnectionString))
+        {
+            // Use the ConnectionStrings__DefaultConnection from environment
+            connectionString = renderConnectionString;
+            Console.WriteLine($"Using ConnectionStrings__DefaultConnection from environment");
         }
         else
         {
-            Console.WriteLine($"Using connection string from config: {connectionString}");
+            Console.WriteLine($"Warning: No valid database connection string found!");
         }
     }
     

@@ -17,25 +17,35 @@ RUN dotnet publish "WebTestUI.Backend.csproj" -c Release -o /app/publish /p:UseA
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+COPY start.sh .
+RUN chmod +x start.sh
 
 # Entity Framework Core araçlarını yükle
 RUN dotnet tool install --global dotnet-ef
 ENV PATH="${PATH}:/root/.dotnet/tools"
 
-# K6 ve gerekli bağımlılıkları yükle
-RUN apt-get update && \
-    apt-get install -y gnupg curl bash ca-certificates && \
-    curl -s https://dl.k6.io/key.gpg | gpg --dearmor | tee /usr/share/keyrings/k6-archive-keyring.gpg > /dev/null && \
-    echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | tee /etc/apt/sources.list.d/k6.list && \
-    apt-get update && \
-    apt-get install -y k6
+# K6 ve gerekli bağımlılıkları yükle (ayrı ayrı komutlar halinde)
+RUN apt-get update 
+RUN apt-get install -y gnupg 
+RUN apt-get install -y curl 
+RUN apt-get install -y bash 
+RUN apt-get install -y ca-certificates
+RUN curl -s https://dl.k6.io/key.gpg | gpg --dearmor > /usr/share/keyrings/k6-archive-keyring.gpg
+RUN echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | tee /etc/apt/sources.list.d/k6.list
+RUN apt-get update
+RUN apt-get install -y k6
 
 # K6 konfigürasyonu
 ENV K6_BROWSER_ENABLED=false
 ENV K6_BROWSER_HEADLESS=true
+ENV K6_NO_THRESHOLDS=true
+ENV K6ExecutablePath=/usr/bin/k6
 
 # Çalışma modu ve yapılandırması
 ENV ASPNETCORE_URLS=http://+:80;https://+:443
 ENV ASPNETCORE_ENVIRONMENT=Production
 
-ENTRYPOINT ["dotnet", "WebTestUI.Backend.dll"] 
+# Sağlık kontrolü için curl yükle
+RUN apt-get install -y curl netcat-openbsd
+
+ENTRYPOINT ["/app/start.sh"] 

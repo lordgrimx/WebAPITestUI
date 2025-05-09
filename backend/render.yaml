@@ -6,11 +6,21 @@ services:
     dockerContext: .
     plan: free
     healthCheckPath: /health
+    disk:
+      name: tmp-volume
+      mountPath: /tmp
+      sizeGB: 1
+    buildFilter:
+      paths:
+        - ./Dockerfile
+        - ./WebTestUI.Backend.csproj
+        - ./start.sh
+        - ./**/*.cs
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: ASPNETCORE_URLS
-        value: http://+:80;https://+:443
+        value: http://+:80
       - key: UsePostgreSQL
         value: true
       - key: K6_BROWSER_ENABLED
@@ -25,8 +35,11 @@ services:
         fromDatabase:
           name: postgre_db
           property: connectionString
-    buildCommand: docker build -t webtestui-backend .
-    startCommand: docker run -p $PORT:80 webtestui-backend
+      # Buildkit sorununu önlemek için
+      - key: DOCKER_BUILDKIT
+        value: 0
+    buildCommand: docker build --no-cache -t webtestui-backend .
+    startCommand: docker run -p $PORT:80 --env-file .env -e "ConnectionStrings__DefaultConnection=$ConnectionStrings__DefaultConnection" webtestui-backend
 
 databases:
   - name: postgre_db
