@@ -12,6 +12,22 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80;https://+:443
+      - ConnectionStrings__DefaultConnection=Host=dpg-d0evff95pdvs73b56cng-a.oregon-postgres.render.com;Database=postgre_q95b;Username=postgre_q95b_user;Password=iBldWBvc97c5MwHJ2CpENCBmvA6P8kXI;Port=5432;SSL Mode=Require;Trust Server Certificate=true
+      - UsePostgreSQL=true
+      - K6_BROWSER_ENABLED=false
+      - K6_BROWSER_HEADLESS=true
+      - K6_NO_THRESHOLDS=true
+      - K6ExecutablePath=/usr/bin/k6
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    command: >
+      bash -c "dotnet ef database update && dotnet WebTestUI.Backend.dll"
     volumes:
-      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
-      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro 
+      - ${APPDATA:-/root/.appdata}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA:-/root/.appdata}/ASP.NET/Https:/root/.aspnet/https:ro
+      - /tmp:/tmp 

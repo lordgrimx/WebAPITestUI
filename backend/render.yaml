@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: webtestui-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:80;https://+:443
+      - key: UsePostgreSQL
+        value: true
+      - key: K6_BROWSER_ENABLED
+        value: false
+      - key: K6_BROWSER_HEADLESS
+        value: true
+      - key: K6_NO_THRESHOLDS
+        value: true
+      - key: K6ExecutablePath
+        value: /usr/bin/k6
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: postgre_db
+          property: connectionString
+    buildCommand: docker build -t webtestui-backend .
+    startCommand: docker run -p $PORT:80 webtestui-backend
+
+databases:
+  - name: postgre_db
+    plan: free
+    ipAllowList: [] 

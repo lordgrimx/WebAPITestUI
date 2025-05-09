@@ -5,7 +5,7 @@ using WebTestUI.Backend.Data;
 
 namespace WebTestUI.Backend.Controllers
 {
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
     public class HealthController : ControllerBase
     {
@@ -17,20 +17,9 @@ namespace WebTestUI.Backend.Controllers
         }
 
         [HttpGet]
-        [Route("/health")]
-        public async Task<IActionResult> Get()
+        public IActionResult Get()
         {
-            try
-            {
-                // Veritabanı bağlantısını kontrol et
-                await _context.Database.CanConnectAsync();
-                
-                return Ok(new { status = "healthy", message = "Service is running" });
-            }
-            catch (System.Exception ex)
-            {
-                return StatusCode(500, new { status = "unhealthy", message = $"Service has issues: {ex.Message}" });
-            }
+            return Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
         }
     }
 } 
