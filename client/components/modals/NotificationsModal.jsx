@@ -174,8 +174,8 @@ function NotificationsModal({ open, setOpen, darkMode }) {
           darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"
         }`}
       >
-        <Tabs defaultValue="notifications" className="w-full">
-          <DialogHeader className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+        <Tabs defaultValue="notifications" className="w-full h-full flex flex-col">
+          <DialogHeader className="px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200 shrink-0">
             <div className="flex items-center justify-between">
               <DialogTitle>
                 <VisuallyHidden>Bildirimler</VisuallyHidden>
@@ -197,7 +197,7 @@ function NotificationsModal({ open, setOpen, darkMode }) {
               </TabsList>
               <div className="flex items-center ml-2 sm:ml-4">
                 <DialogClose className="text-gray-500 hover:text-gray-700">
-                  <X className="h-3 w-3 sm:h-4 sm:w-4" />
+                  
                 </DialogClose>
               </div>
             </div>
@@ -298,7 +298,27 @@ function NotificationsModal({ open, setOpen, darkMode }) {
           </TabsContent>
 
           <TabsContent value="preferences" className="flex-1 overflow-y-auto p-3 sm:p-6">
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-4 sm:space-y-6 max-h-[50vh] sm:max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                  width: 8px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                  background: ${darkMode ? '#2d3748' : '#f7fafc'};
+                  border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                  background: ${darkMode ? '#4a5568' : '#cbd5e0'};
+                  border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                  background: ${darkMode ? '#718096' : '#a0aec0'};
+                }
+                .custom-scrollbar {
+                  scrollbar-width: thin;
+                  scrollbar-color: ${darkMode ? '#4a5568 #2d3748' : '#cbd5e0 #f7fafc'};
+                }
+              `}</style>
               <div>
                 <h3 className="font-medium text-base sm:text-lg mb-1 sm:mb-2 flex items-center">
                   <Bell className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
@@ -522,7 +542,7 @@ function NotificationsModal({ open, setOpen, darkMode }) {
               </div>
             </div>
 
-            <DialogFooter className="mt-4 sm:mt-6 flex-col sm:flex-row gap-2 sm:gap-0">
+            <DialogFooter className="mt-4 sm:mt-6 flex-col sm:flex-row gap-2 sm:gap-0 sticky bottom-0 pb-2 pt-2 bg-inherit border-t">
               <Button 
                 variant="outline" 
                 onClick={handleResetToDefault}

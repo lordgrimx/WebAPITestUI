@@ -203,6 +203,9 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IHelpDocumentService, HelpDocumentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// Health check için gerekli yapılandırma
+builder.Services.AddHealthChecks();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -262,6 +265,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<WebTestUI.Backend.Hubs.NotificationHub>("/hubs/notifications");
+
+// Health check endpoint'i ekle
+app.MapHealthChecks("/health");
 
 // Seed roles and default environment
 using (var scope = app.Services.CreateScope())
