@@ -143,6 +143,7 @@ builder.Services.AddCors(options =>
         var originList = new List<string>(allowedOrigins);
         originList.Add("https://client-d597m7fo4-lordgrimxs-projects.vercel.app");
         originList.Add("https://client-helykzfuh-lordgrimxs-projects.vercel.app");
+        originList.Add("https://client-nu-orcin-64.vercel.app/");
         // Herhangi bir Vercel domainini kabul etmek için (*.vercel.app) burada regex kullanamıyoruz, 
         // bu yüzden bilinen tüm domainleri eklemeliyiz
         
