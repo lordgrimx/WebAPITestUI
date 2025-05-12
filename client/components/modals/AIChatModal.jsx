@@ -287,10 +287,6 @@ function AIChatModal({ open, setOpen, darkMode }) {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
-              <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </DialogHeader>

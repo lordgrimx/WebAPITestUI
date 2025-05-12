@@ -144,6 +144,9 @@ builder.Services.AddCors(options =>
         originList.Add("https://client-d597m7fo4-lordgrimxs-projects.vercel.app");
         originList.Add("https://client-helykzfuh-lordgrimxs-projects.vercel.app");
         originList.Add("https://client-nu-orcin-64.vercel.app");
+        originList.Add("https://webtestui-backend.onrender.com"); // Backend'in kendi domain'i
+        originList.Add("http://localhost:3000"); // Localhost'u tekrar ekleyelim (kesin olması için)
+        originList.Add("http://localhost:3001"); // Farklı port seçenekleri ekleyelim (geliştirme için)
         // Herhangi bir Vercel domainini kabul etmek için (*.vercel.app) burada regex kullanamıyoruz, 
         // bu yüzden bilinen tüm domainleri eklemeliyiz
         
@@ -152,6 +155,16 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod()
             .AllowAnyHeader()
             .AllowCredentials();
+    });
+
+    // Geliştirme ortamı için daha geniş bir politika ekleyelim
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy
+            .SetIsOriginAllowed(_ => true) // Tüm originlere izin ver, AllowAnyOrigin() yerine
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials(); // Credentials kullanabilmek için
     });
 });
 
@@ -229,11 +242,17 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    
+    // Geliştirme ortamında daha geniş CORS politikası kullan
+    app.UseCors("AllowAll");
+}
+else
+{
+    // Prodüksiyon ortamında belirli originlere izin ver
+    app.UseCors("AllowSpecificOrigin");
 }
 
 app.UseHttpsRedirection();
-
-app.UseCors("AllowSpecificOrigin");
 
 // Enable static file serving (for wwwroot)
 app.UseStaticFiles();
