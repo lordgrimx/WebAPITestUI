@@ -9,6 +9,7 @@ using WebTestUI.Backend.Data.Entities; // Add this for ApplicationUser
 using WebTestUI.Backend.Services;
 using WebTestUI.Backend.Services.Interfaces;
 using dotenv.net; // Add dotenv support
+using Npgsql; // NpgsqlDataSourceBuilder için ekleyin
 // Add Swashbuckle using directives if they are missing implicitly
 // using Swashbuckle.AspNetCore.SwaggerGen;
 // using Swashbuckle.AspNetCore.SwaggerUI;
@@ -19,6 +20,9 @@ DotEnv.Fluent()
     .WithTrimValues()
     .WithProbeForEnv(probeLevelsToSearch: 5)
     .Load();
+
+// <<< YENİ SATIR: Global dinamik JSON'u etkinleştir >>>
+NpgsqlConnection.GlobalTypeMapper.EnableDynamicJson();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,8 +68,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         }
         
         options.UseNpgsql(
-            connectionString,
-            b => b.MigrationsAssembly("WebTestUI.Backend")
+            connectionString, // Doğrudan connection string'i kullan
+            o => o.MigrationsAssembly("WebTestUI.Backend")
         );
     }
     else
