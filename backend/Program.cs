@@ -203,6 +203,9 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IHelpDocumentService, HelpDocumentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// Register the background service for history cleanup
+builder.Services.AddHostedService<HistoryCleanupService>();
+
 // Health check için gerekli yapılandırma
 builder.Services.AddHealthChecks();
 

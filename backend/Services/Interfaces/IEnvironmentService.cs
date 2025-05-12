@@ -11,6 +11,5 @@ namespace WebTestUI.Backend.Services.Interfaces
         Task<EnvironmentDto> UpdateEnvironmentAsync(int id, UpdateEnvironmentDto model, string userId);
         Task<bool> DeleteEnvironmentAsync(int id, string userId);
         Task<bool> ActivateEnvironmentAsync(int id, string userId);
-        Task<bool> SyncHistoryWithEnvironmentAsync(int environmentId, string userId); // Add new method for explicit sync
     }
 }

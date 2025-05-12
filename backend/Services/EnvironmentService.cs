@@ -311,7 +311,7 @@ namespace WebTestUI.Backend.Services
                 environment.UpdatedAt = DateTime.UtcNow;
 
                 // Sync history entries with this environment (Fix for history synchronization)
-                await SyncHistoryEntriesWithEnvironmentAsync(id, userId);
+                // await SyncHistoryEntriesWithEnvironmentAsync(id, userId); // Removed this call
 
                 await _dbContext.SaveChangesAsync();
 
@@ -336,6 +336,7 @@ namespace WebTestUI.Backend.Services
                 env.UpdatedAt = DateTime.UtcNow;
             }
         }        // Implementation of interface method for explicit synchronization
+        /* // Removed this method
         public async Task<bool> SyncHistoryWithEnvironmentAsync(int environmentId, string userId)
         {
             try
@@ -364,8 +365,10 @@ namespace WebTestUI.Backend.Services
                 throw;
             }
         }
+        */
 
         // Internal method to synchronize history entries with the active environment
+        /* // Removed this method
         private async Task SyncHistoryEntriesWithEnvironmentAsync(int environmentId, string userId)
         {
             try
@@ -397,6 +400,7 @@ namespace WebTestUI.Backend.Services
                 // that shouldn't prevent the main environment activation
             }
         }
+        */
 
         private async Task<bool> ActivateAnotherEnvironmentAsync(string userId)
         {
@@ -421,7 +425,7 @@ namespace WebTestUI.Backend.Services
                     environmentToActivate.UpdatedAt = DateTime.UtcNow;
 
                     // Also sync history entries with this newly activated environment
-                    await SyncHistoryEntriesWithEnvironmentAsync(environmentToActivate.Id, userId);
+                    // await SyncHistoryEntriesWithEnvironmentAsync(environmentToActivate.Id, userId); // Removed this call
 
                     await _dbContext.SaveChangesAsync();
                     return true;
