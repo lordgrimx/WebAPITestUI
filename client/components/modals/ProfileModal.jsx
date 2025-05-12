@@ -39,7 +39,7 @@ function ProfileModal({ open, setOpen, darkMode }) {
     if (user) {
       setFirstName(user.name?.split(" ")[0] || "");
       setLastName(user.name?.split(" ").slice(1).join(" ") || "");
-      setProfileImageUrl(user.profileImage || ""); // Use existing profile image URL
+      setProfileImageUrl(user.profileImageBase64 || ""); // Use existing profile image URL
       setPhone(user.phone || "");
       setAddress(user.address || "");
       setWebsite(user.website || "");

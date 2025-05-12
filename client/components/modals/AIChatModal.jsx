@@ -243,7 +243,8 @@ function AIChatModal({ open, setOpen, darkMode }) {
       <DialogContent
         className={`max-w-5xl h-[80vh] overflow-hidden flex flex-col p-0 gap-0 ${
           darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-800 border-gray-200"
-        }`}
+        } [&>button]:hidden`}
+        hideCloseButton
       >
         <DialogHeader className={`px-6 py-3 border-b ${darkMode ? "border-gray-700" : "border-gray-200"}`}>
           <div className="flex justify-between items-center">
@@ -287,6 +288,10 @@ function AIChatModal({ open, setOpen, darkMode }) {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              
+              <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </DialogHeader>
