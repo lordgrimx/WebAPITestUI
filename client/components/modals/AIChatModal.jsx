@@ -288,11 +288,9 @@ function AIChatModal({ open, setOpen, darkMode }) {
                 </Tooltip>
               </TooltipProvider>
               
-              <DialogClose asChild>
-                <Button variant="ghost" size="icon">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DialogClose>
+              <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </DialogHeader>

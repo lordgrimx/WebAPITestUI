@@ -57,6 +57,7 @@ import { toast } from "sonner";
 
 // DeleteConfirmDialog bileşeni - Environment silme onay dialog'u
 const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
+  const { t } = useTranslation('common');
   const handleConfirm = () => {
     onConfirm(environment);
     setOpen(false);
@@ -66,17 +67,17 @@ const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Delete Environment</DialogTitle>
+          <DialogTitle>{t('general.delete')} {t('header.environment')}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete the environment "${environment?.name}"? This will also delete all associated collections, requests, and history for this environment.
+            {t('collections.confirmDelete').replace('collection', 'environment')} "${environment?.name}"?
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
+            {t('general.cancel')}
           </Button>
           <Button variant="destructive" onClick={handleConfirm}>
-            Delete
+            {t('general.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -323,20 +324,20 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
       // Copy URL to clipboard
       navigator.clipboard.writeText(shareUrl)
         .then(() => {
-          toast.success("Share Link Generated!", {
-            description: "Shareable link copied to clipboard."
+          toast.success(t('header.shareList.copyLink'), {
+            description: t('header.shareList.copyLink'),
           });
         })
         .catch(err => {
           console.error('Failed to copy link: ', err);
-          toast.error("Copy Failed", {
-            description: "Could not copy the share link to the clipboard."
+          toast.error(t('saveRequest.failedToSave'), {
+            description: t('response.previewNotAvailable'),
           });
         });
     } catch (error) {
       console.error('Failed to generate shareable link:', error);
-      toast.error("Generation Failed", {
-        description: "Could not generate a shareable link. " + (error.response?.data?.message || error.message)
+      toast.error(t('saveRequest.failedToSave'), {
+        description: t('response.previewNotAvailable') + " " + (error.response?.data?.message || error.message),
       });
     }
   };
@@ -348,15 +349,15 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
 
   const handleShareToWorkspace = () => {
     console.log("Sharing to workspace (placeholder)...", currentRequestData);
-    toast.info("Share to Workspace", {
+    toast.info(t('header.shareList.toWorkspace'), {
       description: "This feature is not yet fully implemented.",
     });
   };
 
   const handleExportRequest = () => {
     if (!currentRequestData) {
-      toast.error("Export Failed", {
-        description: "No request data available to export.",
+      toast.error(t('response.truncated'), {
+        description: t('response.previewNotAvailable'),
       });
       return;
     }
@@ -393,13 +394,13 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success("Request Exported", {
-        description: `Request data saved as ${filename}`,
+      toast.success(t('saveRequest.requestSaved'), {
+        description: `${t('requests.requestName')} ${filename}`,
       });
     } catch (error) {
       console.error("Failed to export request:", error);
-      toast.error("Export Failed", {
-        description: "Could not export the request data.",
+      toast.error(t('saveRequest.failedToSave'), {
+        description: t('response.previewNotAvailable'),
       });
     }
   };  // Function to open the delete confirmation dialog
@@ -414,9 +415,9 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
     if (env && env.id) {
       try {
         await deleteEnvironment(env.id);
-        toast.success('Environment deleted successfully.');
+        toast.success(t('general.delete') + ' ' + t('header.environment'));
       } catch (error) {
-        toast.error('Failed to delete environment.');
+        toast.error(t('saveRequest.failedToSave'));
         console.error('Delete environment error:', error);
       }
     }
@@ -465,7 +466,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
       <header className="container mx-auto px-4 md:px-6 py-4">
         <nav className="flex items-center justify-between">
           <div className="flex items-center">
-            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>API Testing Tool</h1>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{t('header.title', 'API Testing Tool')}</h1>
           </div>
 
           {isMobile && (
@@ -558,7 +559,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     <div className={`mr-3 p-2 rounded-full ${isDarkMode ? 'bg-blue-900/40' : 'bg-blue-100'}`}>
                       <Zap className={`h-5 w-5 ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`} />
                     </div>
-                    Özellikler
+                    {t('header.features')}
                   </a>
                   <a
                     href="#pricing"
@@ -568,7 +569,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     <div className={`mr-3 p-2 rounded-full ${isDarkMode ? 'bg-green-900/40' : 'bg-green-100'}`}>
                       <ChartLine className={`h-5 w-5 ${isDarkMode ? 'text-green-300' : 'text-green-600'}`} />
                     </div>
-                    Fiyatlandırma
+                    {t('header.pricing')}
                   </a>
                   <a
                     href="#docs"
@@ -578,7 +579,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     <div className={`mr-3 p-2 rounded-full ${isDarkMode ? 'bg-purple-900/40' : 'bg-purple-100'}`}>
                       <BookMarked className={`h-5 w-5 ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`} />
                     </div>
-                    Dokümantasyon
+                    {t('header.documentation')}
                   </a>
                   <a
                     href="#about"
@@ -588,7 +589,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     <div className={`mr-3 p-2 rounded-full ${isDarkMode ? 'bg-orange-900/40' : 'bg-orange-100'}`}>
                       <Users className={`h-5 w-5 ${isDarkMode ? 'text-orange-300' : 'text-orange-600'}`} />
                     </div>
-                    Hakkında
+                    {t('header.about')}
                   </a>
                 </div>
               </div>
@@ -605,7 +606,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                       closeMobileMenu();
                     }}
                   >
-                    Giriş Yap
+                    {t('auth.login')}
                   </Button>
                   
                   <Button
@@ -615,7 +616,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                       closeMobileMenu();
                     }}
                   >
-                    Kayıt Ol
+                    {t('auth.register')}
                   </Button>
                   
                   <Button
@@ -626,12 +627,12 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     {isDarkMode ? (
                       <>
                         <Sun className="h-5 w-5 mr-2" />
-                        Açık Mod
+                        {t('settings.theme.light')}
                       </>
                     ) : (
                       <>
                         <Moon className="h-5 w-5 mr-2" />
-                        Koyu Mod
+                        {t('settings.theme.dark')}
                       </>
                     )}
                   </Button>
@@ -735,7 +736,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowSaveRequest(true)}
             >
               <Save className="h-4 w-4" />
-              <span className="hidden sm:inline">Kaydet</span>
+              <span className="hidden sm:inline">{t('header.saveRequest')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -744,7 +745,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowGenerateCode(true)}
             >
               <Code className="h-4 w-4" />
-              <span className="hidden sm:inline">Kod Üret</span>
+              <span className="hidden sm:inline">{t('header.generateCode')}</span>
             </Button>
             <Button
               variant="ghost"
@@ -753,7 +754,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
               onClick={() => setShowSettings(true)}
             >
               <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Ayarlar</span>
+              <span className="hidden sm:inline">{t('header.settings')}</span>
             </Button>            
             <Link href="/loadtests">
               <Button
@@ -762,7 +763,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 className={`flex items-center space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4" />
-                <span className="hidden sm:inline">Yük Testleri</span>
+                <span className="hidden sm:inline">{t('loadTests.title')}</span>
               </Button>
             </Link>
             <Link href="/monitor">
@@ -772,7 +773,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 className={`flex items-center space-x-1 ${isDarkMode ? "":"text-gray-800"}`}
               >
                 <Activity className="h-4 w-4" />
-                <span className="hidden sm:inline">İzleme</span>
+                <span className="hidden sm:inline">{t('header.monitoring')}</span>
               </Button>
             </Link>
           </div>
@@ -818,7 +819,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 ))
               ) : (
                 <DropdownMenuItem disabled>
-                  {t('header.environmentList.notFound', 'Ortam Bulunamadı')}
+                  {t('header.environmentList.notFound')}
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />              <Button
@@ -828,7 +829,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 onClick={openCreateEnvironmentModal}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                {t('header.environmentList.add', 'Add Environment')}
+                {t('header.environmentList.add')}
               </Button>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -843,13 +844,13 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleCopyLink}>
-                {t('header.shareList.copyLink', 'Bağlantıyı Kopyala')}
+                {t('header.shareList.copyLink')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleShareToWorkspace}>
-                {t('header.shareList.toWorkspace', 'Çalışma Alanına Paylaş')}
+                {t('header.shareList.toWorkspace')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportRequest}>
-                {t('header.shareList.export', 'Dışa Aktar')}
+                {t('header.shareList.export')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>          
@@ -1035,7 +1036,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     }}
                   >
                     <Save className="h-6 w-6" />
-                    <span>Kaydet</span>
+                    <span>{t('header.saveRequest')}</span>
                   </Button>
                   
                   <Button
@@ -1047,7 +1048,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     }}
                   >
                     <Code className="h-6 w-6" />
-                    <span>Kod Üret</span>
+                    <span>{t('header.generateCode')}</span>
                   </Button>
                   
                   <Button
@@ -1059,7 +1060,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                     }}
                   >
                     <Settings className="h-6 w-6" />
-                    <span>Ayarlar</span>
+                    <span>{t('header.settings')}</span>
                   </Button>
                   
                   <Link href="/monitor" className="contents" onClick={closeMobileMenu}>
@@ -1068,7 +1069,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                       className={`flex flex-col items-center justify-center h-24 rounded-xl gap-2 ${isDarkMode ? "hover:bg-gray-700 border-gray-700" : "hover:bg-gray-100"}`}
                     >
                       <Activity className="h-6 w-6" />
-                      <span>İzleme</span>
+                      <span>{t('header.monitoring')}</span>
                     </Button>
                   </Link>
                 </div>
@@ -1078,7 +1079,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   <div className="flex justify-between items-center mb-3">
                     <h2 className={`font-medium ${isDarkMode ? "text-gray-200" : "text-gray-700"}`}>
                       <Globe className="h-4 w-4 inline mr-2" />
-                      Ortam
+                      {t('header.environment')}
                     </h2>
                     <Button
                       variant="ghost"
@@ -1094,7 +1095,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                   </div>
                   
                   <div className={`text-sm mb-2 ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
-                    Aktif: <span className="font-medium">{isEnvironmentLoading ? "Yükleniyor..." : currentEnvironment?.name || "Ortam Seçilmedi"}</span>
+                    {t('monitoring.active')}: <span className="font-medium">{isEnvironmentLoading ? t('general.loading') : currentEnvironment?.name || t('header.environmentList.notFound')}</span>
                   </div>
                   
                   {environments.length > 0 && (
@@ -1149,7 +1150,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                 <div className={`mb-6 p-4 rounded-xl ${isDarkMode ? "bg-gray-700/60" : "bg-gray-100"}`}>
                   <h2 className={`font-medium mb-3 ${isDarkMode ? "text-gray-200" : "text-gray-700"}`}>
                     <Share2 className="h-4 w-4 inline mr-2" />
-                    Paylaşım
+                    {t('header.share')}
                   </h2>
                   
                   <div className="flex flex-col gap-2">
@@ -1165,7 +1166,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                         <div className={`mr-3 p-1.5 rounded-full ${isDarkMode ? "bg-blue-800" : "bg-blue-100"}`}>
                           <Share2 className={`h-4 w-4 ${isDarkMode ? "text-blue-200" : "text-blue-600"}`} />
                         </div>
-                        <span>Bağlantıyı Kopyala</span>
+                        <span>{t('header.shareList.copyLink')}</span>
                       </div>
                     </Button>
                     
@@ -1181,7 +1182,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                         <div className={`mr-3 p-1.5 rounded-full ${isDarkMode ? "bg-green-800" : "bg-green-100"}`}>
                           <Share2 className={`h-4 w-4 ${isDarkMode ? "text-green-200" : "text-green-600"}`} />
                         </div>
-                        <span>Çalışma Alanına Paylaş</span>
+                        <span>{t('header.shareList.toWorkspace')}</span>
                       </div>
                     </Button>
                     
@@ -1197,7 +1198,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                         <div className={`mr-3 p-1.5 rounded-full ${isDarkMode ? "bg-purple-800" : "bg-purple-100"}`}>
                           <Share2 className={`h-4 w-4 ${isDarkMode ? "text-purple-200" : "text-purple-600"}`} />
                         </div>
-                        <span>Dışa Aktar</span>
+                        <span>{t('header.shareList.export')}</span>
                       </div>
                     </Button>
                   </div>
@@ -1244,7 +1245,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
                       }}
                       className="rounded-full px-4"
                     >
-                      Çıkış
+                      {t('auth.logout')}
                     </Button>
                   </div>
                 </div>
