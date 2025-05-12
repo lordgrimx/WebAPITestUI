@@ -104,11 +104,13 @@ namespace WebTestUI.Backend.Services
                 await _dbContext.SaveChangesAsync();
 
                 // If this is the active environment, sync history entries
+                /* // Removed history sync call
                 if (environment.IsActive)
                 {
                     await SyncHistoryEntriesWithEnvironmentAsync(environment.Id, userId);
                     await _dbContext.SaveChangesAsync();
                 }
+                */
 
                 // Map the created entity back to DTO using helper
                 return MapToDto(environment);
@@ -150,7 +152,9 @@ namespace WebTestUI.Backend.Services
                     environment.IsActive = true;
 
                     // Sync history entries when environment is activated through an update
+                    /* // Removed history sync call
                     await SyncHistoryEntriesWithEnvironmentAsync(environment.Id, userId);
+                    */
                 }
                 else if (model.IsActive.HasValue)
                 {

@@ -238,32 +238,5 @@ namespace WebTestUI.Backend.Controllers
             }
         }
         // Yorum satırını kaldır
-
-        // Endpoint to explicitly synchronize history entries with an environment
-        [HttpPost("{id}/sync-history")]
-        public async Task<IActionResult> SyncHistoryWithEnvironment(int id)
-        {
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(new { message = "Kullanıcı oturumu bulunamadı." });
-                }
-
-                var result = await _environmentService.SyncHistoryWithEnvironmentAsync(id, userId);
-                if (!result)
-                {
-                    return NotFound(new { message = "Ortam bulunamadı veya bu işlem için yetkiniz yok." });
-                }
-
-                return Ok(new { message = "Geçmiş kayıtları ortam ile başarıyla senkronize edildi." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Geçmiş kayıtları ortam ile senkronize edilirken bir hata oluştu: {EnvironmentId}", id);
-                return StatusCode(500, new { message = "Bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
-            }
-        }
     }
 }
