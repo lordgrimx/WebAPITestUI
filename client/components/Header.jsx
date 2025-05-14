@@ -97,9 +97,10 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
   // Environment silme dialog'u için state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [environmentToDelete, setEnvironmentToDelete] = useState(null);
+  // Add state for environment dropdown
+  const [isEnvDropdownOpen, setIsEnvDropdownOpen] = useState(false);
   // Remove local environment state - get from context instead
   // const [environments, setEnvironments] = useState([]);
-  // const [currentEnvironment, setCurrentEnvironment] = useState(null);
   const { user, isAuthenticated, login, logout, isLoading: isAuthLoading } = useAuth(); // Renamed isLoading to avoid conflict
   const { updateSettings } = useSettings(); // updateSettings'i context'ten al
   const { theme, setTheme } = useTheme();
@@ -131,6 +132,7 @@ export default function Header({ currentRequestData, openSignupModal, openLoginM
 
   const activateEnvironment = async (environmentId) => {
     await setCurrentEnvironmentById(environmentId);
+    setIsEnvDropdownOpen(false); // Close dropdown after selection
   };
 
   const openEditEnvironmentModal = (env, e) => {

@@ -9,6 +9,7 @@ using WebTestUI.Backend.Data.Entities; // Add this for ApplicationUser
 using WebTestUI.Backend.Services;
 using WebTestUI.Backend.Services.Interfaces;
 using dotenv.net; // Add dotenv support
+using Npgsql; // NpgsqlDataSourceBuilder için ekleyin
 // Add Swashbuckle using directives if they are missing implicitly
 // using Swashbuckle.AspNetCore.SwaggerGen;
 // using Swashbuckle.AspNetCore.SwaggerUI;
@@ -19,6 +20,9 @@ DotEnv.Fluent()
     .WithTrimValues()
     .WithProbeForEnv(probeLevelsToSearch: 5)
     .Load();
+
+// <<< YENİ SATIR: Global dinamik JSON'u etkinleştir >>>
+NpgsqlConnection.GlobalTypeMapper.EnableDynamicJson();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,8 +68,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         }
         
         options.UseNpgsql(
-            connectionString,
-            b => b.MigrationsAssembly("WebTestUI.Backend")
+            connectionString, // Doğrudan connection string'i kullan
+            o => o.MigrationsAssembly("WebTestUI.Backend")
         );
     }
     else
@@ -203,6 +207,12 @@ builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddScoped<IHelpDocumentService, HelpDocumentService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// Register the background service for history cleanup
+builder.Services.AddHostedService<HistoryCleanupService>();
+
+// Health check için gerekli yapılandırma
+builder.Services.AddHealthChecks();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -262,6 +272,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<WebTestUI.Backend.Hubs.NotificationHub>("/hubs/notifications");
+
+// Health check endpoint'i ekle
+app.MapHealthChecks("/health");
 
 // Seed roles and default environment
 using (var scope = app.Services.CreateScope())

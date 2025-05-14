@@ -62,9 +62,6 @@ export const EnvironmentProvider = ({ children }) => {
             setIsEnvironmentLoading(true);            // Update in backend using the correct endpoint and method
             await authAxios.put(`/environments/${environmentId}/activate`); // Changed from POST to PUT and updated URL
 
-            // Explicitly sync history with the newly activated environment
-            await authAxios.post(`/environments/${environmentId}/sync-history`);
-
             // Update in frontend state
             setEnvironmentState(prevState => {
                 const selectedEnv = prevState.environments.find(env => env.id === environmentId);
