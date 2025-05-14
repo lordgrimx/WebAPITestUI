@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Mvc;
 using WebTestUI.Backend.Services;
 using WebTestUI.Backend.DTOs;
 using WebTestUI.Backend.Data.Entities;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebTestUI.Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class K6TestController : ControllerBase
     {
         private readonly IK6TestService _k6TestService;
@@ -17,9 +20,14 @@ namespace WebTestUI.Backend.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<K6TestDTO>>> GetAllK6Tests()
+        public async Task<ActionResult<List<K6TestDTO>>> GetAllK6Tests([FromQuery] int? environmentId)
         {
-            var tests = await _k6TestService.GetAllK6TestsAsync();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("User ID not found in token.");
+            }
+            var tests = await _k6TestService.GetAllK6TestsAsync(userId, environmentId);
             return Ok(tests);
         }
 
@@ -33,6 +41,13 @@ namespace WebTestUI.Backend.Controllers
         [HttpPost]
         public async Task<ActionResult<K6TestDTO>> CreateK6Test(CreateK6TestDTO createDto)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("User ID not found in token.");
+            }
+            createDto.UserId = userId;
+
             var test = await _k6TestService.CreateK6TestAsync(createDto);
             return CreatedAtAction(nameof(GetAllK6Tests), new { id = test.Id }, test);
         }

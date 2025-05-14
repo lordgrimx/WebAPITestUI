@@ -101,6 +101,7 @@ export default function LoadTestsPage() {
     pending: "Beklemede",
     running: "Çalışıyor",
     completed: "Tamamlandı",
+    completed_with_thresholds: "Tamamlandı (Eşik aşıldı)",
     failed: "Başarısız",
     stopping: "Durduruluyor",
     stopped: "Durduruldu"
@@ -324,6 +325,7 @@ export default function LoadTestsPage() {
     pending: <RefreshCw className="h-4 w-4" />, // Beklemede
     running: <Play className="h-4 w-4" />,
     completed: <CheckCircle className="h-4 w-4" />,
+    completed_with_thresholds: <CheckCircle className="h-4 w-4 text-amber-500" />,
     failed: <AlertTriangle className="h-4 w-4" />,
     stopping: <RefreshCw className="h-4 w-4 animate-spin" />, // Durduruluyor için
     stopped: <Square className="h-4 w-4" /> // Durduruldu için
@@ -334,6 +336,7 @@ export default function LoadTestsPage() {
     pending: "bg-amber-500 hover:bg-amber-600",
     running: "bg-blue-500 hover:bg-blue-600",
     completed: "bg-emerald-500 hover:bg-emerald-600",
+    completed_with_thresholds: "bg-amber-500 hover:bg-amber-600",
     failed: "bg-rose-500 hover:bg-rose-600",
     stopping: "bg-purple-500 hover:bg-purple-600",
     stopped: "bg-slate-500 hover:bg-slate-600"
@@ -344,6 +347,7 @@ export default function LoadTestsPage() {
     pending: "text-amber-500",
     running: "text-blue-500",
     completed: "text-emerald-500",
+    completed_with_thresholds: "text-amber-500",
     failed: "text-rose-500",
     stopping: "text-purple-500",
     stopped: "text-slate-500"

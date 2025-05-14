@@ -15,6 +15,13 @@ namespace WebTestUI.Backend.Data.Entities
         public string? AuthType { get; set; }
         public string? AuthToken { get; set; }
 
+        // Add UserId and EnvironmentId
+        public string? UserId { get; set; }
+        public int? EnvironmentId { get; set; }
+        // Navigation properties (optional, but good practice)
+        // public virtual ApplicationUser? User { get; set; }
+        // public virtual EnvironmentConfig? Environment { get; set; }
+
         [Column(TypeName = "jsonb")]
         public K6TestOptions? Options { get; set; }
 

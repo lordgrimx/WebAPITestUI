@@ -5,7 +5,7 @@ namespace WebTestUI.Backend.Services
 {
     public interface IK6TestService
     {
-        Task<List<K6TestDTO>> GetAllK6TestsAsync();
+        Task<List<K6TestDTO>> GetAllK6TestsAsync(string? userId, int? environmentId);
         Task<List<K6TestDTO>> GetK6TestsByRequestAsync(int requestId);
         Task<K6TestDTO> CreateK6TestAsync(CreateK6TestDTO createDto);
         Task<K6TestDTO> UpdateK6TestResultsAsync(Guid id, UpdateK6TestResultsDTO updateDto);

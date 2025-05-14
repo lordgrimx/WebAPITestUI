@@ -18,9 +18,21 @@ namespace WebTestUI.Backend.Services
             _logger = logger;
         }
 
-        public async Task<List<K6TestDTO>> GetAllK6TestsAsync()
+        public async Task<List<K6TestDTO>> GetAllK6TestsAsync(string? userId, int? environmentId)
         {
-            var tests = await _context.K6Tests
+            var query = _context.K6Tests.AsQueryable();
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                query = query.Where(t => t.UserId == userId);
+            }
+
+            if (environmentId.HasValue)
+            {
+                query = query.Where(t => t.EnvironmentId == environmentId);
+            }
+
+            var tests = await query
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
 
@@ -47,6 +59,8 @@ namespace WebTestUI.Backend.Services
                 Description = createDto.Description,
                 Script = createDto.Script,
                 RequestId = createDto.RequestId,
+                UserId = createDto.UserId,
+                EnvironmentId = createDto.EnvironmentId,
                 Status = "pending",
                 CreatedAt = now,
                 UpdatedAt = now
@@ -369,6 +383,8 @@ export default function() {{
                 Logs = test.Logs,
                 ErrorDetails = test.ErrorDetails,
                 RequestId = test.RequestId,
+                UserId = test.UserId,
+                EnvironmentId = test.EnvironmentId,
                 Status = test.Status,
                 Results = test.Results,
                 ProcessId = test.ProcessId,

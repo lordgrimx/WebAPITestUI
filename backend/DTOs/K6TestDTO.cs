@@ -15,6 +15,8 @@ namespace WebTestUI.Backend.DTOs
         public List<K6TestLog>? Logs { get; set; }
         public K6TestError? ErrorDetails { get; set; }
         public int? RequestId { get; set; }
+        public string? UserId { get; set; }
+        public int? EnvironmentId { get; set; }
         public string Status { get; set; } = string.Empty;
         public K6TestResults? Results { get; set; }
         public int? ProcessId { get; set; }
@@ -27,6 +29,8 @@ namespace WebTestUI.Backend.DTOs
         public string? Description { get; set; }
         public string Script { get; set; } = string.Empty;
         public int? RequestId { get; set; }
+        public string? UserId { get; set; }
+        public int? EnvironmentId { get; set; }
     }
 
     public class UpdateK6TestResultsDTO
