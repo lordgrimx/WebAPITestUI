@@ -429,7 +429,7 @@ export default function LoadTestsPage() {
                     <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>İstek/Saniye</span>
                   </div>
                 </div>
-                {test.status === 'completed' && performanceScore !== null && (
+                {['completed', 'completed_with_thresholds'].includes(test.status) && performanceScore !== null && (
                   <div className="mb-4">
                     <div className="flex justify-between text-sm mb-1">
                       <span className={isDarkMode ? 'text-slate-300' : ''}>Performans Skoru</span>
@@ -456,7 +456,7 @@ export default function LoadTestsPage() {
                     />
                   </div>
                 )}
-                {test.status === 'completed' && (
+                {['completed', 'completed_with_thresholds'].includes(test.status) && (
                   <div className="flex justify-between text-sm mb-4">
                     <div className={
                       test.results?.failureRate > 5 
@@ -482,7 +482,7 @@ export default function LoadTestsPage() {
                   >
                     Detaylar
                   </Button>
-                  {['created', 'failed', 'completed', 'stopped'].includes(test.status) && (
+                  {['created', 'failed', 'completed', 'stopped', 'completed_with_thresholds'].includes(test.status) && (
                     <>
                       <Button
                         onClick={() => handleRunTest(test.id)}
