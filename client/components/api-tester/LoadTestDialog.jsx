@@ -8,6 +8,7 @@ import { authAxios } from '@/lib/auth-context';
 import { toast } from "react-toastify";
 import { useRouter } from 'next/navigation';
 import { Dialog as ModalDialog } from "@/components/ui/dialog"; // Rename to avoid conflict
+import { useAuth } from '@/lib/auth-context'; // Import useAuth
 
 export default function LoadTestDialog({ 
     open, 
@@ -27,6 +28,7 @@ export default function LoadTestDialog({
     const [isParameterModalOpen, setIsParameterModalOpen] = useState(false);
     const [tempParameters, setTempParameters] = useState("");
     const router = useRouter();
+    const { userId } = useAuth(); // Get userId from useAuth
 
     const handleParametersSave = () => {
         try {
@@ -78,14 +80,16 @@ export default function LoadTestDialog({
                 options: {
                     vus: parseInt(vus),
                     duration: duration
-                }
+                },
+                environmentId: localStorage.getItem('currentEnvironmentId') || null, // Get environmentId from localStorage
+                userId: userId // Add userId
             };
 
             console.log('Request Body:', JSON.stringify(requestBody, null, 2));
             
             // Query parametrelerini URL'e ekleyerek API çağrısı yapma
             const response = await authAxios.post(
-                `/K6Test/generate-and-save?name=${encodeURIComponent(testName)}&description=&requestId=${requestData.id || ''}`,
+                `/K6Test/generate-and-save?name=${encodeURIComponent(testName)}&description=`,
                 requestBody
             );
 
