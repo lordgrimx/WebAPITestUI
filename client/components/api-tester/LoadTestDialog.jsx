@@ -86,6 +86,9 @@ export default function LoadTestDialog({
             };
 
             console.log('Request Body:', JSON.stringify(requestBody, null, 2));
+            // Log values just before sending
+            console.log('UserId to be sent:', userId);
+            console.log('EnvironmentId from localStorage to be sent:', localStorage.getItem('currentEnvironmentId'));
             
             // Query parametrelerini URL'e ekleyerek API çağrısı yapma
             const response = await authAxios.post(

@@ -258,9 +258,17 @@ export default function() {{
             return sb.ToString();
         }
 
-        public async Task<K6TestDTO> GenerateAndSaveK6ScriptAsync(string name, string? description, int? requestId, RequestData requestData, K6TestOptions options)
+        public async Task<K6TestDTO> GenerateAndSaveK6ScriptAsync(string name, string? description, int? requestId, RequestData requestData, K6TestOptions options, string userId, int? environmentId)
         {
-            var script = await GenerateK6ScriptAsync(new GenerateK6ScriptDTO { RequestData = requestData, Options = options });
+            // Pass UserId and EnvironmentId to GenerateK6ScriptAsync if needed by script generation
+            // For now, assuming they are not directly needed for script string generation itself
+            var script = await GenerateK6ScriptAsync(new GenerateK6ScriptDTO 
+            {
+                 RequestData = requestData, 
+                 Options = options,
+                 // UserId = userId, // Uncomment if script generation needs UserId
+                 // EnvironmentId = environmentId // Uncomment if script generation needs EnvironmentId
+            });
             _logger.LogInformation($"Options: {options.Duration}, {options.Vus}");
             var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             var test = new K6Test
@@ -273,6 +281,8 @@ export default function() {{
                 AuthToken = requestData.AuthToken,
                 Options = options,
                 RequestId = requestId,
+                UserId = userId, // Assign UserId
+                EnvironmentId = environmentId, // Assign EnvironmentId
                 Status = "created",
                 CreatedAt = now,
                 UpdatedAt = now

@@ -11,7 +11,7 @@ namespace WebTestUI.Backend.Services
         Task<K6TestDTO> UpdateK6TestResultsAsync(Guid id, UpdateK6TestResultsDTO updateDto);
         Task<bool> DeleteK6TestAsync(Guid id);
         Task<string> GenerateK6ScriptAsync(GenerateK6ScriptDTO generateDto);
-        Task<K6TestDTO> GenerateAndSaveK6ScriptAsync(string name, string? description, int? requestId, RequestData requestData, K6TestOptions options);
+        Task<K6TestDTO> GenerateAndSaveK6ScriptAsync(string name, string? description, int? requestId, RequestData requestData, K6TestOptions options, string userId, int? environmentId);
         Task AddLogEntryAsync(Guid testId, AddLogEntryDTO logDto);
         Task UpdateTestStatusAndLogsAsync(Guid id, UpdateTestStatusAndLogsDTO updateDto);
         Task<K6TestDTO> ExecuteK6TestAsync(Guid testId);

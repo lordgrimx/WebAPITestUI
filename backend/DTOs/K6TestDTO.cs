@@ -42,6 +42,8 @@ namespace WebTestUI.Backend.DTOs
     {
         public RequestData RequestData { get; set; } = new RequestData();
         public K6TestOptions Options { get; set; } = new K6TestOptions();
+        public string? UserId { get; set; }
+        public int? EnvironmentId { get; set; }
     }
 
     public class RequestData

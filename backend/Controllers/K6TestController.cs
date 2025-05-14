@@ -90,12 +90,21 @@ namespace WebTestUI.Backend.Controllers
             [FromQuery] int? requestId,
             [FromBody] GenerateK6ScriptDTO generateDto)
         {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("User ID not found in token.");
+            }
+
             var test = await _k6TestService.GenerateAndSaveK6ScriptAsync(
                 name,
                 description,
                 requestId,
                 generateDto.RequestData,
-                generateDto.Options);
+                generateDto.Options,
+                userId,
+                generateDto.EnvironmentId
+                );
 
             return CreatedAtAction(nameof(GetAllK6Tests), new { id = test.Id }, test);
         }
