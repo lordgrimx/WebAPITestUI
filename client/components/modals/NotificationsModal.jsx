@@ -69,17 +69,29 @@ function NotificationsModal({ open, setOpen, darkMode }) {
   }, [preferences]);
 
   const handleToggleChange = (key) => {
-    setLocalPreferences(prev => ({
-      ...prev,
-      [key]: !prev[key]
-    }));
+    setLocalPreferences(prev => {
+      // Güvenli erişim için: Sadece bilinen anahtarları kabul et
+      if (Object.prototype.hasOwnProperty.call(prev, key)) {
+        return {
+          ...prev,
+          [key]: !prev[key]
+        };
+      }
+      return prev;
+    });
   };
 
   const handleInputChange = (key, value) => {
-    setLocalPreferences(prev => ({
-      ...prev,
-      [key]: value
-    }));
+    setLocalPreferences(prev => {
+      // Güvenli erişim için: Sadece bilinen anahtarları kabul et
+      if (Object.prototype.hasOwnProperty.call(prev, key)) {
+        return {
+          ...prev,
+          [key]: value
+        };
+      }
+      return prev;
+    });
   };
 
   const handleSaveChanges = async () => {

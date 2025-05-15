@@ -46,15 +46,7 @@ import { authAxios } from '@/lib/auth-context';
 import LoadTestDialog from '@/components/api-tester/LoadTestDialog';
 import Link from 'next/link';
 import { useTheme } from "next-themes";
-
-function MetricItem({ label, value, isDarkMode }) {
-  return (
-    <div className={`p-3 ${isDarkMode ? 'bg-slate-900' : 'bg-slate-50'} rounded-lg`}>
-      <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{label}</p>
-      <p className={`text-lg font-semibold ${isDarkMode ? 'text-slate-100' : ''}`}>{value?.toFixed(2) || '0.00'}</p>
-    </div>
-  );
-}
+import MetricItem from '@/components/common/MetricItem'; // MetricItem import edildi
 
 const executeK6Test = async (testId) => {
   const response = await authAxios.post(`/K6Test/${testId}/execute`);

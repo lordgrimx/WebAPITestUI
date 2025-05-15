@@ -562,7 +562,10 @@ export default function ApiTester() {
             const maxKeys = Math.max(50, Math.floor(MAX_RESPONSE_SIZE / 2000)); // Estimate based on size
 
             keys.slice(0, maxKeys).forEach(key => {
-              truncatedData[key] = axiosResponse.data[key];
+              // Güvenli erişim için Object.prototype.hasOwnProperty kontrolü
+              if (Object.prototype.hasOwnProperty.call(axiosResponse.data, key)) {
+                truncatedData[key] = axiosResponse.data[key];
+              }
             });
 
             if (keys.length > maxKeys) {

@@ -413,7 +413,7 @@ export default function CollectionsSidebar({ setSelectedRequestId, onHistorySele
                   <p className={`px-1 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.loading', "Loading collections...")}</p>
                 )}
                 {!isLoading && filteredCollections.length === 0 && searchTerm && (
-                  <p className={`px-1 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.notFound', "No collections found matching")} "{searchTerm}".</p>
+                  <p className={`px-1 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.notFound', "No collections found matching")} &quot;{searchTerm}&quot;.</p>
                 )}
                 {!isLoading && filteredCollections.length === 0 && !searchTerm && (
                   <p className={`px-1 py-2 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{t('collections.empty', "No collections yet. Click \"+ New Collection\" to add one.")}</p>

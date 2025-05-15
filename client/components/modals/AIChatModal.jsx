@@ -407,7 +407,7 @@ function AIChatModal({ open, setOpen, darkMode }) {
                         </h4>
                         <ul className="space-y-2 text-sm">
                           <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("PUTman nedir ve nasıl kullanılır?")}>
-                            • PUTman'e genel bakış
+                            • PUTman&apos;e genel bakış
                           </li>
                           <li className="cursor-pointer hover:underline" onClick={() => setInputMessage("İstekler nasıl oluşturulur ve düzenlenir?")}>
                             • İstekler (Requests)

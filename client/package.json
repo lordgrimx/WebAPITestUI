@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@microsoft/signalr": "^8.0.7",
@@ -45,6 +47,7 @@
     "lucide-react": "^0.487.0",
     "next": "15.2.4",
     "next-themes": "^0.4.6",
+    "prismjs": "^1.30.0",
     "react": "^18.0.0",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "^18.0.0",
@@ -67,6 +70,11 @@
     "@types/node": "22.14.0",
     "@types/react": "19.1.0",
     "@types/react-syntax-highlighter": "^15.5.13",
+    "babel-jest": "^29.7.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.3.2",
+    "eslint-plugin-security": "^3.0.1",
+    "jest-transform-stub": "^2.0.0",
     "tailwindcss": "^4",
     "typescript": "5.8.3"
   }

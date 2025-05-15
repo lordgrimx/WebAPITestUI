@@ -284,7 +284,7 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }) => {
                 </div>
                 <div className="ml-3 text-xs sm:text-sm">
                   <Label htmlFor="terms" className={`${isDarkMode ? 'text-gray-300' : 'text-gray-700'} cursor-pointer`}>
-                    <a href="#" className={`${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'} font-medium`}>Kullanım Şartları</a> ve <a href="#" className={`${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'} font-medium`}>Gizlilik Politikası</a>'nı kabul ediyorum
+                    <a href="#" className={`${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'} font-medium`}>Kullanım Şartları</a> ve <a href="#" className={`${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-800'} font-medium`}>Gizlilik Politikası</a>&apos;nı kabul ediyorum
                   </Label>
                 </div>
               </div>

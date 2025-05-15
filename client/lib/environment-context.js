@@ -45,7 +45,8 @@ export const EnvironmentProvider = ({ children }) => {
         // Replace {{variableName}} with the actual value
         return text.replace(/\{\{([^}]+)\}\}/g, (match, variableName) => {
             const trimmedName = variableName.trim();
-            return variables[trimmedName] !== undefined ? variables[trimmedName] : match;
+            // Güvenli erişim için Object.prototype.hasOwnProperty kullan
+            return Object.prototype.hasOwnProperty.call(variables, trimmedName) ? variables[trimmedName] : match;
         });
     }, []);
 

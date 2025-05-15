@@ -7,6 +7,7 @@ import { Button } from '../ui/button';
 import { toast } from 'react-toastify';
 import { authAxios, useAuth } from '@/lib/auth-context';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowLeft, Badge, ChevronsUpDown, Check, Menu, X } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -127,7 +128,7 @@ const MonitoringDashboard = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
   
-  const getThemeColors = () => {
+  const getThemeColors = useCallback(() => {
     const isDark = theme === 'dark';
     return {
       textColor: isDark ? '#e2e8f0' : '#374151',
@@ -140,7 +141,7 @@ const MonitoringDashboard = () => {
       responseTimeAreaColor: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(59, 130, 246, 0.5)',
       errorRateAreaColor: isDark ? 'rgba(248, 113, 113, 0.5)' : 'rgba(239, 68, 68, 0.5)',
     };
-  };
+  }, [theme]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
@@ -300,6 +301,22 @@ const MonitoringDashboard = () => {
     return requests.filter(req => req.endpoint === selectedEndpoint);
   }, [selectedEndpoint, requests]);
 
+  const calculateStatusDistribution = useCallback((historyData) => {
+    if (!historyData?.length) return [];
+
+    const statusCounts = new Map();
+    historyData.forEach(item => {
+      const status = item.statusCode || 0;
+      statusCounts.set(status, (statusCounts.get(status) || 0) + 1);
+    });
+
+    return Array.from(statusCounts.entries()).map(([status, value]) => ({
+      name: `Status ${status}`,
+      value,
+      itemStyle: { color: getStatusColor(Number(status), theme) }
+    })).sort((a, b) => Number(a.name.split(' ')[1]) - Number(b.name.split(' ')[1]));
+  }, [theme]);
+
   useEffect(() => {
     if (!mounted || !filteredRequests) return;
 
@@ -334,24 +351,35 @@ const MonitoringDashboard = () => {
       statusDistribution: statusDistributionChart
     });
 
-    const timeGroups = filteredRequests.reduce((acc, req) => {
+    const timeGroups = new Map();
+    filteredRequests.forEach(req => {
       const time = formatTimestamp(req.timestamp);
-      if (!acc[time]) acc[time] = { total: 0, errors: 0, responseTimes: [] };
-      acc[time].total += 1;
-      if (req.statusCode >= 400) acc[time].errors += 1;
-      acc[time].responseTimes.push(req.responseTime);
-      return acc;
-    }, {});
-
-    const timeData = Object.keys(timeGroups).sort();
-    const responseTimesData = timeData.map(time => {
-      const times = timeGroups[time].responseTimes;
-      return times.reduce((sum, time) => sum + time, 0) / times.length;
+      if (!timeGroups.has(time)) {
+        timeGroups.set(time, { total: 0, errors: 0, responseTimes: [] });
+      }
+      const group = timeGroups.get(time);
+      group.total += 1;
+      if (req.statusCode >= 400) group.errors += 1;
+      group.responseTimes.push(req.responseTime);
     });
-    const requestCountData = timeData.map(time => timeGroups[time].total);
+
+    const timeData = Array.from(timeGroups.keys()).sort();
+    const responseTimesData = timeData.map(time => {
+      if (timeGroups.has(time)) {
+        const times = timeGroups.get(time).responseTimes;
+        return times.reduce((sum, t) => sum + t, 0) / times.length;
+      }
+      return 0;
+    });
+    const requestCountData = timeData.map(time => 
+      timeGroups.has(time) ? timeGroups.get(time).total : 0
+    );
     const errorRateData = timeData.map(time => {
-      const { total, errors } = timeGroups[time];
-      return total > 0 ? (errors / total) * 100 : 0;
+      if (timeGroups.has(time)) {
+        const { total, errors } = timeGroups.get(time);
+        return total > 0 ? (errors / total) * 100 : 0;
+      }
+      return 0;
     });
 
     const themeColors = getThemeColors();
@@ -494,23 +522,7 @@ const MonitoringDashboard = () => {
         statusDistribution: null
       });
     };
-  }, [mounted, filteredRequests]);
-
-  const calculateStatusDistribution = (history) => {
-    if (!history?.length) return [];
-
-    const statusCounts = history.reduce((acc, item) => {
-      const status = item.statusCode || 0;
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {});
-
-    return Object.entries(statusCounts).map(([status, value]) => ({
-      name: `Status ${status}`,
-      value,
-      itemStyle: { color: getStatusColor(Number(status), theme) }
-    })).sort((a, b) => Number(a.name.split(' ')[1]) - Number(b.name.split(' ')[1]));
-  };
+  }, [mounted, filteredRequests, calculateStatusDistribution, getThemeColors, theme]);
 
   const filteredEndpoints = endpoints.filter(endpoint => {
     const matchesSearch = endpoint.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -608,9 +620,11 @@ const MonitoringDashboard = () => {
             </div>
             <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground overflow-hidden">
               {user?.profileImageBase64 ? (
-                <img
+                <Image
                   src={user.profileImageBase64}
                   alt={user.name || 'User Avatar'}
+                  width={32}
+                  height={32}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -696,7 +710,7 @@ const MonitoringDashboard = () => {
               </div>
             ) : (
               <div className="px-3 sm:px-4 py-2 text-xs sm:text-sm text-muted-foreground">
-                Endpoint'leri görüntülemek için koleksiyon seçin
+                Endpoint&apos;leri görüntülemek için koleksiyon seçin
               </div>
             )}
           </div>
@@ -767,7 +781,7 @@ const MonitoringDashboard = () => {
                           backgroundColor: `${getStatusColor(request.statusCode, theme)}20`,
                           color: getStatusColor(request.statusCode, theme)
                         }}>
-                        {request.statusCode || 'Unknown'}
+                        {request.statusCode || "Unknown"}
                       </span>
                     </td>
                     <td className="px-2 sm:px-6 py-2 sm:py-4 whitespace-nowrap text-[11px] sm:text-sm text-foreground">{request.responseTime} ms</td>

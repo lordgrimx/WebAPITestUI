@@ -69,7 +69,7 @@ const DeleteConfirmDialog = ({ open, setOpen, environment, onConfirm }) => {
         <DialogHeader>
           <DialogTitle>{t('general.delete')} {t('header.environment')}</DialogTitle>
           <DialogDescription>
-            {t('collections.confirmDelete').replace('collection', 'environment')} "${environment?.name}"?
+            {t('collections.confirmDelete').replace('collection', 'environment')} &quot;{environment?.name}&quot;?
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
